@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseGeckoPools } from '../src/server/research/scanner.js';
-import { autopilotBuysToday, evaluateCandidate, prefilterCandidates, recentlyTraded } from '../src/server/trading/strategy.js';
+import { autopilotBuysToday, describeDropped, evaluateCandidate, prefilterCandidates, prefilterWithStats, recentlyTraded } from '../src/server/trading/strategy.js';
 import { openPosition } from '../src/server/trading/accounting.js';
 import type { Candidate, ResearchReport, Sourced } from '../src/shared/types.js';
 import { META, fill, settings } from './helpers.js';
@@ -44,6 +44,8 @@ describe('prefilterCandidates', () => {
       AP,
     );
     expect(out.map((c) => c.mint)).toEqual(['WATCH', 'BIG', 'DUP', 'UNKNOWN']);
+    const { dropped } = prefilterWithStats([cand({ mint: 'A', liquidityUsd: 1 }), cand({ mint: 'B', liquidityUsd: 2 }), cand({ mint: 'C', ageMinutes: 1 })], AP);
+    expect(describeDropped(dropped)).toBe('2 liquidity < $30,000, 1 younger than 60 min');
     expect(out.find((c) => c.mint === 'DUP')?.liquidityUsd).toBe(90_000);
   });
 });
@@ -61,7 +63,7 @@ describe('evaluateCandidate', () => {
     ['low liquidity', (r) => (r.market.liquidityUsd = s(5000)), /liquidity \$5,000/],
     ['too young', (r) => (r.token.ageMinutes = s(10)), /age 10 min < 60/],
     ['too old', (r) => (r.token.ageMinutes = s(20_000)), /> 10080/],
-    ['age only a lower bound', (r) => (r.token.ageMinutes = s(9000, 'lower bound: history deeper than scan')), /9000\+ min/],
+    ['age only a lower bound', (r) => (r.token.ageMinutes = s(66, 'lower bound: history deeper than scan')), /exact age unknown \(busy token, history only checked back 66 min\)/],
     ['low volume', (r) => (r.market.volume24hUsd = s(100)), /24h volume \$100/],
     ['few holders', (r) => (r.holders.count = s(20)), /holders 20 < 300/],
     ['holder count unknown', (r) => (r.holders.count = s<number>(null)), /holders unknown/],

@@ -24,25 +24,42 @@ export const EXCLUDED_MINTS = new Set([
  * watchlist first, then by liquidity.
  */
 export function prefilterCandidates(cands: Candidate[], ap: AutopilotSettings): Candidate[] {
+  return prefilterWithStats(cands, ap).kept;
+}
+
+/** Same as prefilterCandidates, plus how many pools each filter removed (for the activity log). */
+export function prefilterWithStats(cands: Candidate[], ap: AutopilotSettings): { kept: Candidate[]; dropped: Record<string, number> } {
   const f = ap.filters;
+  const dropped: Record<string, number> = {};
+  const drop = (why: string) => (dropped[why] = (dropped[why] ?? 0) + 1);
   const best = new Map<string, Candidate>();
   for (const c of cands) {
-    if (EXCLUDED_MINTS.has(c.mint)) continue;
+    if (EXCLUDED_MINTS.has(c.mint)) {
+      drop('SOL/stablecoin');
+      continue;
+    }
     if (c.source !== 'watchlist') {
-      if (c.liquidityUsd !== null && c.liquidityUsd < f.minLiquidityUsd) continue;
-      if (c.volume24hUsd !== null && c.volume24hUsd < f.minVolume24hUsd) continue;
-      if (c.ageMinutes !== null && c.ageMinutes < f.minAgeMinutes) continue;
-      if (c.ageMinutes !== null && f.maxAgeMinutes !== null && c.ageMinutes > f.maxAgeMinutes) continue;
-      if (c.priceChange1hPct !== null && f.maxPriceChange1hPct !== null && c.priceChange1hPct > f.maxPriceChange1hPct) continue;
+      if (c.liquidityUsd !== null && c.liquidityUsd < f.minLiquidityUsd) { drop(`liquidity < $${f.minLiquidityUsd.toLocaleString()}`); continue; }
+      if (c.volume24hUsd !== null && c.volume24hUsd < f.minVolume24hUsd) { drop(`24h volume < $${f.minVolume24hUsd.toLocaleString()}`); continue; }
+      if (c.ageMinutes !== null && c.ageMinutes < f.minAgeMinutes) { drop(`younger than ${f.minAgeMinutes} min`); continue; }
+      if (c.ageMinutes !== null && f.maxAgeMinutes !== null && c.ageMinutes > f.maxAgeMinutes) { drop(`older than ${f.maxAgeMinutes} min`); continue; }
+      if (c.priceChange1hPct !== null && f.maxPriceChange1hPct !== null && c.priceChange1hPct > f.maxPriceChange1hPct) { drop(`1h change > ${f.maxPriceChange1hPct}%`); continue; }
     }
     const prev = best.get(c.mint);
     if (!prev || (prev.source !== 'watchlist' && (c.source === 'watchlist' || (c.liquidityUsd ?? 0) > (prev.liquidityUsd ?? 0)))) best.set(c.mint, c);
   }
-  return [...best.values()].sort((a, b) => {
+  const kept = [...best.values()].sort((a, b) => {
     if ((a.source === 'watchlist') !== (b.source === 'watchlist')) return a.source === 'watchlist' ? -1 : 1;
     return (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0);
   });
+  return { kept, dropped };
 }
+
+export const describeDropped = (d: Record<string, number>): string =>
+  Object.entries(d)
+    .sort((a, b) => b[1] - a[1])
+    .map(([why, n]) => `${n} ${why}`)
+    .join(', ');
 
 export interface CandidateDecision {
   ok: boolean;
@@ -70,7 +87,15 @@ export function evaluateCandidate(r: ResearchReport, ap: AutopilotSettings): Can
   const ageIsLowerBound = !!r.token.ageMinutes.note?.includes('lower bound');
   check(age !== null && age >= f.minAgeMinutes, `age ${age === null ? '?' : Math.round(age)} min`, `age ${age === null ? 'unknown' : `${Math.round(age)} min`} < ${f.minAgeMinutes} min`);
   if (f.maxAgeMinutes !== null)
-    check(age !== null && !ageIsLowerBound && age <= f.maxAgeMinutes, `age ≤ ${f.maxAgeMinutes} min`, `age ${age === null ? 'unknown' : `${Math.round(age)}${ageIsLowerBound ? '+' : ''} min`} > ${f.maxAgeMinutes} min`);
+    check(
+      age !== null && !ageIsLowerBound && age <= f.maxAgeMinutes,
+      `age ≤ ${f.maxAgeMinutes} min`,
+      age === null
+        ? 'age unknown'
+        : ageIsLowerBound
+          ? `exact age unknown (busy token, history only checked back ${Math.round(age)} min) — cannot confirm it is under ${f.maxAgeMinutes} min`
+          : `age ${Math.round(age)} min > ${f.maxAgeMinutes} min`,
+    );
 
   const vol = r.market.volume24hUsd.value;
   check(vol !== null && vol >= f.minVolume24hUsd, `24h volume $${Math.round(vol ?? 0).toLocaleString()}`, `24h volume ${vol === null ? 'unknown' : `$${Math.round(vol).toLocaleString()}`} < $${f.minVolume24hUsd.toLocaleString()}`);

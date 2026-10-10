@@ -98,6 +98,11 @@ export class Researcher {
     } else bundles = none('Solana RPC', launch && !launch.reachedStart ? 'launch history beyond scan depth; bundle analysis skipped' : 'launch or holder data unavailable');
 
     const ageMin = launch?.createdAt ? (Date.now() - new Date(launch.createdAt).getTime()) / 60_000 : null;
+    // Busy tokens have more history than we scan, so the on-chain age is only a lower bound.
+    // The main pool's creation time (DexScreener) is then a better, exact age for trading purposes.
+    const deep = !!launch && !launch.reachedStart;
+    const pairAge = pair?.pairCreatedAt ? (Date.now() - pair.pairCreatedAt) / 60_000 : null;
+    const usePairAge = deep && pairAge !== null && (ageMin === null || pairAge >= ageMin);
     const dexUrl = pair?.url ?? dexScreenerUrl(mint);
     const roundTrip = buy && sell ? (1 - Number(sell.summary.outAmount) / Number(buy.summary.inAmount)) * 100 : null;
     const priceSol = pair && pair.quoteToken.address === WSOL_MINT && pair.priceNative ? Number(pair.priceNative) : null;
@@ -115,8 +120,12 @@ export class Researcher {
         mintAuthority: m ? ok(m.mintAuthority, 'Solana RPC', solscan) : none('Solana RPC', mintR.err ?? ''),
         freezeAuthority: m ? ok(m.freezeAuthority, 'Solana RPC', solscan) : none('Solana RPC', mintR.err ?? ''),
         extensions: m ? ok(m.riskyExtensions, 'Solana RPC', solscan) : none('Solana RPC', mintR.err ?? ''),
-        createdAt: ok(launch?.createdAt ?? null, 'Solana RPC (oldest signature)', solscan, launch && !launch.reachedStart ? 'lower bound' : undefined),
-        ageMinutes: ok(ageMin, 'Solana RPC (oldest signature)', solscan, launch && !launch.reachedStart ? 'lower bound: history deeper than scan' : undefined),
+        createdAt: usePairAge
+          ? ok(new Date(pair!.pairCreatedAt!).toISOString(), 'DexScreener (main pool created)', dexUrl, 'busy token: on-chain history deeper than scan')
+          : ok(launch?.createdAt ?? null, 'Solana RPC (oldest signature)', solscan, deep ? 'lower bound' : undefined),
+        ageMinutes: usePairAge
+          ? ok(pairAge, 'DexScreener (main pool created)', dexUrl, 'busy token: age of its main trading pool (on-chain history deeper than scan)')
+          : ok(ageMin, 'Solana RPC (oldest signature)', solscan, deep ? 'lower bound: history deeper than scan' : undefined),
         creator: ok(launch?.creator ?? null, 'Solana RPC (fee payer of first transaction)', solscan),
       },
       market: {

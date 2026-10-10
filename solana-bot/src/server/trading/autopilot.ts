@@ -14,7 +14,7 @@ import type { BotWallet } from '../wallet/botWallet.js';
 import type { AutopilotLogEntry } from '../../shared/types.js';
 import { big } from './accounting.js';
 import { TradeRejected, type Engine } from './engine.js';
-import { autopilotBuysToday, evaluateCandidate, prefilterCandidates, recentlyTraded } from './strategy.js';
+import { autopilotBuysToday, describeDropped, evaluateCandidate, prefilterWithStats, recentlyTraded } from './strategy.js';
 
 const SOL = 1e9;
 /** Violations that block every buy, not just this token: stop the cycle instead of trying the next one. */
@@ -148,13 +148,23 @@ export class Autopilot {
       this.store.update((s) => (s.autopilot.consecutiveErrors = 0));
 
       const rejected = this.s.autopilot.rejected;
-      const cands = prefilterCandidates(scan.candidates, ap).filter(
-        (c) => !recentlyTraded(this.s.positions, c.mint, mode, now, ap.cooldownMinutes) && !(rejected[c.mint] && new Date(rejected[c.mint]!).getTime() > now.getTime()),
-      );
+      const { kept, dropped } = prefilterWithStats(scan.candidates, ap);
+      const cands = kept.filter((c) => {
+        if (recentlyTraded(this.s.positions, c.mint, mode, now, ap.cooldownMinutes)) {
+          dropped['already held / bought recently'] = (dropped['already held / bought recently'] ?? 0) + 1;
+          return false;
+        }
+        if (rejected[c.mint] && new Date(rejected[c.mint]!).getTime() > now.getTime()) {
+          dropped[`rejected recently (re-checked after ${ap.recheckAfterMinutes} min)`] = (dropped[`rejected recently (re-checked after ${ap.recheckAfterMinutes} min)`] ?? 0) + 1;
+          return false;
+        }
+        return true;
+      });
       if (!cands.length) {
-        this.note(`Scanned ${scan.candidates.length} pools: none new that pass the pre-filter.`);
+        this.note(`Scanned ${scan.candidates.length} pools, none to research. Filtered out: ${describeDropped(dropped) || 'nothing'}. Next scan in ${ap.scanIntervalSec} s.`);
         return;
       }
+      this.note(`Scanned ${scan.candidates.length} pools: researching up to ${Math.min(cands.length, ap.maxResearchPerScan)} of ${cands.length}. Filtered out: ${describeDropped(dropped) || 'nothing'}.`);
 
       let researched = 0;
       for (const c of cands) {
