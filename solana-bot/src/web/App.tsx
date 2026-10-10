@@ -4,13 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type DashboardState, type TradeIntent } from './api.js';
 import { ago } from './format.js';
 import { Audit } from './components/Audit.js';
+import { AutopilotPanel } from './components/AutopilotPanel.js';
+import { BotWalletPanel } from './components/BotWalletPanel.js';
 import { LivePanel } from './components/LivePanel.js';
 import { Positions } from './components/Positions.js';
 import { Research } from './components/Research.js';
 import { SettingsPanel } from './components/SettingsPanel.js';
 import { TradeModal } from './components/TradeModal.js';
 
-const TABS = ['Positions', 'Research', 'Limits & rules', 'Live mode', 'Audit log'] as const;
+const TABS = ['Positions', 'Autopilot', 'Research', 'Limits & rules', 'Bot wallet', 'Live mode', 'Audit log'] as const;
 type Tab = (typeof TABS)[number];
 
 export function App() {
@@ -36,10 +38,11 @@ export function App() {
     return () => clearInterval(t);
   }, [refresh]);
 
-  // Live automation that the user explicitly enabled: open the wallet prompt
-  // for rule triggers flagged autoExecute. The wallet still asks to sign.
+  // Browser-wallet live automation that the user explicitly enabled: open the
+  // wallet prompt for rule triggers flagged autoExecute. The wallet still asks
+  // to sign. (With the bot wallet, the server executes these itself.)
   useEffect(() => {
-    if (!state || state.mode !== 'live' || state.paused || modal || !publicKey) return;
+    if (!state || state.mode !== 'live' || state.live?.signer !== 'browser' || state.paused || modal || !publicKey) return;
     const pr = state.proposals.find((p) => p.autoExecute && !handledProposals.current.has(p.id));
     if (!pr) return;
     handledProposals.current.add(pr.id);
@@ -52,6 +55,7 @@ export function App() {
       reason: pr.rule,
       proposalId: pr.id,
       acknowledgeLocked: true,
+      ...(pr.tpLevel !== undefined ? { tpLevel: pr.tpLevel, tpTargetRaw: pr.tpTargetRaw } : {}),
     })
       .then((intent) => setModal({ intent, autoSign: true }))
       .catch(() => undefined);
@@ -78,11 +82,15 @@ export function App() {
         <h1>Solana Research Trader</h1>
         <span className={`badge ${state.mode}`}>{state.mode === 'live' ? 'LIVE' : 'PAPER'}</span>
         {state.env.marketData === 'mock' && <span className="badge warnb">MOCK DATA</span>}
+        {state.live?.signer === 'bot' && <span className="badge locked">BOT WALLET</span>}
+        <button className={`badge pill ${state.autopilot.enabled ? (state.autopilot.active ? 'on' : 'waiting') : ''}`} onClick={() => setTab('Autopilot')} title="Autopilot status">
+          AUTOPILOT {state.autopilot.enabled ? (state.autopilot.active ? 'ON' : 'WAITING') : 'OFF'}
+        </button>
         <span className="grow" />
         {state.paused ? (
           <button className="resume" onClick={resume}>Paused — resume…</button>
         ) : (
-          <button className="pause" onClick={pause} title="Stops new trades and cancels pending unsigned trades">EMERGENCY PAUSE</button>
+          <button className="pause" onClick={pause} title="Stops all new trades (autopilot and rules included) and cancels pending unsigned trades">EMERGENCY PAUSE</button>
         )}
         <WalletMultiButton />
       </header>
@@ -107,9 +115,11 @@ export function App() {
         ))}
       </nav>
       {tab === 'Positions' && <Positions state={state} onIntent={openIntent} />}
+      {tab === 'Autopilot' && <AutopilotPanel state={state} onChange={refresh} />}
+      {tab === 'Bot wallet' && <BotWalletPanel state={state} onChange={refresh} />}
       {tab === 'Research' && <Research state={state} onIntent={openIntent} />}
-      {tab === 'Limits & rules' && <SettingsPanel state={state} />}
-      {tab === 'Live mode' && <LivePanel state={state} />}
+      {tab === 'Limits & rules' && <SettingsPanel state={state} onChange={refresh} />}
+      {tab === 'Live mode' && <LivePanel state={state} onChange={refresh} />}
       {tab === 'Audit log' && <Audit />}
 
       {modal && (
@@ -117,6 +127,7 @@ export function App() {
           key={modal.intent.id}
           intent={modal.intent}
           autoSign={modal.autoSign}
+          signer={state.live?.signer ?? null}
           onClose={() => {
             setModal(null);
             void refresh();
@@ -137,7 +148,7 @@ function MockControls({ state, onDone }: { state: DashboardState; onDone: () => 
         {state.env.mockTokens.map((t) => <option key={t.mint} value={t.mint}>{t.symbol}</option>)}
       </select>
       {[0.5, 0.9, 1.1, 2, 5.5].map((m) => <button key={m} onClick={() => move(m)}>price ×{m}</button>)}
-      <span className="muted">Use this to watch the take-profit rule fire in paper mode.</span>
+      <span className="muted">Prices also drift on their own every 15 s (MMOON tends up, MFADE down). Use this to watch the ladder and the autopilot in paper mode.</span>
     </div>
   );
 }

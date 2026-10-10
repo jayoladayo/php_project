@@ -82,3 +82,14 @@ ul.flags { list-style: none; padding: 0; }
 .diagram { background: #0d1117; border: 1px solid var(--line); border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 12px; }
 .checklist { list-style: none; padding: 0; }
 details pre { white-space: pre-wrap; font-size: 11px; }
+
+.badge.pill { border: 1px solid var(--line); cursor: pointer; padding: 3px 10px; }
+.badge.pill.on { background: var(--pos); color: #000; }
+.badge.pill.waiting { background: var(--warn); color: #000; }
+.badge.small { font-size: 10px; padding: 1px 6px; margin-left: 6px; }
+.lvl { display: inline-block; width: 1.2em; text-align: center; }
+.lvl.done { color: var(--pos); }
+.lvl.partial { color: var(--warn); }
+.lvl.skipped { color: var(--muted); }
+table.ladder td { vertical-align: middle; }
+textarea { background: #0d1117; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }

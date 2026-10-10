@@ -1,7 +1,7 @@
 import type { Settings } from './types.js';
 
-// Conservative defaults: small sizes, tight limits, exit rules other than
-// take-profit disabled until the user sets them.
+// Conservative defaults: small sizes, tight limits, autopilot off, exit rules
+// other than take-profit disabled until the user sets them.
 export const DEFAULT_SETTINGS: Settings = {
   limits: {
     maxBuySol: 0.05,
@@ -15,10 +15,39 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   takeProfit: {
     enabled: true,
-    multiple: 5,
-    sellFractionPct: 50,
+    // 3× → take the initial investment back out; 5× → sell half of the
+    // original amount; whatever remains (at least the moon bag) rides.
+    levels: [
+      { multiple: 3, sell: { kind: 'recover_cost' } },
+      { multiple: 5, sell: { kind: 'percent_of_original', pct: 50 } },
+    ],
+    moonBagPct: 15,
     entryPriceBasis: 'effective_incl_fees',
     autoExecuteLive: false,
+  },
+  autopilot: {
+    enabled: false,
+    buySizeSol: 0.02,
+    slippageBps: 100,
+    maxBuysPerDay: 3,
+    scanIntervalSec: 120,
+    maxResearchPerScan: 3,
+    sources: { newPools: true, trendingPools: true },
+    watchlist: [],
+    filters: {
+      minLiquidityUsd: 30_000,
+      minAgeMinutes: 60,
+      maxAgeMinutes: 7 * 24 * 60,
+      minVolume24hUsd: 50_000,
+      minHolders: 300,
+      minSells24h: 50,
+      maxPriceChange1hPct: 50,
+      requireLpLockKnown: true,
+      minLpLockedPct: 90,
+    },
+    recheckAfterMinutes: 60,
+    cooldownMinutes: 24 * 60,
+    acknowledgeNoStopLoss: false,
   },
   stopLoss: {
     enabled: false,
@@ -26,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
     sellFractionPct: 100,
     autoExecuteLive: false,
     applyAfterTakeProfit: false,
+    includeMoonBag: false,
   },
   timeExit: {
     enabled: false,
@@ -33,6 +63,7 @@ export const DEFAULT_SETTINGS: Settings = {
     sellFractionPct: 100,
     autoExecuteLive: false,
     applyAfterTakeProfit: false,
+    includeMoonBag: false,
   },
   verification: {
     maxDataAgeSec: 300,

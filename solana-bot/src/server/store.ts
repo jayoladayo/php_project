@@ -1,13 +1,26 @@
 // Single-process JSON state store with atomic writes. Holds no secrets: only
-// public keys, positions, settings and logs.
+// public keys, positions, settings and logs. (The bot wallet's encrypted key
+// lives in its own file, see wallet/botWallet.ts.)
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DEFAULT_SETTINGS } from '../shared/defaults.js';
-import type { Alert, Mark, Mode, Position, Proposal, ResearchReport, Settings, TradeIntent } from '../shared/types.js';
+import type { Alert, AutopilotLogEntry, Mark, Mode, Position, Proposal, ResearchReport, Settings, SignerKind, TakeProfitRule, TradeIntent } from '../shared/types.js';
+import { migratePosition } from './trading/accounting.js';
 
 export interface LiveArm {
   armedAt: string;
   wallet: string;
+  signer: SignerKind;
+}
+
+export interface AutopilotState {
+  log: AutopilotLogEntry[];
+  /** mint → ISO time until which a rejected token is not re-researched */
+  rejected: Record<string, string>;
+  lastScanAt: string | null;
+  lastScanCandidates: number;
+  consecutiveErrors: number;
+  lastError: string | null;
 }
 
 export interface State {
@@ -27,7 +40,10 @@ export interface State {
   lossEvents: Array<{ at: string; lamports: string; mode: Mode; reason: string }>;
   paperBalanceLamports: string;
   research: Record<string, ResearchReport>;
+  autopilot: AutopilotState;
 }
+
+const freshAutopilot = (): AutopilotState => ({ log: [], rejected: {}, lastScanAt: null, lastScanCandidates: 0, consecutiveErrors: 0, lastError: null });
 
 function fresh(): State {
   return {
@@ -46,18 +62,42 @@ function fresh(): State {
     lossEvents: [],
     paperBalanceLamports: String(Math.round(DEFAULT_SETTINGS.paper.startingBalanceSol * 1e9)),
     research: {},
+    autopilot: freshAutopilot(),
   };
 }
 
+type LegacyTakeProfit = Partial<TakeProfitRule> & { multiple?: number; sellFractionPct?: number };
+
+/** Take-profit settings from the single-rule version become a one-level ladder (unchanged defaults become the new default ladder). */
+function mergeTakeProfit(d: TakeProfitRule, saved: LegacyTakeProfit | undefined): TakeProfitRule {
+  if (!saved) return d;
+  const { multiple, sellFractionPct, ...rest } = saved;
+  const merged = { ...d, ...rest };
+  if (!Array.isArray(saved.levels) && multiple !== undefined) {
+    const wasDefault = multiple === 5 && (sellFractionPct ?? 50) === 50;
+    if (!wasDefault) {
+      merged.levels = [{ multiple, sell: { kind: 'percent_of_original', pct: sellFractionPct ?? 50 } }];
+      merged.moonBagPct = 0;
+    }
+  }
+  return merged;
+}
+
 /** Deep-merge saved settings over defaults so new settings keys get safe defaults. */
-function mergeSettings(saved: Partial<Settings> | undefined): Settings {
+export function mergeSettings(saved: Partial<Settings> | undefined): Settings {
   const d = structuredClone(DEFAULT_SETTINGS);
   if (!saved) return d;
   return {
     ...d,
     ...saved,
     limits: { ...d.limits, ...saved.limits },
-    takeProfit: { ...d.takeProfit, ...saved.takeProfit },
+    takeProfit: mergeTakeProfit(d.takeProfit, saved.takeProfit as LegacyTakeProfit | undefined),
+    autopilot: {
+      ...d.autopilot,
+      ...saved.autopilot,
+      sources: { ...d.autopilot.sources, ...saved.autopilot?.sources },
+      filters: { ...d.autopilot.filters, ...saved.autopilot?.filters },
+    },
     stopLoss: { ...d.stopLoss, ...saved.stopLoss },
     timeExit: { ...d.timeExit, ...saved.timeExit },
     verification: { ...d.verification, ...saved.verification },
@@ -72,7 +112,15 @@ export class Store {
     mkdirSync(dirname(path), { recursive: true });
     if (existsSync(path)) {
       const saved = JSON.parse(readFileSync(path, 'utf8')) as Partial<State>;
-      this.state = { ...fresh(), ...saved, settings: mergeSettings(saved.settings) };
+      const legacyMultiple = (saved.settings?.takeProfit as LegacyTakeProfit | undefined)?.multiple ?? 5;
+      this.state = {
+        ...fresh(),
+        ...saved,
+        settings: mergeSettings(saved.settings),
+        positions: (saved.positions ?? []).map((p) => migratePosition(p, legacyMultiple)),
+        live: saved.live ? { ...saved.live, signer: saved.live.signer ?? 'browser' } : null,
+        autopilot: { ...freshAutopilot(), ...saved.autopilot },
+      };
     } else this.state = fresh();
   }
 
@@ -81,6 +129,9 @@ export class Store {
     const s = this.state;
     s.intents = s.intents.slice(-300);
     s.alerts = s.alerts.slice(-200);
+    s.autopilot.log = s.autopilot.log.slice(-300);
+    const now = Date.now();
+    for (const [mint, until] of Object.entries(s.autopilot.rejected)) if (new Date(until).getTime() < now) delete s.autopilot.rejected[mint];
     s.proposals = s.proposals.filter((p) => p.status === 'open').concat(s.proposals.filter((p) => p.status !== 'open').slice(-100));
     const keys = Object.keys(s.research);
     if (keys.length > 50) for (const k of keys.slice(0, keys.length - 50)) delete s.research[k];

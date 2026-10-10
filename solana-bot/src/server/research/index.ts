@@ -3,7 +3,7 @@
 // the result to assessReport() for flags and a verdict.
 import { PublicKey, type Connection } from '@solana/web3.js';
 import { env, rpcHost } from '../env.js';
-import type { MockProvider } from '../market/mock.js';
+import { MOCK_SOL_USD, type MockProvider } from '../market/mock.js';
 import { NoRouteError, type Quote, type SwapProvider } from '../market/types.js';
 import type { ResearchReport, Settings, Sourced } from '../../shared/types.js';
 import { WSOL_MINT } from '../../shared/types.js';
@@ -175,8 +175,8 @@ export class Researcher {
     const log: SourceLog = [{ name: 'Mock market', url: 'about:mock', fetchedAt: now(), ok: true }];
     const buy = await this.quoteSafe(log, WSOL_MINT, mint, probe);
     const sell = buy.v ? await this.quoteSafe(log, mint, WSOL_MINT, BigInt(buy.v.summary.outAmount)) : { v: null, err: 'no buy' };
-    const priceSol = Number(t.solReserve) / 1e9 / (Number(t.tokenReserve) / 10 ** t.decimals);
-    const solUsd = 150;
+    const priceSol = mp.price(t);
+    const solUsd = MOCK_SOL_USD;
     const draft: ReportDraft = {
       mint,
       generatedAt: now(),
@@ -185,16 +185,16 @@ export class Researcher {
         name: ok(t.name, src), symbol: ok(t.symbol, src), decimals: ok(t.decimals, src), supplyRaw: ok(t.supplyRaw.toString(), src),
         tokenProgram: ok('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', src), mintAuthority: ok<string>('none', src),
         freezeAuthority: ok<string>(t.freezeAuthority ?? 'none', src), extensions: ok<string[]>([], src),
-        createdAt: ok(new Date(Date.now() - 3 * 86_400_000).toISOString(), src), ageMinutes: ok(3 * 1440, src), creator: ok('MockCreator1111111111111111111111111111111', src),
+        createdAt: ok(new Date(Date.now() - t.ageMinutes * 60_000).toISOString(), src), ageMinutes: ok(t.ageMinutes, src), creator: ok('MockCreator1111111111111111111111111111111', src),
       },
       market: {
         priceUsd: ok(priceSol * solUsd, src), priceSol: ok(priceSol, src),
-        liquidityUsd: ok((Number(t.solReserve) / 1e9) * solUsd * 2, src), volume24hUsd: ok(100_000, src),
+        liquidityUsd: ok((Number(t.solReserve) / 1e9) * solUsd * 2, src), volume24hUsd: ok(t.volume24hUsd, src),
         marketCapUsd: ok((priceSol * solUsd * Number(t.supplyRaw)) / 10 ** t.decimals, src),
-        fdvUsd: ok((priceSol * solUsd * Number(t.supplyRaw)) / 10 ** t.decimals, src), txns24h: ok({ buys: 100, sells: 90 }, src),
-        priceChange: ok({ h1: 0, h24: 0 }, src), priceHistory: ok([], src), pairAddress: ok('MockPool', src), dex: ok('mock', src), lpLockedPct: ok(100, src),
+        fdvUsd: ok((priceSol * solUsd * Number(t.supplyRaw)) / 10 ** t.decimals, src), txns24h: ok({ buys: Math.round(t.sells24h * 1.1), sells: t.sells24h }, src),
+        priceChange: ok({ h1: 0, h24: 0 }, src), priceHistory: ok([], src), pairAddress: ok('MockPool', src), dex: ok('mock', src), lpLockedPct: ok(t.lpLockedPct, src),
       },
-      holders: { count: ok(1000, src), top: ok([], src), top10Pct: ok(15, src), maxSingleWalletPct: ok(3, src) },
+      holders: { count: ok(t.holders, src), top: ok([], src), top10Pct: ok(t.top10Pct, src), maxSingleWalletPct: ok(t.maxSinglePct, src) },
       sellability: {
         buyQuote: buy.v ? ok(buy.v.summary, src) : none(src, buy.err ?? ''),
         sellQuote: sell.v ? ok(sell.v.summary, src) : none(src, sell.err ?? ''),

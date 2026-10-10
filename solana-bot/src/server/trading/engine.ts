@@ -1,22 +1,27 @@
-// Trading engine: prepare → (paper fill | wallet signature → submit →
-// confirm) → accounting, plus the monitor loop that evaluates exit rules.
+// Trading engine: prepare → (paper fill | signature → submit → confirm) →
+// accounting, plus the monitor loop that evaluates exit rules.
+//
+// Live transactions are signed either by the user's browser wallet (each
+// trade approved in the dashboard) or by the bot wallet (unattended). Either
+// way the transaction is decoded against the allowlist and simulated before
+// anything is signed, and the signed bytes must match what was verified.
 // On any uncertainty (unknown transaction outcome, repeated data failures)
-// it pauses trading and raises an alert rather than guessing.
+// the engine pauses trading and raises an alert rather than guessing.
 import { createHash, randomUUID } from 'node:crypto';
 import bs58 from 'bs58';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-import { PublicKey, SendTransactionError, VersionedTransaction, type Connection } from '@solana/web3.js';
+import { PublicKey, SendTransactionError, SystemProgram, TransactionMessage, VersionedTransaction, type Connection } from '@solana/web3.js';
 import type { Alerts } from '../alerts.js';
 import type { AuditLog } from '../audit.js';
 import { env } from '../env.js';
 import { NoRouteError, type Quote, type SwapProvider } from '../market/types.js';
 import type { Researcher } from '../research/index.js';
 import type { State, Store } from '../store.js';
-import type { Fill, IntentSummary, Mode, Position, PrepareRequest, Proposal, ResearchReport, TradeIntent, TradeReason } from '../../shared/types.js';
+import type { BotWallet } from '../wallet/botWallet.js';
+import type { ExitReason, Fill, IntentSummary, Mode, Position, PrepareRequest, Proposal, ResearchReport, SignerKind, TradeIntent, TradeReason } from '../../shared/types.js';
 import { WSOL_MINT } from '../../shared/types.js';
-import { applySell, big, openPosition, realizedOnUtcDay, remainingTakeProfitRaw, unrealizedLamports } from './accounting.js';
+import { applySell, big, openPosition, planTakeProfit, realizedOnUtcDay, skipLevel, unrealizedLamports } from './accounting.js';
 import { checkTrade } from './risk.js';
-import { evaluateRules, multipleOfEntry, takeProfitTriggered, type SellQuote } from './rules.js';
+import { evaluateRules, levelLabel, multipleOfEntry, takeProfitTriggered, type RuleDecision, type SellQuote } from './rules.js';
 import { fetchLookupTables, simulateSwap } from './simulate.js';
 import { verifyTransaction } from './txverify.js';
 
@@ -31,12 +36,17 @@ export class TradeRejected extends Error {
 
 const BASE_FEE = 5_000n;
 const ATA_RENT = 2_039_280n;
+/** Rent-exempt minimum of an empty system account; a transfer may not leave a balance between 0 and this. */
+const RENT_EXEMPT_MIN = 890_880n;
 
 export function parseSol(s: string): bigint {
   if (!/^\d+(\.\d{1,9})?$/.test(s.trim())) throw new TradeRejected('Amount must be a decimal SOL amount with at most 9 decimals.');
   const [w, f = ''] = s.trim().split('.');
   return BigInt(w!) * 1_000_000_000n + BigInt(f.padEnd(9, '0'));
 }
+
+const fmtSol = (l: bigint | string): string => `${(Number(l) / 1e9).toFixed(4)} SOL`;
+const ruleName = (r: TradeReason): string => r.replace('_', '-');
 
 export class Engine {
   private monitorFailures = 0;
@@ -50,10 +60,22 @@ export class Engine {
     readonly provider: SwapProvider,
     private readonly researcher: Researcher,
     private readonly conn: Connection,
+    private readonly botWallet: BotWallet,
   ) {}
 
   get s(): State {
     return this.store.state;
+  }
+
+  /** Who signs live trades right now. */
+  signer(): SignerKind | null {
+    return this.s.mode === 'live' ? (this.s.live?.signer ?? 'browser') : null;
+  }
+
+  /** The autopilot may act: switched on, not paused, and able to sign without a person (paper, or live with the bot wallet). */
+  autopilotActive(): boolean {
+    if (!this.s.settings.autopilot.enabled || this.s.paused) return false;
+    return this.s.mode === 'paper' || (this.signer() === 'bot' && this.botWallet.isUnlocked());
   }
 
   // ------------------------------------------------------------ pause
@@ -136,7 +158,7 @@ export class Engine {
     return mode === 'paper' ? { network: BASE_FEE, priority: BigInt(this.s.settings.paper.priorityFeeLamports) } : { network: BASE_FEE, priority: BigInt(this.s.settings.priorityFeeMaxLamports) };
   }
 
-  private async balance(mode: Mode, wallet: string | null): Promise<bigint | null> {
+  async balance(mode: Mode, wallet: string | null): Promise<bigint | null> {
     if (mode === 'paper') return big(this.s.paperBalanceLamports);
     if (!wallet) return null;
     try {
@@ -146,13 +168,36 @@ export class Engine {
     }
   }
 
+  /**
+   * Limits that would block any buy of this size right now, checked without a
+   * quote or research so the autopilot does not spend RPC calls when it could
+   * not buy anyway. prepare() still runs the full check.
+   */
+  async buyBlockers(amountLamports: bigint): Promise<string[]> {
+    const mode = this.s.mode;
+    const L = this.s.settings.limits;
+    const out: string[] = [];
+    const open = this.openPositions(mode);
+    if (open.length >= L.maxOpenPositions) out.push(`${open.length} of ${L.maxOpenPositions} positions open`);
+    const exposure = open.reduce((a, p) => a + big(p.costBasisLamports), 0n);
+    if (exposure + amountLamports > BigInt(Math.round(L.maxTotalExposureSol * 1e9))) out.push(`exposure ${fmtSol(exposure)} of ${L.maxTotalExposureSol} SOL limit in use`);
+    const pnl = this.realizedToday(mode, new Date()) + this.unrealizedLoss(mode);
+    if (pnl < 0n && -pnl >= BigInt(Math.round(L.dailyLossLimitSol * 1e9))) out.push('daily loss limit reached');
+    const wallet = mode === 'live' ? (this.s.live?.wallet ?? null) : null;
+    const bal = await this.balance(mode, wallet);
+    const fees = this.estFees(mode);
+    if (bal !== null && bal < amountLamports + fees.network + fees.priority + ATA_RENT + BigInt(Math.round(L.minSolReserve * 1e9))) out.push(`wallet balance ${fmtSol(bal)} too low`);
+    return out;
+  }
+
   // ------------------------------------------------------------ prepare
 
   async prepare(req: PrepareRequest, opts: { automated?: boolean; ruleAppliesAfterTakeProfit?: boolean } = {}): Promise<TradeIntent> {
     const mode = this.s.mode;
     const now = new Date();
     if (this.s.paused) throw new TradeRejected('Trading is paused.', ['Trading is paused (emergency pause is on).']);
-    const wallet = mode === 'live' ? (req.wallet ?? null) : null;
+    // With the bot wallet signing, trades are always for the bot wallet, whatever the request says.
+    const wallet = mode === 'live' ? (this.signer() === 'bot' ? this.botWallet.publicKey() : (req.wallet ?? null)) : null;
     const reason: TradeReason = req.reason ?? 'manual';
 
     let position: Position | null = null;
@@ -221,9 +266,10 @@ export class Engine {
       acknowledgeLocked: !!req.acknowledgeLocked,
       automated: !!opts.automated,
       ruleAppliesAfterTakeProfit: !!opts.ruleAppliesAfterTakeProfit,
+      autopilotEnabled: this.autopilotActive(),
       wallet,
+      liveWallet: this.s.live?.wallet ?? null,
     });
-    if (req.side === 'sell') risk.violations = risk.violations.filter((v) => !v.startsWith('Wallet balance unknown'));
     if (quoteErr) risk.violations.push(quoteErr);
     if (risk.violations.length) {
       this.audit.append('trade.rejected', { mode, req, violations: risk.violations });
@@ -302,7 +348,7 @@ export class Engine {
         if (p) p.status = 'done';
       }
     });
-    this.audit.append('trade.prepared', { intentId: intent.id, mode, reason, wallet, summary: { ...summary, instructions: summary.instructions.map((i) => i.name) }, quote: q.summary, researchVerdict: research?.verdict, researchReasons: research?.verdictReasons });
+    this.audit.append('trade.prepared', { intentId: intent.id, mode, reason, wallet, signer: this.signer(), summary: { ...summary, instructions: summary.instructions.map((i) => i.name) }, quote: q.summary, researchVerdict: research?.verdict, researchReasons: research?.verdictReasons });
     return intent;
   }
 
@@ -338,6 +384,7 @@ export class Engine {
       acknowledgeLocked: !!intent.request.acknowledgeLocked || intent.reason !== 'manual',
       automated: false,
       wallet: intent.wallet,
+      liveWallet: this.s.live?.wallet ?? null,
     });
     const violations = r.violations.filter((v) => !v.startsWith('Wallet balance unknown') && !v.startsWith('Research report is stale'));
     if (violations.length) throw new TradeRejected('Trade no longer passes risk checks.', violations);
@@ -386,7 +433,10 @@ export class Engine {
   private recordFill(intent: TradeIntent, fill: Fill): Position {
     const S = intent.summary;
     const tp = this.s.settings.takeProfit;
+    if (intent.request.tpLevel !== undefined) fill.tpLevel = intent.request.tpLevel;
+    if (intent.request.tpTargetRaw !== undefined) fill.tpTargetRaw = intent.request.tpTargetRaw;
     let result!: Position;
+    let before: Position | undefined;
     this.store.update((s) => {
       if (S.side === 'buy') {
         result = openPosition({ id: randomUUID(), mint: S.mint, symbol: S.symbol, decimals: S.decimals, wallet: intent.wallet }, fill, tp);
@@ -394,7 +444,8 @@ export class Engine {
         if (intent.mode === 'paper') s.paperBalanceLamports = (big(s.paperBalanceLamports) - big(fill.inputRaw) - big(fill.networkFeeLamports) - big(fill.priorityFeeLamports) - big(fill.rentLamports)).toString();
       } else {
         const idx = s.positions.findIndex((p) => p.id === intent.positionId);
-        const { position, fill: f } = applySell(s.positions[idx]!, fill);
+        before = s.positions[idx]!;
+        const { position, fill: f } = applySell(before, fill);
         s.positions[idx] = position;
         result = position;
         fill.realizedPnlLamports = f.realizedPnlLamports;
@@ -403,9 +454,25 @@ export class Engine {
       intent.status = 'confirmed';
     });
     this.audit.append('trade.filled', { intentId: intent.id, positionId: result.id, mode: intent.mode, fill, takeProfit: result.takeProfit, locked: result.locked });
-    if (result.takeProfit.state === 'done' && fill.reason === 'take_profit')
-      this.alerts.raise('info', `Take-profit completed for ${result.symbol}: sold ${result.takeProfit.soldRaw} raw units. Position is now locked — no further automatic trades.`);
+    this.notifyFill(intent, fill, result, before);
     return result;
+  }
+
+  /** Tell the user about trades they did not click themselves (dashboard alert + webhook/Telegram). */
+  private notifyFill(intent: TradeIntent, fill: Fill, p: Position, before?: Position): void {
+    if (fill.reason === 'manual') return;
+    const tag = intent.mode === 'paper' ? '[PAPER] ' : '';
+    const amt = (raw: string) => (Number(raw) / 10 ** p.decimals).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    if (fill.side === 'buy') {
+      this.alerts.raise('info', `${tag}Autopilot bought ${amt(fill.outputRaw)} ${p.symbol} for ${fmtSol(fill.inputRaw)}.`);
+      return;
+    }
+    const lvl = fill.tpLevel !== undefined ? p.takeProfit.levels[fill.tpLevel] : undefined;
+    const what = fill.reason === 'take_profit' && lvl ? `Take-profit level ${fill.tpLevel! + 1} (${levelLabel(lvl)})` : ruleName(fill.reason);
+    const pnl = big(fill.realizedPnlLamports ?? '0');
+    let msg = `${tag}${what}: sold ${amt(fill.inputRaw)} ${p.symbol} for ${fmtSol(fill.outputRaw)} (realized ${pnl >= 0n ? '+' : ''}${fmtSol(pnl)}).`;
+    if (p.locked && !before?.locked) msg += ` Ladder finished — ${amt(p.heldTokenRaw)} ${p.symbol} left riding as the moon bag.`;
+    this.alerts.raise('info', msg);
   }
 
   cancel(id: string): void {
@@ -418,6 +485,18 @@ export class Engine {
 
   // ------------------------------------------------------------ live
 
+  /** Sign a prepared (verified + simulated) live trade with the bot wallet and send it. */
+  async executeWithBot(id: string): Promise<{ intent: TradeIntent; position?: Position }> {
+    const intent = this.s.intents.find((i) => i.id === id);
+    if (!intent) throw new TradeRejected('Unknown trade.');
+    if (this.signer() !== 'bot') throw new TradeRejected('Live trading is not using the bot wallet.');
+    if (!this.botWallet.isUnlocked()) throw new TradeRejected('The bot wallet is locked. Unlock it in the Bot wallet tab.');
+    if (!intent.txBase64 || intent.wallet !== this.botWallet.publicKey()) throw new TradeRejected('This trade was not prepared for the bot wallet.');
+    this.assertConfirmable(intent, 'live');
+    const tx = this.botWallet.sign(VersionedTransaction.deserialize(Buffer.from(intent.txBase64, 'base64')));
+    return this.submitSigned(id, Buffer.from(tx.serialize()).toString('base64'));
+  }
+
   async submitSigned(id: string, signedTxBase64: string): Promise<{ intent: TradeIntent; position?: Position }> {
     const intent = this.assertConfirmable(this.s.intents.find((i) => i.id === id), 'live');
     const tx = VersionedTransaction.deserialize(Buffer.from(signedTxBase64, 'base64'));
@@ -428,7 +507,7 @@ export class Engine {
         intent.error = 'signed transaction differs from the reviewed transaction';
       });
       this.audit.append('trade.tampered', { intentId: id });
-      this.alerts.raise('error', 'The signed transaction differs from the one you reviewed (your wallet or an extension modified it). It was NOT sent.');
+      this.alerts.raise('error', 'The signed transaction differs from the one that was verified (a wallet or extension modified it). It was NOT sent.');
       throw new TradeRejected('Signed transaction does not match the reviewed transaction; not sent.');
     }
     const sigBytes = tx.signatures[0];
@@ -590,7 +669,8 @@ export class Engine {
       if (!open.length) return;
       let failures = 0;
       const estFee = BASE_FEE + this.estFees(this.s.mode).priority;
-      for (const p of open) {
+      for (const p0 of open) {
+        let p = p0;
         let full: (SellQuote & { summary: Quote['summary'] }) | null = null;
         try {
           full = await this.sellQuote(p.mint, big(p.heldTokenRaw));
@@ -613,18 +693,30 @@ export class Engine {
         if (this.s.intents.some((i) => i.positionId === p.id && (i.status === 'pending' || i.status === 'submitted' || i.status === 'unknown'))) continue;
         if (this.s.proposals.some((x) => x.positionId === p.id && x.status === 'open')) continue;
 
-        const rem = remainingTakeProfitRaw(p);
+        // Ladder levels with nothing to sell (cost already recovered, only the moon bag left) are skipped.
+        let plan = planTakeProfit(p);
+        while (plan && plan.amountRaw === 0n) {
+          const skipped = skipLevel(p, plan.index, new Date().toISOString());
+          this.store.update((s) => {
+            const i = s.positions.findIndex((x) => x.id === p.id);
+            if (i >= 0) s.positions[i] = skipped;
+          });
+          this.audit.append('rule.level_skipped', { positionId: p.id, level: plan.index + 1 });
+          p = skipped;
+          plan = planTakeProfit(p);
+        }
+
         let tpQuote: SellQuote | null = null;
-        if (rem > 0n && !p.locked) {
+        if (plan && plan.amountRaw !== null && plan.amountRaw > 0n) {
           try {
-            tpQuote = rem === full.inRaw ? full : await this.sellQuote(p.mint, rem);
+            tpQuote = plan.amountRaw === full.inRaw ? full : await this.sellQuote(p.mint, plan.amountRaw);
           } catch {
             failures++;
           }
         }
-        const d = evaluateRules(p, { now: new Date(), mode: p.mode, settings: this.s.settings, estSellFeeLamports: estFee, takeProfitQuote: tpQuote, fullQuote: full });
+        const d = evaluateRules(p, { now: new Date(), mode: p.mode, settings: this.s.settings, estSellFeeLamports: estFee, takeProfitQuote: tpQuote, fullQuote: full, autopilotActive: this.autopilotActive() });
         if (d.action !== 'sell') continue;
-        await this.actOnRule(p, d.rule, d.amountRaw, d.requiresApproval, d.detail, estFee);
+        await this.actOnRule(p, d, estFee);
       }
       // Market data outages: stop trading after repeated failures.
       if (failures > 0 && failures >= open.length) this.monitorFailures++;
@@ -636,7 +728,8 @@ export class Engine {
   }
 
   /** Respect the price-impact limit by selling in smaller chunks (a partial fill of the rule's target). */
-  private async actOnRule(p: Position, rule: Exclude<TradeReason, 'manual'>, amount: bigint, requiresApproval: boolean, detail: string, estFee: bigint): Promise<void> {
+  private async actOnRule(p: Position, d: Extract<RuleDecision, { action: 'sell' }>, estFee: bigint): Promise<void> {
+    const { rule, amountRaw: amount, requiresApproval, detail } = d;
     const maxImpact = this.s.settings.limits.maxPriceImpactPct;
     let chunk = amount;
     let q = await this.sellQuote(p.mint, chunk);
@@ -646,24 +739,30 @@ export class Engine {
       q = await this.sellQuote(p.mint, chunk);
     }
     if (chunk === 0n || q.priceImpactPct > maxImpact) {
-      this.alerts.raise('warn', `${rule} triggered for ${p.symbol} but even a 1/16 chunk exceeds the ${maxImpact}% price-impact limit. Not trading.`);
+      this.alerts.raise('warn', `${ruleName(rule)} triggered for ${p.symbol} but even a 1/16 chunk exceeds the ${maxImpact}% price-impact limit. Not trading.`);
       return;
     }
-    if (rule === 'take_profit' && !takeProfitTriggered(p, q, { settings: this.s.settings, estSellFeeLamports: estFee })) return;
+    if (rule === 'take_profit') {
+      const lvl = d.tpLevel !== undefined ? p.takeProfit.levels[d.tpLevel] : undefined;
+      if (!lvl || !takeProfitTriggered(p, q, { settings: this.s.settings, estSellFeeLamports: estFee }, lvl.multiple)) return;
+    }
     const partial = chunk < amount ? ` Selling a ${chunk}/${amount} chunk to stay within the price-impact limit; the rest is retried next cycle.` : '';
     const ruleCfg = rule === 'stop_loss' ? this.s.settings.stopLoss : rule === 'time_exit' ? this.s.settings.timeExit : null;
+    const tp = d.tpLevel !== undefined ? { tpLevel: d.tpLevel, tpTargetRaw: (d.tpTargetRaw ?? amount).toString() } : {};
 
-    if (!requiresApproval && p.mode === 'paper') {
+    const canSignUnattended = p.mode === 'paper' || (this.signer() === 'bot' && this.botWallet.isUnlocked());
+    if (!requiresApproval && canSignUnattended) {
       try {
         const intent = await this.prepare(
-          { side: 'sell', positionId: p.id, amountRaw: chunk.toString(), slippageBps: this.s.settings.limits.maxSlippageBps, reason: rule },
+          { side: 'sell', positionId: p.id, amountRaw: chunk.toString(), slippageBps: this.s.settings.limits.maxSlippageBps, reason: rule, ...tp },
           { automated: true, ruleAppliesAfterTakeProfit: ruleCfg?.applyAfterTakeProfit ?? false },
         );
-        this.confirmPaper(intent.id);
+        if (p.mode === 'paper') this.confirmPaper(intent.id);
+        else await this.executeWithBot(intent.id);
         this.audit.append('rule.executed', { positionId: p.id, rule, amountRaw: chunk.toString(), detail: detail + partial });
       } catch (e) {
         const v = e instanceof TradeRejected ? e.violations.join('; ') : '';
-        this.alerts.raise('warn', `${rule} for ${p.symbol} could not execute: ${(e as Error).message} ${v}`);
+        this.alerts.raise('warn', `${ruleName(rule)} for ${p.symbol} could not execute: ${(e as Error).message} ${v}`);
       }
       return;
     }
@@ -673,13 +772,14 @@ export class Engine {
       positionId: p.id,
       rule,
       amountRaw: chunk.toString(),
+      ...tp,
       detail: detail + partial,
       autoExecute: !requiresApproval,
       status: 'open',
     };
     this.store.update((s) => s.proposals.push(proposal));
     this.audit.append('rule.proposed', proposal);
-    this.alerts.raise('info', `${rule.replace('_', '-')} triggered for ${p.symbol}: ${proposal.detail} ${proposal.autoExecute ? 'Your wallet will ask you to sign when the dashboard is open.' : 'Review and approve it in the dashboard.'}`);
+    this.alerts.raise('info', `${ruleName(rule)} triggered for ${p.symbol}: ${proposal.detail} ${proposal.autoExecute ? 'Your wallet will ask you to sign when the dashboard is open.' : 'Review and approve it in the dashboard.'}`);
   }
 
   dismissProposal(id: string): void {
@@ -690,36 +790,59 @@ export class Engine {
     this.audit.append('rule.dismissed', { proposalId: id });
   }
 
-  // ------------------------------------------------------------ live mode
+  // ------------------------------------------------------------ wallets & live mode
 
-  bindWallet(wallet: string | null): void {
-    if (this.s.mode === 'live') throw new TradeRejected('Disable live mode before changing the bound wallet.');
+  /** Your own wallet: allowed for browser-signed live trading, and the only withdrawal destination. */
+  bindWallet(wallet: string | null, passphrase?: string): void {
+    if (this.s.mode === 'live') throw new TradeRejected('Disable live mode before changing your wallet.');
     if (wallet) new PublicKey(wallet);
+    if (wallet && wallet === this.botWallet.publicKey()) throw new TradeRejected('That is the bot wallet itself; bind your own wallet.');
+    // The bound wallet receives withdrawals, so changing it requires the bot wallet passphrase.
+    if (this.botWallet.exists()) {
+      if (!passphrase) throw new TradeRejected('Enter the bot wallet passphrase to change your wallet (it is where withdrawals go).');
+      this.botWallet.decrypt(passphrase);
+    }
     this.store.update((s) => (s.settings.boundWallet = wallet));
     this.audit.append('wallet.bound', { wallet });
   }
 
-  async armLive(wallet: string, phrase: string): Promise<{ warnings: string[] }> {
+  async armLive(signer: SignerKind, connectedWallet: string | null, phrase: string): Promise<{ warnings: string[] }> {
     const problems: string[] = [];
     if (!env.liveTradingAllowed) problems.push('LIVE_TRADING_ALLOWED is not set to true in the server environment.');
     if (this.provider.mock) problems.push('MARKET_DATA=mock cannot be used for live trading.');
     if (this.s.paused) problems.push('Resume from the emergency pause first.');
-    if (!this.s.settings.boundWallet) problems.push('Bind a wallet (ideally a low-balance test wallet) first.');
-    else if (this.s.settings.boundWallet !== wallet) problems.push('Connected wallet is not the bound wallet.');
     if (phrase !== 'ENABLE LIVE TRADING') problems.push('Confirmation phrase does not match.');
+    let wallet: string | null = null;
+    if (signer === 'browser') {
+      if (!this.s.settings.boundWallet) problems.push('Bind your wallet (ideally a low-balance test wallet) first.');
+      else if (this.s.settings.boundWallet !== connectedWallet) problems.push('Connected wallet is not your bound wallet.');
+      wallet = connectedWallet;
+    } else {
+      if (!this.botWallet.exists()) problems.push('Create the bot wallet first.');
+      else if (!this.botWallet.isUnlocked()) problems.push('Unlock the bot wallet first.');
+      if (!this.s.settings.boundWallet) problems.push('Bind your own wallet first: it is the only place bot-wallet withdrawals can go.');
+      wallet = this.botWallet.publicKey();
+    }
     if (problems.length) throw new TradeRejected('Live mode not enabled.', problems);
     const warnings: string[] = [];
     const bal = await this.balance('live', wallet);
     if (bal === null) throw new TradeRejected('Could not read wallet balance (RPC problem). Live mode not enabled.');
     if (bal > BigInt(Math.round(this.s.settings.testWalletMaxBalanceSol * 1e9)))
-      warnings.push(`This wallet holds ${(Number(bal) / 1e9).toFixed(3)} SOL, above your ${this.s.settings.testWalletMaxBalanceSol} SOL test-wallet threshold. Consider a separate low-balance wallet.`);
+      warnings.push(`This wallet holds ${(Number(bal) / 1e9).toFixed(3)} SOL, above your ${this.s.settings.testWalletMaxBalanceSol} SOL threshold. Only keep in it what you are prepared to lose.`);
     if (/api\.mainnet-beta\.solana\.com/.test(env.rpcUrl)) warnings.push('Using the public RPC endpoint, which is rate-limited; a dedicated RPC provider is recommended.');
     this.store.update((s) => {
       s.mode = 'live';
-      s.live = { armedAt: new Date().toISOString(), wallet };
+      s.live = { armedAt: new Date().toISOString(), wallet: wallet!, signer };
+      // The autopilot has to be started explicitly in live mode.
+      s.settings.autopilot.enabled = false;
     });
-    this.audit.append('live.armed', { wallet, settings: this.s.settings, warnings });
-    this.alerts.raise('warn', `LIVE trading enabled for wallet ${wallet}. Every trade still requires your wallet's signature.`);
+    this.audit.append('live.armed', { wallet, signer, settings: this.s.settings, warnings });
+    this.alerts.raise(
+      'warn',
+      signer === 'bot'
+        ? `LIVE trading enabled with the bot wallet ${wallet}. It signs its own trades — only automation you start (autopilot, rules) or trades you confirm in the dashboard.`
+        : `LIVE trading enabled for wallet ${wallet}. Every trade still requires your wallet's signature.`,
+    );
     return { warnings };
   }
 
@@ -727,8 +850,36 @@ export class Engine {
     this.store.update((s) => {
       s.mode = 'paper';
       s.live = null;
+      s.settings.autopilot.enabled = false;
       for (const i of s.intents) if (i.mode === 'live' && i.status === 'pending') i.status = 'cancelled';
     });
     this.audit.append('live.disarmed', {});
   }
+
+  /** Send SOL from the bot wallet to your bound wallet. Requires the passphrase every time. */
+  async withdraw(passphrase: string, amountSol: string | 'all'): Promise<{ signature: string; lamports: string; to: string }> {
+    if (!this.botWallet.exists()) throw new TradeRejected('There is no bot wallet.');
+    const to = this.s.settings.boundWallet;
+    if (!to) throw new TradeRejected('Bind your own wallet first: withdrawals can only go there.');
+    const kp = this.botWallet.decrypt(passphrase);
+    const balance = BigInt(await this.conn.getBalance(kp.publicKey, 'confirmed'));
+    const lamports = amountSol === 'all' ? balance - BASE_FEE : parseSol(amountSol);
+    if (lamports <= 0n) throw new TradeRejected('Nothing to withdraw.');
+    if (lamports + BASE_FEE > balance) throw new TradeRejected(`Amount plus the network fee exceeds the bot wallet balance (${fmtSol(balance)}).`);
+    const remaining = balance - lamports - BASE_FEE;
+    if (remaining > 0n && remaining < RENT_EXEMPT_MIN) throw new TradeRejected('That would leave less than the 0.00089 SOL minimum account balance. Withdraw everything, or a little less.');
+    const { blockhash, lastValidBlockHeight } = await this.conn.getLatestBlockhash('confirmed');
+    const msg = new TransactionMessage({ payerKey: kp.publicKey, recentBlockhash: blockhash, instructions: [SystemProgram.transfer({ fromPubkey: kp.publicKey, toPubkey: new PublicKey(to), lamports })] }).compileToV0Message();
+    const tx = new VersionedTransaction(msg);
+    tx.sign([kp]);
+    const signature = await this.conn.sendRawTransaction(tx.serialize(), { preflightCommitment: 'confirmed' });
+    this.audit.append('wallet.withdraw_sent', { signature, lamports: lamports.toString(), to });
+    const conf = await this.conn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+    if (conf.value.err) throw new TradeRejected(`Withdrawal failed on-chain: ${JSON.stringify(conf.value.err)}`);
+    this.audit.append('wallet.withdrawn', { signature, lamports: lamports.toString(), to });
+    this.alerts.raise('info', `Withdrew ${fmtSol(lamports)} from the bot wallet to ${to}.`);
+    return { signature, lamports: lamports.toString(), to };
+  }
 }
+
+export type { ExitReason };

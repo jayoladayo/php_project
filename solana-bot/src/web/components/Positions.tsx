@@ -49,6 +49,7 @@ export function Positions({ state, onIntent }: { state: DashboardState; onIntent
           reason: pr.rule,
           proposalId: pr.id,
           acknowledgeLocked: true,
+          ...(pr.tpLevel !== undefined ? { tpLevel: pr.tpLevel, tpTargetRaw: pr.tpTargetRaw } : {}),
         }),
         autoSign,
       );
@@ -60,12 +61,27 @@ export function Positions({ state, onIntent }: { state: DashboardState; onIntent
   return (
     <section>
       <div className="cards">
-        {state.mode === 'paper' && <Card label="Paper balance" value={sol(state.paperBalanceLamports)} />}
+        {state.mode === 'paper' && (
+          <div className="card">
+            <div className="muted small">Paper balance</div>
+            <div className="big">{sol(state.paperBalanceLamports)}</div>
+            <button
+              className="link"
+              onClick={() => window.confirm(`Reset the paper account? This deletes all paper positions and history and sets the balance back to ${state.settings.paper.startingBalanceSol} SOL. (Live positions are not touched.)`) && api('/paper/reset', {}).catch((e) => setErr({ msg: (e as Error).message, v: [] }))}
+            >
+              reset paper account
+            </button>
+          </div>
+        )}
         <Card label="Open exposure (cost basis)" value={sol(exposure)} sub={`limit ${state.settings.limits.maxTotalExposureSol} SOL`} />
         <Card label="Unrealized P&L" value={sol(unreal)} cls={pnlClass(unreal)} sub="net of est. sell fees" />
         <Card label="Realized P&L" value={sol(realized)} cls={pnlClass(realized)} sub={`today ${sol(realizedToday)} / loss limit ${state.settings.limits.dailyLossLimitSol} SOL`} />
         <Card label="Fees paid" value={sol(fees, 6)} />
-        <Card label="Take-profit rule" value={tp.enabled ? `${tp.multiple}× → sell ${tp.sellFractionPct}%` : 'off'} sub={`of original amount · basis: ${tp.entryPriceBasis === 'fill_price' ? 'fill price' : 'entry incl. fees'}`} />
+        <Card
+          label="Take-profit ladder"
+          value={tp.enabled ? tp.levels.map((l) => `${l.multiple}×`).join(' → ') : 'off'}
+          sub={tp.enabled ? `${tp.levels.map((l) => (l.sell.kind === 'recover_cost' ? 'recover stake' : l.sell.kind === 'percent_of_original' ? `${l.sell.pct}%` : 'all but bag')).join(' · ')} · moon bag ${tp.moonBagPct}%` : ''}
+        />
       </div>
 
       {err && <div className="box err">{err.msg}{err.v.length > 0 && <ul>{err.v.map((v) => <li key={v}>{v}</li>)}</ul>}</div>}
@@ -102,7 +118,7 @@ export function Positions({ state, onIntent }: { state: DashboardState; onIntent
           </thead>
           <tbody>
             {shown.map((p) => (
-              <PositionRow key={p.id} p={p} tpMultiple={tp.multiple} onSell={sell} />
+              <PositionRow key={p.id} p={p} onSell={sell} />
             ))}
           </tbody>
         </table>
@@ -126,13 +142,13 @@ export function Positions({ state, onIntent }: { state: DashboardState; onIntent
   );
 }
 
-function PositionRow({ p, tpMultiple, onSell }: { p: PositionView; tpMultiple: number; onSell: (p: PositionView, pct: number) => void }) {
+function PositionRow({ p, onSell }: { p: PositionView; onSell: (p: PositionView, pct: number) => void }) {
   const [open, setOpen] = useState(false);
   const tp = p.takeProfit;
   return (
     <>
       <tr>
-        <td><b>{p.symbol}</b><br /><span className="mono small">{short(p.mint)}</span></td>
+        <td><b>{p.symbol}</b>{p.fills[0]?.reason === 'autopilot' && <span className="badge small" title="opened by the autopilot">auto</span>}<br /><span className="mono small">{short(p.mint)}</span></td>
         <td>{tokens(p.heldTokenRaw, p.decimals)}<br /><span className="muted small">of {tokens(p.originalTokenRaw, p.decimals)}</span></td>
         <td>{price(p.view.entryPriceFill)}<br /><span className="muted small">{price(p.view.entryPriceEffective)}</span></td>
         <td>{sol(p.costBasisLamports)}</td>
@@ -140,10 +156,15 @@ function PositionRow({ p, tpMultiple, onSell }: { p: PositionView; tpMultiple: n
         <td className={pnlClass(p.view.unrealizedLamports)}>{sol(p.view.unrealizedLamports)}</td>
         <td className={pnlClass(p.realizedPnlLamports)}>{sol(p.realizedPnlLamports)}</td>
         <td>{p.mark?.multipleOfEntry != null ? `${p.mark.multipleOfEntry.toFixed(2)}×` : '—'}</td>
-        <td>
-          {tp.state === 'done' ? <span className="badge locked">done · locked</span> : tp.state === 'partial' ? <span className="badge warnb">partial</span> : <span className="badge">waiting</span>}
-          <br />
-          <span className="small">target {tpMultiple}× = {price(p.view.takeProfitPrice)} SOL; sold {tokens(tp.soldRaw, p.decimals)} / {tokens(tp.targetRaw, p.decimals)}</span>
+        <td className="small">
+          {p.view.levels.length === 0 && <span className="muted">no ladder</span>}
+          {p.view.levels.map((l, i) => (
+            <div key={i} title={`trigger price ${price(l.triggerPrice)} SOL`}>
+              <span className={`lvl ${l.state}`}>{l.state === 'done' ? '✓' : l.state === 'partial' ? '◐' : l.state === 'skipped' ? '–' : '○'}</span> {l.label}
+              {l.state !== 'pending' && <span className="muted"> · sold {tokens(l.soldRaw, p.decimals)}{l.targetRaw ? ` / ${tokens(l.targetRaw, p.decimals)}` : ''}</span>}
+            </div>
+          ))}
+          {tp.moonBagRaw !== '0' && <div className="muted">moon bag {tokens(tp.moonBagRaw, p.decimals)}{p.locked && ' · riding (locked)'}</div>}
         </td>
         <td>
           {p.status === 'open' && (

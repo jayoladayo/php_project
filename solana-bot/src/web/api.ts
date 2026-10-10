@@ -1,10 +1,10 @@
-import type { Alert, Mark, Mode, Position, Proposal, ResearchReport, Settings, TradeIntent } from '../shared/types.js';
+import type { Alert, AutopilotLogEntry, Mark, Mode, Position, Proposal, ResearchReport, Settings, SignerKind, TakeProfitLevelState, TradeIntent } from '../shared/types.js';
 
 export interface PositionView extends Position {
   view: {
     entryPriceEffective: number;
     entryPriceFill: number;
-    takeProfitPrice: number;
+    levels: Array<{ label: string; triggerPrice: number; state: TakeProfitLevelState['state']; targetRaw: string | null; soldRaw: string }>;
     unrealizedLamports: string | null;
     fills: Array<{ id: string; slippageBps: number; fillRatio: number }>;
   };
@@ -15,13 +15,24 @@ export interface DashboardState {
   mode: Mode;
   paused: boolean;
   pauseReason: string | null;
-  live: { armedAt: string; wallet: string } | null;
+  live: { armedAt: string; wallet: string; signer: SignerKind } | null;
   settings: Settings;
   positions: PositionView[];
   intents: Omit<TradeIntent, 'txBase64'>[];
   proposals: Proposal[];
   alerts: Alert[];
   paperBalanceLamports: string;
+  botWallet: { exists: boolean; publicKey: string | null; unlocked: boolean };
+  autopilot: {
+    enabled: boolean;
+    active: boolean;
+    lastScanAt: string | null;
+    lastScanCandidates: number;
+    consecutiveErrors: number;
+    buysToday: number;
+    startProblems: string[];
+    log: AutopilotLogEntry[];
+  };
   env: {
     marketData: 'live' | 'mock';
     provider: string;
@@ -30,6 +41,8 @@ export interface DashboardState {
     publicRpc: boolean;
     socialEnabled: boolean;
     rugcheckEnabled: boolean;
+    notifications: string[];
+    resumeLiveAfterRestart: boolean;
     mockTokens: Array<{ mint: string; symbol: string; name: string }>;
   };
 }

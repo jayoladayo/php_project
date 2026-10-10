@@ -1,10 +1,12 @@
 // Pure position accounting. All amounts are integers (lamports / token base
 // units) handled as bigint; nothing here does I/O.
-import type { Fill, Position, TakeProfitRule } from '../../shared/types.js';
+import type { Fill, Position, TakeProfitLevelState, TakeProfitRule, TakeProfitState } from '../../shared/types.js';
 
 const BPS = 10_000n;
 
 export const big = (s: string | number | bigint): bigint => BigInt(s);
+const min = (a: bigint, b: bigint): bigint => (a < b ? a : b);
+const max0 = (a: bigint): bigint => (a > 0n ? a : 0n);
 
 export function pctToBps(pct: number): bigint {
   if (!Number.isFinite(pct) || pct < 0 || pct > 100) throw new Error(`invalid percent ${pct}`);
@@ -28,8 +30,16 @@ export interface OpenPositionMeta {
   wallet: string | null;
 }
 
-/** Create a position (lot) from a confirmed buy fill. */
-export function openPosition(meta: OpenPositionMeta, buy: Fill, tp: Pick<TakeProfitRule, 'sellFractionPct'>): Position {
+/** pending: nothing sold · partial: some levels finished · done: every level finished or skipped. */
+export function ladderState(levels: TakeProfitLevelState[]): TakeProfitState['state'] {
+  if (levels.length === 0) return 'pending';
+  if (levels.every((l) => l.state === 'done' || l.state === 'skipped')) return 'done';
+  if (levels.some((l) => l.state !== 'pending')) return 'partial';
+  return 'pending';
+}
+
+/** Create a position (lot) from a confirmed buy fill, snapshotting the take-profit ladder. */
+export function openPosition(meta: OpenPositionMeta, buy: Fill, tp: Pick<TakeProfitRule, 'enabled' | 'levels' | 'moonBagPct'>): Position {
   if (buy.side !== 'buy') throw new Error('openPosition requires a buy fill');
   const received = big(buy.outputRaw);
   const swapped = big(buy.inputRaw);
@@ -37,6 +47,15 @@ export function openPosition(meta: OpenPositionMeta, buy: Fill, tp: Pick<TakePro
   if (swapped <= 0n) throw new Error('buy fill spent nothing');
   const fees = fillFeesLamports(buy);
   const cost = swapped + fees;
+  const levels: TakeProfitLevelState[] = (tp.enabled ? [...tp.levels] : [])
+    .sort((a, b) => a.multiple - b.multiple)
+    .map((l) => ({
+      multiple: l.multiple,
+      sell: { ...l.sell },
+      state: 'pending',
+      targetRaw: l.sell.kind === 'percent_of_original' ? ((received * pctToBps(l.sell.pct)) / BPS).toString() : null,
+      soldRaw: '0',
+    }));
   return {
     id: meta.id,
     mint: meta.mint,
@@ -56,12 +75,96 @@ export function openPosition(meta: OpenPositionMeta, buy: Fill, tp: Pick<TakePro
     rentDepositLamports: big(buy.rentLamports).toString(),
     takeProfit: {
       state: 'pending',
-      targetRaw: ((received * pctToBps(tp.sellFractionPct)) / BPS).toString(),
+      levels,
+      moonBagRaw: tp.enabled ? ((received * pctToBps(tp.moonBagPct)) / BPS).toString() : '0',
       soldRaw: '0',
     },
     locked: false,
     fills: [buy],
   };
+}
+
+/** Tokens automatic rules may sell: everything held except the moon bag. */
+export function sellableRaw(position: Position): bigint {
+  return max0(big(position.heldTokenRaw) - big(position.takeProfit.moonBagRaw));
+}
+
+/** SOL returned so far by sells of this position, net of their fees. */
+export function proceedsLamports(position: Position): bigint {
+  return position.fills.filter((f) => f.side === 'sell').reduce((a, f) => a + big(f.outputRaw) - fillFeesLamports(f), 0n);
+}
+
+/** SOL still needed to have recovered everything put into the position (entry incl. fees). */
+export function costStillToRecover(position: Position): bigint {
+  return max0(big(position.entryCostLamports) - proceedsLamports(position));
+}
+
+/** Index of the next ladder level to work on, or -1. */
+export function nextLevelIndex(position: Position): number {
+  return position.takeProfit.levels.findIndex((l) => l.state === 'pending' || l.state === 'partial');
+}
+
+export interface TakeProfitPlan {
+  index: number;
+  /**
+   * Tokens to sell for this level. null = depends on the price (a recover-cost
+   * level that has not triggered yet; see recoverCostAmount). 0 = nothing to
+   * sell, the level should be skipped.
+   */
+  amountRaw: bigint | null;
+}
+
+export function planTakeProfit(position: Position): TakeProfitPlan | null {
+  if (position.locked || position.status !== 'open') return null;
+  const index = nextLevelIndex(position);
+  if (index < 0) return null;
+  const lvl = position.takeProfit.levels[index]!;
+  const sellable = sellableRaw(position);
+  if (sellable === 0n) return { index, amountRaw: 0n };
+  if (lvl.targetRaw !== null) return { index, amountRaw: min(max0(big(lvl.targetRaw) - big(lvl.soldRaw)), sellable) };
+  if (lvl.sell.kind === 'all_except_moon_bag') return { index, amountRaw: sellable };
+  // recover_cost before its first sell
+  return { index, amountRaw: costStillToRecover(position) === 0n ? 0n : null };
+}
+
+/**
+ * Tokens to sell so that proceeds (after the estimated fee) cover the cost
+ * still to recover even if the fill comes in at the worst price the slippage
+ * tolerance allows. Priced from a quote for a LARGER amount (the whole
+ * holding); smaller sells have less price impact, so this errs on the side of
+ * recovering at least the cost. Capped at what may be sold.
+ *   q × out × (1 − slip) / in − fee ≥ needed   ⇒   q = ceil((needed + fee) × in × 10⁴ / (out × (10⁴ − slipBps)))
+ */
+export function recoverCostAmount(position: Position, q: { inRaw: bigint; outLamports: bigint }, estFeeLamports: bigint, slippageBps = 0): bigint {
+  const needed = costStillToRecover(position);
+  if (needed === 0n || q.outLamports <= 0n || q.inRaw <= 0n) return 0n;
+  const den = q.outLamports * (BPS - BigInt(slippageBps));
+  if (den <= 0n) return 0n;
+  const num = (needed + estFeeLamports) * q.inRaw * BPS;
+  const amount = (num + den - 1n) / den;
+  return min(amount, sellableRaw(position));
+}
+
+/** Mark levels that can no longer sell anything as skipped/done and lock the position when the ladder is finished. */
+function settleLadder(position: Position, at: string): Position {
+  const tp = position.takeProfit;
+  const levels = tp.levels.map((l) => ({ ...l }));
+  if (sellableRaw(position) === 0n) {
+    for (const l of levels) {
+      if (l.state === 'pending' || l.state === 'partial') {
+        l.state = big(l.soldRaw) > 0n ? 'done' : 'skipped';
+        l.completedAt = at;
+      }
+    }
+  }
+  const state = ladderState(levels);
+  return { ...position, takeProfit: { ...tp, levels, state }, locked: position.locked || (levels.length > 0 && state === 'done') };
+}
+
+/** Skip a ladder level that has nothing to sell (e.g. cost already recovered). */
+export function skipLevel(position: Position, index: number, at: string): Position {
+  const levels = position.takeProfit.levels.map((l, i) => (i === index && (l.state === 'pending' || l.state === 'partial') ? { ...l, state: big(l.soldRaw) > 0n ? ('done' as const) : ('skipped' as const), completedAt: at } : l));
+  return settleLadder({ ...position, takeProfit: { ...position.takeProfit, levels } }, at);
 }
 
 /**
@@ -85,46 +188,38 @@ export function applySell(position: Position, sell: Fill): { position: Position;
   const realized = proceeds - allocated;
 
   const fill: Fill = { ...sell, realizedPnlLamports: realized.toString() };
-  const next: Position = {
+  let next: Position = {
     ...position,
     heldTokenRaw: (held - sold).toString(),
     costBasisLamports: (basis - allocated).toString(),
     realizedPnlLamports: (big(position.realizedPnlLamports) + realized).toString(),
     feesPaidLamports: (big(position.feesPaidLamports) + fees).toString(),
     rentDepositLamports: (big(position.rentDepositLamports) + big(sell.rentLamports)).toString(),
-    takeProfit: { ...position.takeProfit },
+    takeProfit: { ...position.takeProfit, levels: position.takeProfit.levels.map((l) => ({ ...l })) },
     fills: [...position.fills, fill],
   };
 
-  if (sell.reason === 'take_profit') {
-    const tpSold = big(position.takeProfit.soldRaw) + sold;
-    const target = big(position.takeProfit.targetRaw);
-    next.takeProfit.soldRaw = tpSold.toString();
-    next.takeProfit.triggeredAt ??= sell.at;
-    // Done when the target is reached, or when nothing is left to sell.
-    if (tpSold >= target || held - sold === 0n) {
-      next.takeProfit.state = 'done';
-      next.takeProfit.completedAt = sell.at;
-      next.locked = true;
-    } else {
-      next.takeProfit.state = 'partial';
+  if (sell.reason === 'take_profit' && next.takeProfit.levels.length) {
+    const idx = sell.tpLevel !== undefined && next.takeProfit.levels[sell.tpLevel] ? sell.tpLevel : nextLevelIndex(position);
+    const lvl = next.takeProfit.levels[idx];
+    if (lvl) {
+      if (lvl.targetRaw === null) lvl.targetRaw = sell.tpTargetRaw ?? sold.toString();
+      lvl.soldRaw = (big(lvl.soldRaw) + sold).toString();
+      lvl.triggeredAt ??= sell.at;
+      if (big(lvl.soldRaw) >= big(lvl.targetRaw)) {
+        lvl.state = 'done';
+        lvl.completedAt = sell.at;
+      } else lvl.state = 'partial';
     }
+    next.takeProfit.soldRaw = (big(next.takeProfit.soldRaw) + sold).toString();
   }
+  next = settleLadder(next, sell.at);
 
   if (held - sold === 0n) {
     next.status = 'closed';
     next.closedAt = sell.at;
   }
   return { position: next, fill };
-}
-
-/** Remaining token amount the take-profit rule may still sell for this position. */
-export function remainingTakeProfitRaw(position: Position): bigint {
-  if (position.takeProfit.state === 'done') return 0n;
-  const remaining = big(position.takeProfit.targetRaw) - big(position.takeProfit.soldRaw);
-  const held = big(position.heldTokenRaw);
-  const r = remaining < held ? remaining : held;
-  return r > 0n ? r : 0n;
 }
 
 /** Entry cost in lamports for the chosen basis. */
@@ -172,4 +267,26 @@ export function realizedOnUtcDay(positions: Position[], day: Date): bigint {
     }
   }
   return total;
+}
+
+/**
+ * Convert a position saved by the single-rule version (one target, no ladder)
+ * to the ladder format.
+ */
+export function migratePosition(p: Position, legacyMultiple: number): Position {
+  const tp = p.takeProfit as unknown as Partial<TakeProfitState> & { targetRaw?: string; soldRaw?: string; state?: TakeProfitState['state']; triggeredAt?: string; completedAt?: string };
+  if (Array.isArray(tp?.levels)) return p;
+  const original = big(p.originalTokenRaw);
+  const target = big(tp?.targetRaw ?? '0');
+  const pct = original > 0n ? Number((target * 10_000n) / original) / 100 : 50;
+  const level: TakeProfitLevelState = {
+    multiple: legacyMultiple,
+    sell: { kind: 'percent_of_original', pct },
+    state: tp?.state ?? 'pending',
+    targetRaw: target.toString(),
+    soldRaw: tp?.soldRaw ?? '0',
+    ...(tp?.triggeredAt ? { triggeredAt: tp.triggeredAt } : {}),
+    ...(tp?.completedAt ? { completedAt: tp.completedAt } : {}),
+  };
+  return { ...p, takeProfit: { state: tp?.state ?? 'pending', levels: [level], moonBagRaw: '0', soldRaw: tp?.soldRaw ?? '0' } };
 }

@@ -55,7 +55,7 @@ describe('risk limits', () => {
   });
 
   it('enforces total exposure across open positions', () => {
-    const p = openPosition(META, fill({ side: 'buy', inputRaw: String(SOL / 5n - 10_000n), outputRaw: '1000' }), { sellFractionPct: 50 });
+    const p = openPosition(META, fill({ side: 'buy', inputRaw: String(SOL / 5n - 10_000n), outputRaw: '1000' }), { enabled: true, levels: [{ multiple: 5, sell: { kind: 'percent_of_original', pct: 50 } }], moonBagPct: 0 });
     const r = checkTrade(base({ openPositions: [p] }));
     expect(r.violations.join()).toMatch(/Exposure/);
   });
@@ -74,25 +74,27 @@ describe('risk limits', () => {
     expect(checkTrade(base({ research: r, overrideUnverified: true })).violations.join()).toMatch(/Critical/);
   });
 
-  it('never allows automatic buys', () => {
-    expect(checkTrade(base({ automated: true })).violations.join()).toMatch(/Automatic buys are disabled/);
+  it('allows automatic buys only while the autopilot is on, and never into a token already held', () => {
+    expect(checkTrade(base({ automated: true })).violations.join()).toMatch(/autopilot is off/);
+    expect(checkTrade(base({ automated: true, autopilotEnabled: true })).ok).toBe(true);
+    const held = openPosition(META, fill({ side: 'buy', inputRaw: '1000', outputRaw: '1000' }), { enabled: true, levels: [{ multiple: 5, sell: { kind: 'percent_of_original', pct: 50 } }], moonBagPct: 0 });
+    expect(checkTrade(base({ automated: true, autopilotEnabled: true, openPositions: [held] })).violations.join()).toMatch(/already holds/);
   });
 
   it('never uses mock data live', () => {
-    const s = settings({ boundWallet: 'W' });
-    const r = checkTrade(base({ mode: 'live', liveArmed: true, wallet: 'W', settings: s, research: report({ mock: true }) }));
+    const r = checkTrade(base({ mode: 'live', liveArmed: true, wallet: 'W', liveWallet: 'W', research: report({ mock: true }) }));
     expect(r.violations.join()).toMatch(/Mock/);
   });
 
-  it('live trades require the bound wallet', () => {
-    const s = settings({ boundWallet: 'BOUND' });
-    expect(checkTrade(base({ mode: 'live', liveArmed: true, wallet: 'OTHER', settings: s })).violations.join()).toMatch(/not the wallet bound/);
-    expect(checkTrade(base({ mode: 'live', liveArmed: true, wallet: 'BOUND', settings: s })).ok).toBe(true);
+  it('live trades must come from the wallet live trading was enabled for', () => {
+    expect(checkTrade(base({ mode: 'live', liveArmed: true, wallet: 'OTHER', liveWallet: 'ARMED' })).violations.join()).toMatch(/not the wallet live trading was enabled for/);
+    expect(checkTrade(base({ mode: 'live', liveArmed: true, wallet: 'ARMED', liveWallet: 'ARMED' })).ok).toBe(true);
+    expect(checkTrade(base({ mode: 'live', liveArmed: true, wallet: 'ARMED', liveWallet: null })).ok).toBe(false);
   });
 
   describe('sells', () => {
-    const pos = openPosition(META, fill({ side: 'buy', inputRaw: '1000', outputRaw: '1000' }), { sellFractionPct: 50 });
-    const locked = applySell(pos, fill({ side: 'sell', inputRaw: '500', outputRaw: '5000', reason: 'take_profit' })).position;
+    const pos = openPosition(META, fill({ side: 'buy', inputRaw: '1000', outputRaw: '1000' }), { enabled: true, levels: [{ multiple: 5, sell: { kind: 'percent_of_original', pct: 50 } }], moonBagPct: 0 });
+    const locked = applySell(pos, fill({ side: 'sell', inputRaw: '500', outputRaw: '5000', reason: 'take_profit', tpLevel: 0 })).position;
     const sell = (p: Partial<RiskInput>) => base({ side: 'sell', amountRaw: 100n, research: undefined, ...p });
 
     it('allows a manual sell of an open position', () => {

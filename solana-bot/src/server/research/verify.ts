@@ -133,7 +133,9 @@ export function assessReport(draft: ReportDraft, t: VerificationThresholds, now:
         flags.push({ code: 'third_party_warn', kind: 'signal', severity: 'warn', message: `Third-party report: ${r.name} — ${r.description}`, source: draft.thirdPartyFlags.source });
     }
   }
-  if (draft.mock) flags.push({ code: 'mock_data', kind: 'fact', severity: 'high', message: 'MOCK market data — paper trading only.' });
+  // Informational only, so the offline simulator can exercise the autopilot;
+  // the risk engine separately refuses mock data for any live trade.
+  if (draft.mock) flags.push({ code: 'mock_data', kind: 'fact', severity: 'info', message: 'MOCK market data — paper trading only.' });
 
   // ---- verdict
   const reasons: string[] = [];

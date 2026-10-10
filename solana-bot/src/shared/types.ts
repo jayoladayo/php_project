@@ -5,7 +5,10 @@
 
 export type Mode = 'paper' | 'live';
 export type Side = 'buy' | 'sell';
-export type TradeReason = 'manual' | 'take_profit' | 'stop_loss' | 'time_exit';
+export type ExitReason = 'take_profit' | 'stop_loss' | 'time_exit';
+export type TradeReason = 'manual' | 'autopilot' | ExitReason;
+/** Who signs live transactions: the user's browser wallet (approve each trade) or the bot's own wallet (unattended). */
+export type SignerKind = 'browser' | 'bot';
 
 export const LAMPORTS_PER_SOL = 1_000_000_000;
 export const WSOL_MINT = 'So11111111111111111111111111111111111111112';
@@ -30,15 +33,30 @@ export interface RiskLimits {
   capBuyByRemainingDailyLoss: boolean;
 }
 
-export interface TakeProfitRule {
-  enabled: boolean;
+/** What a take-profit level sells when it triggers. */
+export type TakeProfitSell =
+  /** Enough tokens to get back everything put into the position (entry cost incl. fees), minus what earlier sells already returned. */
+  | { kind: 'recover_cost' }
+  /** A percentage of the ORIGINAL token amount of the position. */
+  | { kind: 'percent_of_original'; pct: number }
+  /** Everything except the moon bag. */
+  | { kind: 'all_except_moon_bag' };
+
+export interface TakeProfitLevel {
   /** Trigger when the net executable sell price reaches entry × multiple. */
   multiple: number;
-  /** Percent of the ORIGINAL token amount of the position to sell. */
-  sellFractionPct: number;
+  sell: TakeProfitSell;
+}
+
+export interface TakeProfitRule {
+  enabled: boolean;
+  /** Ladder of levels, executed in ascending order of multiple. Snapshotted onto each position when it opens. */
+  levels: TakeProfitLevel[];
+  /** Percent of the original token amount that take-profit never sells (rides as a moon bag). */
+  moonBagPct: number;
   /** Which recorded entry price the multiple is measured against. */
   entryPriceBasis: 'effective_incl_fees' | 'fill_price';
-  /** Live mode only: skip the dashboard approval step (the wallet still asks to sign). */
+  /** Live mode with a browser wallet: skip the dashboard approval step (the wallet still asks to sign). */
   autoExecuteLive: boolean;
 }
 
@@ -48,6 +66,8 @@ export interface ExitRule {
   autoExecuteLive: boolean;
   /** Whether the rule may still act on a position that is locked after take-profit. */
   applyAfterTakeProfit: boolean;
+  /** Whether the rule may also sell the moon bag. */
+  includeMoonBag: boolean;
 }
 
 export interface StopLossRule extends ExitRule {
@@ -77,9 +97,46 @@ export interface PaperSettings {
   priorityFeeLamports: number;
 }
 
+export interface AutopilotFilters {
+  minLiquidityUsd: number;
+  /** Skip tokens younger than this (the first hour is when most rugs happen). */
+  minAgeMinutes: number;
+  maxAgeMinutes: number | null;
+  minVolume24hUsd: number;
+  minHolders: number;
+  /** Evidence that other people have been able to sell. */
+  minSells24h: number;
+  /** Do not chase vertical moves: skip if the 1h price change is above this. */
+  maxPriceChange1hPct: number | null;
+  /** Skip tokens whose LP lock/burn status cannot be verified. */
+  requireLpLockKnown: boolean;
+  minLpLockedPct: number;
+}
+
+export interface AutopilotSettings {
+  enabled: boolean;
+  buySizeSol: number;
+  slippageBps: number;
+  maxBuysPerDay: number;
+  scanIntervalSec: number;
+  /** Full research is expensive (dozens of RPC calls); cap how many tokens are researched per scan. */
+  maxResearchPerScan: number;
+  sources: { newPools: boolean; trendingPools: boolean };
+  /** Mints to always consider (still fully researched and filtered). */
+  watchlist: string[];
+  filters: AutopilotFilters;
+  /** Re-research a rejected token after this many minutes. */
+  recheckAfterMinutes: number;
+  /** Do not buy the same token again within this many minutes of a previous buy. */
+  cooldownMinutes: number;
+  /** Live autopilot without a stop-loss requires this explicit acknowledgement. */
+  acknowledgeNoStopLoss: boolean;
+}
+
 export interface Settings {
   limits: RiskLimits;
   takeProfit: TakeProfitRule;
+  autopilot: AutopilotSettings;
   stopLoss: StopLossRule;
   timeExit: TimeExitRule;
   verification: VerificationThresholds;
@@ -89,7 +146,7 @@ export interface Settings {
   monitorIntervalSec: number;
   /** Cap on the priority fee Jupiter may add to a live swap. */
   priorityFeeMaxLamports: number;
-  /** Live trading is only possible from this wallet (use a low-balance test wallet). */
+  /** Your own wallet: the browser wallet allowed for live trading, and the only destination for bot-wallet withdrawals. */
   boundWallet: string | null;
   /** Warn when the bound wallet holds more than this, in SOL. */
   testWalletMaxBalanceSol: number;
@@ -237,16 +294,30 @@ export interface Fill {
   rentLamports: string;
   /** Sells only: realized P&L of this fill, net of fees. */
   realizedPnlLamports?: string;
+  /** Take-profit sells: ladder level index, and the level's full target (set on its first sell). */
+  tpLevel?: number;
+  tpTargetRaw?: string;
   signature?: string;
   intentId?: string;
 }
 
-export interface TakeProfitState {
-  state: 'pending' | 'partial' | 'done';
-  targetRaw: string;
+export interface TakeProfitLevelState extends TakeProfitLevel {
+  state: 'pending' | 'partial' | 'done' | 'skipped';
+  /** Token amount this level sells; fixed at open for percentages, at first trigger otherwise. */
+  targetRaw: string | null;
   soldRaw: string;
   triggeredAt?: string;
   completedAt?: string;
+}
+
+export interface TakeProfitState {
+  /** pending: nothing sold yet · partial: some levels done · done: ladder finished (position locked) */
+  state: 'pending' | 'partial' | 'done';
+  levels: TakeProfitLevelState[];
+  /** Tokens take-profit never sells. */
+  moonBagRaw: string;
+  /** Total tokens sold by take-profit. */
+  soldRaw: string;
 }
 
 export interface Position {
@@ -360,6 +431,8 @@ export interface PrepareRequest {
   overrideUnverified?: boolean;
   acknowledgeLocked?: boolean;
   proposalId?: string;
+  tpLevel?: number;
+  tpTargetRaw?: string;
 }
 
 /** A rule fired but needs the user's approval (or a wallet signature) before a trade is built. */
@@ -367,8 +440,10 @@ export interface Proposal {
   id: string;
   createdAt: string;
   positionId: string;
-  rule: Exclude<TradeReason, 'manual'>;
+  rule: ExitReason;
   amountRaw: string;
+  tpLevel?: number;
+  tpTargetRaw?: string;
   detail: string;
   autoExecute: boolean;
   status: 'open' | 'dismissed' | 'done';
@@ -380,4 +455,28 @@ export interface Alert {
   level: 'info' | 'warn' | 'error';
   message: string;
   acknowledged: boolean;
+}
+
+// ---------------------------------------------------------------- autopilot
+
+export interface Candidate {
+  mint: string;
+  symbol: string | null;
+  source: 'new_pools' | 'trending_pools' | 'watchlist' | 'mock';
+  poolAddress: string | null;
+  dex: string | null;
+  liquidityUsd: number | null;
+  volume24hUsd: number | null;
+  ageMinutes: number | null;
+  priceChange1hPct: number | null;
+}
+
+export interface AutopilotLogEntry {
+  at: string;
+  action: 'buy' | 'skip' | 'error' | 'info';
+  mint?: string;
+  symbol?: string | null;
+  source?: Candidate['source'];
+  detail: string;
+  reasons?: string[];
 }

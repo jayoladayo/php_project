@@ -6,9 +6,10 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { VersionedTransaction } from '@solana/web3.js';
 import { useEffect, useState } from 'react';
 import { api, ApiError, type TradeIntent } from '../api.js';
+import type { SignerKind } from '../../shared/types.js';
 import { price, sol, tokens } from '../format.js';
 
-export function TradeModal({ intent, onClose, autoSign = false }: { intent: TradeIntent; onClose: (done: boolean) => void; autoSign?: boolean }) {
+export function TradeModal({ intent, onClose, autoSign = false, signer = null }: { intent: TradeIntent; onClose: (done: boolean) => void; autoSign?: boolean; signer?: SignerKind | null }) {
   const { signTransaction, publicKey } = useWallet();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ msg: string; v: string[] } | null>(null);
@@ -16,6 +17,7 @@ export function TradeModal({ intent, onClose, autoSign = false }: { intent: Trad
   const [left, setLeft] = useState(secondsLeft);
   const S = intent.summary;
   const live = intent.mode === 'live';
+  const botSigns = live && signer === 'bot';
 
   useEffect(() => {
     const t = setInterval(() => setLeft(secondsLeft()), 250);
@@ -28,6 +30,8 @@ export function TradeModal({ intent, onClose, autoSign = false }: { intent: Trad
     try {
       if (!live) {
         await api(`/trades/${intent.id}/confirm-paper`, {});
+      } else if (botSigns) {
+        await api(`/trades/${intent.id}/execute`, {});
       } else {
         if (!signTransaction || !publicKey) throw new ApiError('Connect your wallet first.', []);
         if (publicKey.toBase58() !== intent.wallet) throw new ApiError('Connected wallet differs from the wallet this trade was prepared for.', []);
@@ -46,7 +50,7 @@ export function TradeModal({ intent, onClose, autoSign = false }: { intent: Trad
   };
 
   useEffect(() => {
-    if (autoSign && live) void confirm();
+    if (autoSign && live && !botSigns) void confirm();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -109,7 +113,8 @@ export function TradeModal({ intent, onClose, autoSign = false }: { intent: Trad
         )}
         <p className="muted">
           Fees and slippage reduce what you receive; the final fill can be anywhere between the estimate and the minimum. Quote expires in {left}s.
-          {live && ' Your wallet will ask you to approve this exact transaction. If the wallet changes it, the server refuses to send it.'}
+          {live && !botSigns && ' Your wallet will ask you to approve this exact transaction. If the wallet changes it, the server refuses to send it.'}
+          {botSigns && ' The bot wallet will sign exactly this verified and simulated transaction and send it.'}
         </p>
         {error && (
           <div className="box err">
@@ -119,7 +124,7 @@ export function TradeModal({ intent, onClose, autoSign = false }: { intent: Trad
         )}
         <div className="row">
           <button className="primary" disabled={busy || left === 0} onClick={confirm}>
-            {busy ? 'Working…' : live ? 'Sign with wallet & send' : 'Confirm paper trade'}
+            {busy ? 'Working…' : botSigns ? 'Execute with bot wallet' : live ? 'Sign with wallet & send' : 'Confirm paper trade'}
           </button>
           <button onClick={cancel} disabled={busy}>Cancel</button>
         </div>

@@ -39,7 +39,12 @@ export interface RiskInput {
   automated: boolean;
   /** Automated sells: the firing rule is explicitly allowed to act after take-profit. */
   ruleAppliesAfterTakeProfit?: boolean;
+  /** Automated buys: the autopilot is switched on. */
+  autopilotEnabled?: boolean;
+  /** The wallet trading the order (live: browser wallet or bot wallet). */
   wallet: string | null;
+  /** Live: the wallet live trading was enabled for. */
+  liveWallet?: string | null;
 }
 
 export interface RiskResult {
@@ -57,8 +62,8 @@ export function checkTrade(i: RiskInput): RiskResult {
   if (i.mode === 'live') {
     if (!i.liveArmed) v.push('Live trading has not been enabled.');
     if (!i.wallet) v.push('No wallet connected.');
-    else if (i.settings.boundWallet && i.wallet !== i.settings.boundWallet) v.push('Connected wallet is not the wallet bound for live trading.');
-    else if (!i.settings.boundWallet) v.push('No wallet is bound for live trading.');
+    else if (!i.liveWallet) v.push('No wallet is enabled for live trading.');
+    else if (i.wallet !== i.liveWallet) v.push('This wallet is not the wallet live trading was enabled for.');
   }
 
   if (!Number.isInteger(i.requestedSlippageBps) || i.requestedSlippageBps <= 0) v.push('Slippage must be a positive whole number of bps.');
@@ -99,8 +104,12 @@ function checkBuy(i: RiskInput, v: string[], w: string[]): void {
     }
     if (r.mock && i.mode === 'live') v.push('Mock data can never be used for live trades.');
   }
-  // Automatic buys are not part of this bot: buys are always user-initiated.
-  if (i.automated) v.push('Automatic buys are disabled.');
+  // Automatic buys only come from the autopilot, only for verified tokens
+  // (checked above), and never add to a token that is already held.
+  if (i.automated) {
+    if (!i.autopilotEnabled) v.push('Automatic buys are disabled (autopilot is off).');
+    if (r && i.openPositions.some((p) => p.mint === r.mint)) v.push('Autopilot never adds to a token it already holds.');
+  }
 
   if (amount > toLamports(L.maxBuySol)) v.push(`Buy of ${fmt(amount)} SOL exceeds max buy ${L.maxBuySol} SOL.`);
 
