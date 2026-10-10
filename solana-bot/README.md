@@ -33,6 +33,17 @@ npm run dev
 npm test
 ```
 
+**Windows (PowerShell):** use `npm.cmd` instead of `npm` if PowerShell says
+"running scripts is disabled", and set variables with `$env:`:
+
+```powershell
+npm.cmd install
+$env:MARKET_DATA="mock"; npm.cmd run dev
+```
+
+Keep that window open while using the dashboard. Pressing Ctrl+C in it stops
+the bot (to copy text from it, use Ctrl+Shift+C or right-click).
+
 `npm run dev` starts the API server on `127.0.0.1:8787` and the dashboard on
 `127.0.0.1:5173`. For a single process, `npm run build && npm start` serves the
 built dashboard from `http://127.0.0.1:8787`.

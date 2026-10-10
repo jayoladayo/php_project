@@ -9,6 +9,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '127.0.0.1',
-    proxy: { '/api': 'http://127.0.0.1:8787' },
+    // Trailing slash matters: '/api' would also capture the dashboard's own /api.ts module.
+    proxy: { '/api/': 'http://127.0.0.1:8787' },
   },
 });
