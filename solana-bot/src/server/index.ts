@@ -15,7 +15,7 @@ import { PrepareSchema, SettingsSchema } from './schemas.js';
 import { Store } from './store.js';
 import { big, entryPrice, fillRatio, slippageBps, unrealizedLamports } from './trading/accounting.js';
 import { Autopilot } from './trading/autopilot.js';
-import { Engine, TradeRejected } from './trading/engine.js';
+import { Engine, TradeRejected, requireConfirmed } from './trading/engine.js';
 import { levelLabel } from './trading/rules.js';
 import { autopilotBuysToday } from './trading/strategy.js';
 import { BotWallet, WrongPassphraseError } from './wallet/botWallet.js';
@@ -178,7 +178,7 @@ app.post('/api/trades/:id/confirm-paper', (req, res) => {
 });
 app.post('/api/trades/:id/submit', async (req, res) => {
   const { signedTx } = z.object({ signedTx: z.string().min(10).max(4000) }).parse(req.body);
-  res.json(await engine.submitSigned(req.params.id, signedTx));
+  res.json(requireConfirmed(await engine.submitSigned(req.params.id, signedTx)));
 });
 app.post('/api/trades/:id/execute', async (req, res) => {
   res.json(await engine.executeWithBot(req.params.id));

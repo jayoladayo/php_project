@@ -45,6 +45,8 @@ interface World {
   last: { user: PublicKey; mint: PublicKey; inLamports: bigint } | null;
   sent: VersionedTransaction[];
   injectApprove: boolean;
+  /** Make sent swaps fail on-chain (e.g. slippage exceeded). */
+  failOnChain: boolean;
 }
 
 class FakeRouter implements SwapProvider {
@@ -111,13 +113,13 @@ function fakeConnection(w: World): Connection {
       w.sent.push(tx);
       return bs58.encode(tx.signatures[0]!);
     },
-    confirmTransaction: async () => ({ context: { slot: 2 }, value: { err: null } }),
+    confirmTransaction: async () => ({ context: { slot: 2 }, value: { err: w.failOnChain ? { InstructionError: [6, { Custom: 6001 }] } : null } }),
     getTransaction: async (sig: string) => ({
       slot: 2,
       blockTime: Math.floor(Date.now() / 1000),
       transaction: { signatures: [sig] },
       meta: {
-        err: null,
+        err: w.failOnChain ? { InstructionError: [6, { Custom: 6001 }] } : null,
         fee: Number(5_000n + PRIORITY),
         preBalances: [Number(w.balance)],
         postBalances: [Number(w.balance - spent())],
@@ -176,7 +178,7 @@ let scannerMints: string[];
 beforeEach(() => {
   env.liveTradingAllowed = true;
   const dir = mkdtempSync(join(tmpdir(), 'livebot-'));
-  w = { balance: SOL, last: null, sent: [], injectApprove: false };
+  w = { balance: SOL, last: null, sent: [], injectApprove: false, failOnChain: false };
   store = new Store(join(dir, 'state.json'));
   const audit = new AuditLog(join(dir, 'audit.jsonl'));
   const alerts = new Alerts(store);
@@ -292,6 +294,30 @@ describe('live trading with the bot wallet', () => {
     // switching back to paper stops the autopilot
     engine.disarmLive();
     expect(store.state.settings.autopilot.enabled).toBe(false);
+  });
+
+  it('a buy that fails on-chain is reported as failed, never as bought, and is not retried right away', async () => {
+    await armBot();
+    const mint = newVerifiedMint();
+    scannerMints = [mint];
+    store.state.settings.autopilot.acknowledgeNoStopLoss = true;
+    autopilot.enable('START AUTOPILOT');
+    w.failOnChain = true;
+    await autopilot.cycle();
+    expect(w.sent).toHaveLength(1);
+    expect(store.state.positions).toHaveLength(0);
+    const last = store.state.autopilot.log.at(-1)!;
+    expect(last.action).toBe('skip');
+    expect(last.detail).toMatch(/failed on-chain/);
+    expect(store.state.autopilot.log.some((e) => e.action === 'buy')).toBe(false);
+    expect(store.state.lossEvents.map((e) => e.reason)).toEqual(['failed transaction fee']);
+    // manual execution reports the failure to the dashboard too
+    const intent = await engine.prepare({ side: 'buy', mint: newVerifiedMint(), amountSol: '0.02', slippageBps: 100 });
+    await expect(engine.executeWithBot(intent.id)).rejects.toThrow(/failed on-chain/);
+    // the failed token waits for its re-check instead of being bought again immediately
+    w.failOnChain = false;
+    await autopilot.cycle();
+    expect(store.state.positions).toHaveLength(0);
   });
 
   it('withdraws only to your own wallet, only with the passphrase, never leaving dust below rent', async () => {

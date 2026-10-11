@@ -197,7 +197,7 @@ export class Autopilot {
           this.audit.append('autopilot.buy', { mint: c.mint, symbol, intentId: intent.id, checks: d.passes, source: c.source });
         } catch (e) {
           const v = e instanceof TradeRejected ? e.violations : [];
-          this.log({ ...base, symbol, action: 'skip', detail: `Buy blocked: ${(e as Error).message}`, reasons: v });
+          this.log({ ...base, symbol, action: 'skip', detail: `Buy not done: ${v[0] ? `${(e as Error).message} ${v[0]}` : (e as Error).message}`, reasons: v });
           if (v.some((x) => GLOBAL_BLOCKERS.test(x))) break;
           this.store.update((s) => (s.autopilot.rejected[c.mint] = recheckAt));
         }

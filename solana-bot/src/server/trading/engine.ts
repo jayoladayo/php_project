@@ -48,6 +48,20 @@ export function parseSol(s: string): bigint {
 const fmtSol = (l: bigint | string): string => `${(Number(l) / 1e9).toFixed(4)} SOL`;
 const ruleName = (r: TradeReason): string => r.replace('_', '-');
 
+const STATUS_TEXT: Record<string, string> = {
+  failed: 'failed on-chain (only the network fee was spent)',
+  expired: 'expired without landing (nothing was spent)',
+  unknown: 'has an unknown outcome — trading is paused until you reconcile it',
+};
+
+/** A sent transaction that did not end confirmed is an error for the caller, not a fill. */
+export function requireConfirmed<T extends { intent: TradeIntent }>(r: T): T {
+  if (r.intent.status !== 'confirmed') {
+    throw new TradeRejected(`The transaction ${STATUS_TEXT[r.intent.status] ?? `ended ${r.intent.status}`}.`, r.intent.error ? [r.intent.error] : []);
+  }
+  return r;
+}
+
 export class Engine {
   private monitorFailures = 0;
   private monitorTimer: NodeJS.Timeout | null = null;
@@ -494,7 +508,7 @@ export class Engine {
     if (!intent.txBase64 || intent.wallet !== this.botWallet.publicKey()) throw new TradeRejected('This trade was not prepared for the bot wallet.');
     this.assertConfirmable(intent, 'live');
     const tx = this.botWallet.sign(VersionedTransaction.deserialize(Buffer.from(intent.txBase64, 'base64')));
-    return this.submitSigned(id, Buffer.from(tx.serialize()).toString('base64'));
+    return requireConfirmed(await this.submitSigned(id, Buffer.from(tx.serialize()).toString('base64')));
   }
 
   async submitSigned(id: string, signedTxBase64: string): Promise<{ intent: TradeIntent; position?: Position }> {
