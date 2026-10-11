@@ -10,6 +10,8 @@ export function Positions({ state, onIntent }: { state: DashboardState; onIntent
   const mine = state.positions.filter((p) => p.mode === state.mode);
   const open = mine.filter((p) => p.status === 'open');
   const shown = showClosed ? mine : open;
+  // After a restart the bot comes back in paper mode: keep real positions visible.
+  const otherOpen = state.mode === 'paper' ? state.positions.filter((p) => p.mode === 'live' && p.status === 'open') : [];
 
   const exposure = open.reduce((a, p) => a + Number(p.costBasisLamports), 0);
   const unreal = open.reduce((a, p) => a + Number(p.view.unrealizedLamports ?? 0), 0);
@@ -102,6 +104,29 @@ export function Positions({ state, onIntent }: { state: DashboardState; onIntent
         </div>
       )}
 
+      {otherOpen.length > 0 && (
+        <div className="box warn">
+          <h3>Your live positions ({otherOpen.length}) — not being managed right now</h3>
+          <p className="small">
+            The bot restarted in paper mode, so these real tokens (still in your bot wallet) are only shown here. Take-profit sells for them
+            need live mode again: <b>Bot wallet</b> tab → unlock, then <b>Live mode</b> tab → arm with the bot wallet, then start the autopilot.
+          </p>
+          <table className="list">
+            <thead>
+              <tr>
+                <th>Token</th><th>Held / original</th><th>Entry price<br /><span className="muted">fill · incl. fees</span></th><th>Cost basis</th>
+                <th>Value (net)</th><th>Unrealized</th><th>Realized</th><th>Now × entry</th><th>Take-profit</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {otherOpen.map((p) => (
+                <PositionRow key={p.id} p={p} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <div className="row">
         <h3 className="grow">Positions ({state.mode})</h3>
         <label><input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} /> show closed</label>
@@ -142,7 +167,7 @@ export function Positions({ state, onIntent }: { state: DashboardState; onIntent
   );
 }
 
-function PositionRow({ p, onSell }: { p: PositionView; onSell: (p: PositionView, pct: number) => void }) {
+function PositionRow({ p, onSell }: { p: PositionView; onSell?: (p: PositionView, pct: number) => void }) {
   const [open, setOpen] = useState(false);
   const tp = p.takeProfit;
   return (
@@ -167,7 +192,7 @@ function PositionRow({ p, onSell }: { p: PositionView; onSell: (p: PositionView,
           {tp.moonBagRaw !== '0' && <div className="muted">moon bag {tokens(tp.moonBagRaw, p.decimals)}{p.locked && ' · riding (locked)'}</div>}
         </td>
         <td>
-          {p.status === 'open' && (
+          {p.status === 'open' && onSell && (
             <div className="row nowrap">
               {[25, 50, 100].map((x) => <button key={x} onClick={() => onSell(p, x)}>Sell {x}%</button>)}
             </div>
