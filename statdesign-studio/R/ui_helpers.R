@@ -11,6 +11,7 @@ NAV <- list(
   list(page = "two", label = "Two samples", icon = "columns"),
   list(page = "k", label = "k samples", icon = "layers"),
   list(group = "Design of experiments"),
+  list(page = "problems", label = "Problem Sets", icon = "clipboard"),
   list(page = "crd", label = "CRD", icon = "shuffle"),
   list(page = "rcbd", label = "RCBD", icon = "rows"),
   list(page = "lsd", label = "Latin Square", icon = "grid"),
@@ -25,7 +26,7 @@ PAGE_CRUMB <- list(
   home = c("StatDesign Studio", "Home"), advisor = c("StatDesign Studio", "Test Advisor"),
   data = c("StatDesign Studio", "Data Studio"), desc = c("Explore", "Descriptive statistics"),
   one = c("Compare", "One sample"), two = c("Compare", "Two samples"), k = c("Compare", "k samples"),
-  crd = c("Design of experiments", "CRD"), rcbd = c("Design of experiments", "RCBD"),
+  problems = c("Design of experiments", "Problem Sets"), crd = c("Design of experiments", "CRD"), rcbd = c("Design of experiments", "RCBD"),
   lsd = c("Design of experiments", "Latin Square"), glsd = c("Design of experiments", "Graeco-Latin Square"),
   planner = c("Tools", "Design Planner"), report = c("Tools", "Report"), learn = c("Tools", "Learn")
 )

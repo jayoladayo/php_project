@@ -7,12 +7,13 @@ for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f, local
 
 options(shiny.maxRequestSize = 50 * 1024^2)
 
-PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "crd", "rcbd", "lsd", "glsd", "planner", "report", "learn")
+PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "planner", "report", "learn")
 
 JUMP_CHOICES <- c(
   "Home" = "home", "Test Advisor" = "advisor", "Data Studio: upload a file" = "data",
   "Descriptive statistics" = "desc", "One sample tests" = "one", "Two sample tests (t-test, Mann-Whitney)" = "two",
   "k samples (one-way ANOVA, Kruskal-Wallis)" = "k",
+  "Problem Sets: Chapter 2 and 3 exercises, custom problems" = "problems",
   "CRD: Completely Randomized Design" = "crd", "RCBD: Randomized Complete Block Design" = "rcbd",
   "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd",
   "Design Planner: randomised layouts" = "planner", "Report builder" = "report", "Learn: method guides" = "learn")
@@ -47,6 +48,7 @@ ui <- page(
                 tabPanelBody("one", cmp_ui("one", "one")),
                 tabPanelBody("two", cmp_ui("two", "two")),
                 tabPanelBody("k", cmp_ui("k", "k")),
+                tabPanelBody("problems", problems_ui("problems")),
                 tabPanelBody("crd", doe_ui("crd", DESIGNS$CRD)),
                 tabPanelBody("rcbd", doe_ui("rcbd", DESIGNS$RCBD)),
                 tabPanelBody("lsd", doe_ui("lsd", DESIGNS$LSD)),
@@ -104,6 +106,7 @@ server <- function(input, output, session) {
   desc <- desc_server("desc", store)
   advisor_server("advisor", goto, function(page, m) cmp[[page]]$set_method(m))
 
+  problems <- problems_server("problems", store, show_crumb = function(cr) session$sendCustomMessage("crumb", list(crumb = cr)))
   planner <- planner_server("planner")
   report_server("report", store)
   add_example <- function(ex) {
@@ -123,7 +126,7 @@ server <- function(input, output, session) {
 
   # Ask Dr. Riaz: each page tells the assistant what it is showing.
   ai_fns <- c(lapply(doe, `[[`, "ai"), lapply(cmp, `[[`, "ai"),
-              list(desc = desc$ai, planner = planner$ai, learn = learn$ai,
+              list(desc = desc$ai, planner = planner$ai, learn = learn$ai, problems = problems$ai,
                    report = function(full) {
                      pins <- store$pins
                      list(label = sprintf("your report (%d item%s)", length(pins), if (length(pins) == 1) "" else "s"), kind = "general",

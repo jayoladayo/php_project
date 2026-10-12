@@ -22,6 +22,11 @@
 
   $(document).on('shiny:connected', function () {
     Shiny.addCustomMessageHandler('crumb', function (m) { setCrumb(m.crumb); });
+    Shiny.addCustomMessageHandler('ps_ready', function (m) { setTimeout(function () { Shiny.setInputValue(m.id, m.token, { priority: 'event' }); }, 50); });
+    Shiny.addCustomMessageHandler('scroll_top', function (m) { window.scrollTo(0, 0); });
+    Shiny.addCustomMessageHandler('scroll_to', function (m) {
+      setTimeout(function () { var el = document.getElementById(m.id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+    });
     Shiny.addCustomMessageHandler('learn_on', function (m) {
       document.querySelectorAll('.lnav .lnk').forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-k') === m.k); });
     });

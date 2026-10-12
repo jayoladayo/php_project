@@ -55,6 +55,20 @@ In automatic mode each page recommends the test whose assumptions hold and expla
 - **Report**: every results page has a **Pin to report** button. Pinned tables, charts and interpretations are snapshots, so rerunning an analysis does not change them. Reorder them by dragging, add notes and headings, pick a template (Lab report, Thesis, Brief) and download Word, PDF, HTML or Excel. The appendix holds each dataset's notes and the R code.
 - **Learn**: eleven short guides (descriptive statistics, one, two and k sample tests, CRD, RCBD, Latin, Graeco-Latin, assumption checks, post-hoc tests, three ways to decide), each with when to use it, the model, the assumptions and their fallbacks, a worked class example, and a button that opens that example in the app.
 
+## What is in stage 6
+
+- **Problem Sets** (sidebar, first item under Design of experiments): 30 exercises from the course problem sheets, each with its full statement and complete dataset.
+  - **Chapter 2 problems** (15): simple comparative experiments: one-sample t and z tests, a χ² test on a variance, two-sample t and z tests, and three paired problems (2.34, 2.35, 2.36). A paired problem is a block design: each pair is a block, so it is analysed as an RCBD with two treatments, and the answer shows that the paired t-test and the RCBD ANOVA agree (F = t²).
+  - **Chapter 3 problems** (15): single-factor ANOVA: balanced and unbalanced CRDs, count data, a problem that needs a log transformation (3.32) and a random-effects problem with variance components (3.34).
+  - **Create custom problem**: write or paste a statement, paste, type or upload the data (or start from a class example, including the Latin square), stack wide tables into long format, say which column is the response, treatment, block, row or column, and edit everything before running. **Edit this problem** copies any exercise into this editor.
+- Every problem follows **Problem → Data → Recommended analysis → Run analysis**: the statement and questions, the factors and variables, the design type, the assumptions and data requirements, and the data as printed or in long format (scrollable, downloadable as CSV).
+- **Automatic recommendation** from the data structure, with the reasons: one sample, two independent samples, paired (RCBD with two treatments), CRD, random effects, RCBD (complete blocks), Latin square (checked to be a valid square) or a general linear model for unbalanced or incomplete layouts. It also flags unequal replication, count responses and very unequal variances.
+- **Override the analysis**: one-sample test, variance test, two-sample t-test, paired t-test, one-way ANOVA, random-effects ANOVA, RCBD ANOVA, Latin Square ANOVA, general linear model, rank tests, descriptive statistics, and residual diagnostics, with an optional log or square-root transformation. An analysis that does not fit the data says why and what to change. A manual choice is labelled as yours, not the system's.
+- **Answer Model** after **Run analysis**: the design, the variables, the hypotheses, the model, the calculations with the numbers filled in (sums of squares, standard errors, test statistics), the ANOVA or test table, the statistics with df, P-values and critical values, the decision, treatment comparisons (Tukey or Fisher LSD with grouping letters, or a confidence interval for two groups), assumption checks with QQ and residual plots, the statistical conclusion and a plain-language interpretation. **Pin to report** sends it to the Report builder, and Ask Dr. Riaz can see it.
+- The page remembers the selected problem and the analysis chosen for each problem, so returning to the list loses nothing.
+
+The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experiments) and Chapter 3 (Experiments with a Single Factor). Neither contains a Latin square exercise, so no Latin square problem is invented; the Latin Square ANOVA is available for custom problems and through the class example. The chapter labels are set in `PS_CHAPTERS` at the top of `R/problems.R`.
+
 ## Ask Dr. Riaz (AI assistant)
 
 The **Ask Dr. Riaz** button at the bottom right opens a chat with an AI course assistant. It can see the page you are on: your dataset, your column mapping, and on a results page the ANOVA or test tables, assumption checks, post-hoc tables, the interpretation and the generated R code. Ask it to explain results, check assumptions, walk through the R code line by line, or show you how to use the app. Untick **Let Dr. Riaz see my current data and results** in its settings to keep your data private.
@@ -77,6 +91,8 @@ After you paste a key, the Model list fills with every chat model that key can u
 Open `deploy.R` in RStudio, paste your account name, token and secret from shinyapps.io (Account > Tokens), and press Source. Keep the token private.
 
 ## Files
+
+- `R/problems.R`: the Problem Sets exercises and their data. `R/problem_engine.R`: structure detection, recommendation, validation, the analyses and the Answer Model. `R/mod_problems.R`: the Problem Sets page and the custom problem editor.
 
 - `R/ai.R`: Ask Dr. Riaz (providers, non-blocking requests, page context, chat panel).
 
