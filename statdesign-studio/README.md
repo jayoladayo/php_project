@@ -79,7 +79,7 @@ To give every student a working assistant without asking for a key, put your own
 
 1. Copy `.Renviron.example` to a file named `.Renviron` in the same folder as `app.R`.
 2. Set `RIAZ_PROVIDER` (gemini, openrouter, groq, openai, anthropic or custom), `RIAZ_API_KEY`, and optionally `RIAZ_MODEL` and `RIAZ_SESSION_LIMIT` (questions per student session, default 40; 0 = no limit).
-3. Restart the app. Dr. Riaz's settings now say "Ready to use: no key needed".
+3. Restart the app. The R console prints "Ask Dr. Riaz: built-in key loaded …" and Dr. Riaz's settings say "Ready to use: no key needed". If the console says no key was found, it also shows the folder the file must be in. A Windows editor adding ".txt" (`.Renviron.txt`) or saving with a byte-order mark is handled.
 4. To publish, run `deploy.R` as usual: it uploads `.Renviron` with the app. On Posit Connect you can set the same variables under the app's Vars tab instead.
 
 The key stays on the server: it is never sent to the browser, stored in the browser, or written to project files, and `.Renviron` is in `.gitignore` so it is never committed. Every student's questions are billed to this key, so use a free-tier service (Google Gemini Flash or Groq) or set a spending limit with your provider. Students can still connect their own key, and switch back to the course service, in the settings.

@@ -3,10 +3,16 @@
 library(shiny)
 library(bslib)
 
-# Private settings such as the built-in AI key live in .Renviron next to this file (never committed).
-if (file.exists(".Renviron")) readRenviron(".Renviron")
-
 for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f, local = TRUE)
+
+# Private settings such as the built-in AI key live in .Renviron next to this file (never committed).
+local({
+  f <- riaz_load_env(".")
+  b <- riaz_builtin()
+  message(if (!is.null(b)) sprintf("Ask Dr. Riaz: built-in key loaded from %s (%s, model %s). Students need no key.", basename(f %||% "the environment"), AI_PROVIDERS[[b$provider]]$name, b$model)
+          else if (is.null(f)) sprintf("Ask Dr. Riaz: no built-in key. To add one, create a file named .Renviron in %s (see .Renviron.example).", normalizePath("."))
+          else sprintf("Ask Dr. Riaz: %s was found but RIAZ_API_KEY is empty or still the placeholder, so students must enter their own key.", basename(f)))
+})
 
 options(shiny.maxRequestSize = 50 * 1024^2)
 

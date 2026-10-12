@@ -20,11 +20,33 @@ AI_PROVIDERS <- list(
                 note = "Any service with an OpenAI-style /chat/completions endpoint: DeepSeek, Mistral, Together, a local Ollama (http://localhost:11434/v1), and others.")
 )
 
+# Read private settings (KEY=VALUE lines) from a file next to app.R. Tolerates the usual
+# Windows accidents: a ".txt" added to the name, a byte-order mark, CRLF line endings,
+# spaces around "=", quotes and a missing final newline. Variables already set in the
+# real environment (for example on Posit Connect) win. Returns the file used, or NULL.
+riaz_load_env <- function(dir = ".") {
+  cands <- file.path(dir, c(".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env"))
+  f <- cands[file.exists(cands)][1]
+  if (is.na(f)) return(NULL)
+  lines <- tryCatch(readLines(f, warn = FALSE, encoding = "UTF-8"), error = function(e) character(0))
+  lines <- sub("^\ufeff", "", sub("^\xef\xbb\xbf", "", lines, useBytes = TRUE))
+  lines <- trimws(gsub("\r", "", lines))
+  lines <- lines[nzchar(lines) & !startsWith(lines, "#") & grepl("=", lines, fixed = TRUE)]
+  for (ln in lines) {
+    k <- trimws(sub("=.*$", "", ln)); v <- trimws(sub("^[^=]*=", "", ln))
+    k <- sub("^export\\s+", "", k)
+    v <- sub('^"(.*)"$', "\\1", sub("^'(.*)'$", "\\1", v))
+    if (nzchar(k) && grepl("^[A-Za-z_][A-Za-z0-9_]*$", k) && !nzchar(Sys.getenv(k, ""))) do.call(Sys.setenv, stats::setNames(list(v), k))
+  }
+  f
+}
+
 # A key built into the app by whoever deploys it, read from environment variables on
 # the server (see .Renviron.example). It is never sent to the browser, stored in the
 # browser, or written to project files. Returns NULL when no key is configured.
 riaz_builtin <- function() {
   key <- trimws(Sys.getenv("RIAZ_API_KEY", ""))
+  if (grepl("paste-your-key-here|your-real-key|your-key", key)) key <- ""
   prov <- trimws(Sys.getenv("RIAZ_PROVIDER", "gemini"))
   if (!prov %in% names(AI_PROVIDERS)) prov <- "gemini"
   base <- trimws(Sys.getenv("RIAZ_BASE_URL", ""))
