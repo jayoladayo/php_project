@@ -58,8 +58,8 @@ ps_structure <- function(df, roles, transform = "none") {
   raw <- df[[resp]]
   y <- suppressWarnings(as.numeric(as.character(raw)))
   bad <- which(is.na(y) & !is.na(raw) & trimws(as.character(raw)) != "")
-  if (length(bad)) st$errors <- c(st$errors, sprintf("The response %s has %s that %s not numbers (row %d holds \"%s\"). Correct %s in the data editor.",
-                                                     resp, plural(length(bad), "value"), if (length(bad) == 1) "is" else "are", bad[1], raw[bad[1]],
+  if (length(bad)) st$errors <- c(st$errors, sprintf("The response %s has %s that %s (row %d holds \"%s\"). Correct %s in the data editor.",
+                                                     resp, plural(length(bad), "value"), if (length(bad) == 1) "is not a number" else "are not numbers", bad[1], raw[bad[1]],
                                                      if (length(bad) == 1) "it" else "them"))
   d <- data.frame(y = y)
   for (k in PS_ROLE_KEYS) {
@@ -329,7 +329,7 @@ ps_assump <- function(res_vec, alpha, group = NULL, what = "residuals", random_o
   }
   rows[[length(rows) + 1]] <- data.frame(Assumption = "Independence", Test = "Design: randomised run order", Statistic = "—", `p-value` = "—",
                                          Result = if (random_order) "By design" else "Check", check.names = FALSE)
-  txt <- c(txt, if (random_order) "Independence: the run order is not recorded, so it cannot be tested from the data; it is ensured by randomising the runs, as the problem states." else
+  txt <- c(txt, if (random_order) "Independence: the run order is not recorded, so it cannot be tested from the data; it is ensured by running the experiment in random order." else
     "Independence: check how the data were collected; values from the same unit or time period may be correlated.")
   list(table = do.call(rbind, rows), text = txt, sw = sw)
 }
