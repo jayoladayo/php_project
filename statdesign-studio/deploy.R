@@ -42,7 +42,15 @@ if (length(still)) stop("These packages could not be installed: ", paste(still, 
                         ". Install them with install.packages(), then run this script again.", call. = FALSE)
 
 rsconnect::setAccountInfo(name = ACCOUNT, token = TOKEN, secret = SECRET)
-rsconnect::deployApp(
-  appDir = ".", appName = APP, account = ACCOUNT, launch.browser = TRUE, forceUpdate = TRUE,
-  appFiles = c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE),
-               intersect(c(".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env"), list.files(".", all.files = TRUE))))  # the built-in AI key, if you set one
+files <- c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE),
+           intersect(c(".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env"), list.files(".", all.files = TRUE)))  # the built-in AI key, if you set one
+deploy <- function() rsconnect::deployApp(appDir = ".", appName = APP, account = ACCOUNT, launch.browser = TRUE,
+                                          forceUpdate = TRUE, appFiles = files)
+# If the app was deleted or archived on shinyapps.io, the old record in the rsconnect/
+# folder points at nothing. Forget it and publish again as a new app.
+tryCatch(deploy(), error = function(e) {
+  if (!grepl("probably been deleted|Failed to find existing content", conditionMessage(e), ignore.case = TRUE)) stop(e)
+  message("The previous deployment no longer exists on the server. Forgetting it and deploying again.")
+  rsconnect::forgetDeployment(appPath = ".", force = TRUE)
+  deploy()
+})
