@@ -510,7 +510,7 @@ problems_server <- function(id, store, show_crumb) {
       open_problem("custom")
     })
 
-    # ---------- For Ask Dr. Riaz ----------
+    # ---------- For Ask Professor Riaz ----------
     list(ai = function(full) {
       i <- isolate(sel())
       if (is.null(i)) return(list(label = "the Problem Sets list", kind = "general", text = if (full) "The student is browsing the Problem Sets list (Chapter 2 comparative experiments and Chapter 3 single-factor ANOVA problems)."))

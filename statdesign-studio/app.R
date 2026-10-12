@@ -9,9 +9,9 @@ for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f, local
 local({
   f <- riaz_load_env(".")
   b <- riaz_builtin()
-  message(if (!is.null(b)) sprintf("Ask Dr. Riaz: built-in key loaded from %s (%s, model %s). Students need no key.", basename(f %||% "the environment"), AI_PROVIDERS[[b$provider]]$name, b$model)
-          else if (is.null(f)) sprintf("Ask Dr. Riaz: no built-in key. To add one, create a file named .Renviron in %s (see .Renviron.example).", normalizePath("."))
-          else sprintf("Ask Dr. Riaz: %s was found but RIAZ_API_KEY is empty or still the placeholder, so students must enter their own key.", basename(f)))
+  message(if (!is.null(b)) sprintf("Ask Professor Riaz: built-in key loaded from %s (%s, model %s). Students need no key.", basename(f %||% "the environment"), AI_PROVIDERS[[b$provider]]$name, b$model)
+          else if (is.null(f)) sprintf("Ask Professor Riaz: no built-in key. To add one, create a file named .Renviron in %s (see .Renviron.example).", normalizePath("."))
+          else sprintf("Ask Professor Riaz: %s was found but RIAZ_API_KEY is empty or still the placeholder, so students must enter their own key.", basename(f)))
 })
 
 options(shiny.maxRequestSize = 50 * 1024^2)
@@ -133,7 +133,7 @@ server <- function(input, output, session) {
     })
   observe(session$sendCustomMessage("badge", list(id = "report-count", n = length(store$pins))))
 
-  # Ask Dr. Riaz: each page tells the assistant what it is showing.
+  # Ask Professor Riaz: each page tells the assistant what it is showing.
   ai_fns <- c(lapply(doe, `[[`, "ai"), lapply(cmp, `[[`, "ai"),
               list(desc = desc$ai, planner = planner$ai, learn = learn$ai, problems = problems$ai,
                    report = function(full) {

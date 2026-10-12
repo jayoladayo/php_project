@@ -1,4 +1,4 @@
-# Ask Dr. Riaz: an AI course assistant that can see the current page, data and results.
+# Ask Professor Riaz: an AI course assistant that can see the current page, data and results.
 # Each user brings their own API key. The key stays in the user's browser (if they ask
 # to remember it) and in the R session's memory; it is never written to disk or saved
 # in project files.
@@ -233,9 +233,9 @@ ai_pick_model <- function(p, df) {
 
 model_choices <- function(df) setNames(df$id, df$label)
 
-# ---------- What Dr. Riaz knows ----------
+# ---------- What Professor Riaz knows ----------
 
-RIAZ_SYSTEM <- "You are \"Dr. Riaz\", the AI teaching assistant built into StatDesign Studio, a no-code R Shiny app for the Experimental Design course at King Fahd University of Petroleum & Minerals (KFUPM). The persona is named after the course lecturer, but you are an AI assistant, not the lecturer himself: if a student asks, say so plainly, and never claim to speak for him about grades, deadlines or course policy.
+RIAZ_SYSTEM <- "You are \"Professor Riaz\", the AI teaching assistant built into StatDesign Studio, a no-code R Shiny app for the Experimental Design course at King Fahd University of Petroleum & Minerals (KFUPM). The persona is named after the course lecturer, but you are an AI assistant, not the lecturer himself: if a student asks, say so plainly, and never claim to speak for him about grades, deadlines or course policy.
 
 How to help:
 - Explain like a patient, encouraging statistics lecturer: clear, accurate, step by step, with the reasoning behind each choice. Use the course's methods: CRD, RCBD, Latin square, Graeco-Latin square, one, two and k sample tests, assumption checks (Shapiro-Wilk, Breusch-Pagan or Levene, Durbin-Watson), post-hoc tests (Tukey HSD, Fisher LSD, Bonferroni, Scheffe, Dunnett, Games-Howell, Dunn), non-parametric alternatives (Kruskal-Wallis, Friedman, Wilcoxon, Mann-Whitney, sign test), and the three ways to decide (p-value, rejection region, confidence interval).
@@ -368,11 +368,11 @@ riaz_avatar <- function(size = 36) div(class = "riaz-av", style = sprintf("width
 riaz_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$button(class = "riaz-fab", id = ns("fab"), onclick = "riazOpen(true)", riaz_avatar(38), span("Ask Dr. Riaz")),
+    tags$button(class = "riaz-fab", id = ns("fab"), onclick = "riazOpen(true)", riaz_avatar(38), span("Ask Professor Riaz")),
     div(class = "riaz-panel", id = ns("panel"), `data-ns` = ns(""),
         div(class = "riaz-head",
             riaz_avatar(44),
-            div(class = "grow", div(class = "riaz-name", "Dr. Riaz"), div(class = "riaz-sub", "AI course assistant")),
+            div(class = "grow", div(class = "riaz-name", "Professor Riaz"), div(class = "riaz-sub", "AI course assistant")),
             tags$button(class = "riaz-ib", title = "Settings", onclick = "riazView('settings')", icon("gear", 17)),
             tags$button(class = "riaz-ib", title = "New chat", onclick = sprintf("Shiny.setInputValue('%s', Math.random())", ns("clear")), icon("trash", 17)),
             tags$button(class = "riaz-ib", title = "Close", onclick = "riazOpen(false)", icon("x", 17))),
@@ -380,7 +380,7 @@ riaz_ui <- function(id) {
             uiOutput(ns("ctxbar")),
             div(class = "riaz-msgs", id = ns("msgs"), uiOutput(ns("messages"))),
             div(class = "riaz-input",
-                tags$textarea(id = ns("q"), rows = 1, placeholder = "Ask Dr. Riaz a question", class = "riaz-q"),
+                tags$textarea(id = ns("q"), rows = 1, placeholder = "Ask Professor Riaz a question", class = "riaz-q"),
                 tags$button(class = "riaz-send", id = ns("sendbtn"), title = "Send", onclick = "riazSend()", icon("send", 17))),
             div(class = "riaz-foot", "AI answers can be wrong. Check important results.")),
         div(class = "riaz-view riaz-settings",
@@ -398,7 +398,7 @@ riaz_ui <- function(id) {
                                    options = list(create = TRUE, persist = TRUE, placeholder = "Model name")),
                     btn(ns("load_models"), "Load models", "download", size = "bsm")),
                 checkboxInput(ns("remember"), "Remember on this device", FALSE),
-                checkboxInput(ns("share"), "Let Dr. Riaz see my current data and results", TRUE),
+                checkboxInput(ns("share"), "Let Professor Riaz see my current data and results", TRUE),
                 div(class = "hrow", btn(ns("save"), "Save and test", "check", "bp"), tags$button(class = "btn-k bs", onclick = "riazView('chat')", "Back to chat")),
                 uiOutput(ns("set_status")),
                 note(class = "small", "Your key is kept in this browser session only (and in this browser's storage if you tick Remember). It is never saved in project files. When the app runs online, your questions and the shared context pass through the app's server to the service you chose.")))))
@@ -551,7 +551,7 @@ riaz_server <- function(id, store, page, ctx_fns) {
       m <- msgs(); c <- cfg()
       intro <- div(class = "riaz-msg a", riaz_avatar(32),
                    div(class = "bubble", HTML(md_safe(paste0(
-                     "Assalamu alaikum! I'm **Dr. Riaz**, your AI assistant for Experimental Design. Ask me about your data, your results, the R code, or how to use the app.",
+                     "Assalamu alaikum! I'm **Professor Riaz**, your AI assistant for Experimental Design. Ask me about your data, your results, the R code, or how to use the app.",
                      if (is.null(c)) "\n\nFirst, connect an AI service with your own API key in the settings." else "")))))
       sug <- if (!length(m)) {
         k <- ctx()$kind; ch <- RIAZ_SUGGEST[[k]] %||% RIAZ_SUGGEST$general
@@ -596,7 +596,7 @@ riaz_server <- function(id, store, page, ctx_fns) {
         promises::then(ai_chat_promise(cc, system, cm, timeout = if (length(models) > 1) 45 else 120),
           function(txt) {
             if (!identical(cc$model, c$model)) {
-              txt <- paste0(txt, sprintf("\n\n*(Answered by %s because %s was busy. Dr. Riaz will keep using %s.)*", cc$model, c$model, cc$model))
+              txt <- paste0(txt, sprintf("\n\n*(Answered by %s because %s was busy. Professor Riaz will keep using %s.)*", cc$model, c$model, cc$model))
               cfg(cc); if (isTRUE(isolate(input$remember)) && !isTRUE(cc$builtin)) session$sendCustomMessage("riaz_store", cc)
               updateSelectizeInput(session, "model", selected = cc$model)
             }

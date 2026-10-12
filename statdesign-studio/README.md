@@ -64,14 +64,14 @@ In automatic mode each page recommends the test whose assumptions hold and expla
 - Every problem follows **Problem → Data → Recommended analysis → Run analysis**: the statement and questions, the factors and variables, the design type, the assumptions and data requirements, and the data as printed or in long format (scrollable, downloadable as CSV).
 - **Automatic recommendation** from the data structure, with the reasons: one sample, two independent samples, paired (RCBD with two treatments), CRD, random effects, RCBD (complete blocks), Latin square (checked to be a valid square) or a general linear model for unbalanced or incomplete layouts. It also flags unequal replication, count responses and very unequal variances.
 - **Override the analysis**: one-sample test, variance test, two-sample t-test, paired t-test, one-way ANOVA, random-effects ANOVA, RCBD ANOVA, Latin Square ANOVA, general linear model, rank tests, descriptive statistics, and residual diagnostics, with an optional log or square-root transformation. An analysis that does not fit the data says why and what to change. A manual choice is labelled as yours, not the system's.
-- **Answer Model** after **Run analysis**: the design, the variables, the hypotheses, the model, the calculations with the numbers filled in (sums of squares, standard errors, test statistics), the ANOVA or test table, the statistics with df, P-values and critical values, the decision, treatment comparisons (Tukey or Fisher LSD with grouping letters, or a confidence interval for two groups), assumption checks with QQ and residual plots, the statistical conclusion and a plain-language interpretation. **Pin to report** sends it to the Report builder, and Ask Dr. Riaz can see it.
+- **Answer Model** after **Run analysis**: the design, the variables, the hypotheses, the model, the calculations with the numbers filled in (sums of squares, standard errors, test statistics), the ANOVA or test table, the statistics with df, P-values and critical values, the decision, treatment comparisons (Tukey or Fisher LSD with grouping letters, or a confidence interval for two groups), assumption checks with QQ and residual plots, the statistical conclusion and a plain-language interpretation. **Pin to report** sends it to the Report builder, and Ask Professor Riaz can see it.
 - The page remembers the selected problem and the analysis chosen for each problem, so returning to the list loses nothing.
 
 The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experiments) and Chapter 3 (Experiments with a Single Factor). Neither contains a Latin square exercise, so no Latin square problem is invented; the Latin Square ANOVA is available for custom problems and through the class example. The chapter labels are set in `PS_CHAPTERS` at the top of `R/problems.R`.
 
-## Ask Dr. Riaz (AI assistant)
+## Ask Professor Riaz (AI assistant)
 
-The **Ask Dr. Riaz** button at the bottom right opens a chat with an AI course assistant. It can see the page you are on: your dataset, your column mapping, and on a results page the ANOVA or test tables, assumption checks, post-hoc tables, the interpretation and the generated R code. Ask it to explain results, check assumptions, walk through the R code line by line, or show you how to use the app. Untick **Let Dr. Riaz see my current data and results** in its settings to keep your data private.
+The **Ask Professor Riaz** button at the bottom right opens a chat with an AI course assistant. It can see the page you are on: your dataset, your column mapping, and on a results page the ANOVA or test tables, assumption checks, post-hoc tables, the interpretation and the generated R code. Ask it to explain results, check assumptions, walk through the R code line by line, or show you how to use the app. Untick **Let Professor Riaz see my current data and results** in its settings to keep your data private.
 
 ### Built-in key (students need no key)
 
@@ -79,7 +79,7 @@ To give every student a working assistant without asking for a key, put your own
 
 1. Copy `.Renviron.example` to a file named `.Renviron` in the same folder as `app.R`.
 2. Set `RIAZ_PROVIDER` (gemini, openrouter, groq, openai, anthropic or custom), `RIAZ_API_KEY`, and optionally `RIAZ_MODEL` and `RIAZ_SESSION_LIMIT` (questions per student session, default 40; 0 = no limit).
-3. Restart the app. The R console prints "Ask Dr. Riaz: built-in key loaded …" and Dr. Riaz's settings say "Ready to use: no key needed". If the console says no key was found, it also shows the folder the file must be in. A Windows editor adding ".txt" (`.Renviron.txt`) or saving with a byte-order mark is handled.
+3. Restart the app. The R console prints "Ask Professor Riaz: built-in key loaded …" and Professor Riaz's settings say "Ready to use: no key needed". If the console says no key was found, it also shows the folder the file must be in. A Windows editor adding ".txt" (`.Renviron.txt`) or saving with a byte-order mark is handled.
 4. To publish, run `deploy.R` as usual: it uploads `.Renviron` with the app. On Posit Connect you can set the same variables under the app's Vars tab instead.
 
 The key stays on the server: it is never sent to the browser, stored in the browser, or written to project files, and `.Renviron` is in `.gitignore` so it is never committed. Every student's questions are billed to this key, so use a free-tier service (Google Gemini Flash or Groq) or set a spending limit with your provider. Students can still connect their own key, and switch back to the course service, in the settings.
@@ -107,7 +107,7 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 - `R/problems.R`: the Problem Sets exercises and their data. `R/problem_engine.R`: structure detection, recommendation, validation, the analyses and the Answer Model. `R/mod_problems.R`: the Problem Sets page and the custom problem editor.
 
-- `R/ai.R`: Ask Dr. Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `.Renviron.example`: template for the built-in key.
+- `R/ai.R`: Ask Professor Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `.Renviron.example`: template for the built-in key.
 
 - `R/mod_planner.R`: Design Planner. `R/report.R`: pinning and the report exports. `R/mod_learn.R`: Learn guides. `deploy.R`: publish script.
 

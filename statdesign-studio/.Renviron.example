@@ -1,4 +1,4 @@
-# Built-in AI key for Ask Dr. Riaz.
+# Built-in AI key for Ask Professor Riaz.
 # 1. Copy this file and name the copy .Renviron (same folder as app.R).
 # 2. Fill in the values below and save. Restart the app.
 # .Renviron is listed in .gitignore, so the key is never committed. deploy.R uploads

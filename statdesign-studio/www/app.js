@@ -75,7 +75,7 @@
     $(input).trigger('change');
   });
 
-  // ---------- Ask Dr. Riaz ----------
+  // ---------- Ask Professor Riaz ----------
   var RZ = 'riaz-', RZKEY = 'sds-riaz';
   function rz(id) { return document.getElementById(RZ + id); }
   window.riazOpen = function (on) {
