@@ -1,0 +1,24 @@
+{
+  "mode": "paper",
+  "symbols": ["EURUSD"],
+  "timeframe": "H1",
+  "strategy": { "name": "ema_trend", "params": { "fast": 20, "slow": 50, "trend": 200, "atr_mult": 2.0, "rr": 2.0 } },
+  "risk": {
+    "risk_per_trade_pct": 0.5,
+    "max_open_positions": 3,
+    "max_total_risk_pct": 2.0,
+    "daily_loss_limit_pct": 2.0,
+    "flatten_on_daily_limit": false,
+    "max_lots": 1.0,
+    "max_spread_points": 30,
+    "max_tick_age_sec": 120,
+    "min_rr": 1.0
+  },
+  "exits": { "breakeven_at_r": 1.0, "partial_close_at_r": null, "partial_close_pct": 50, "trailing_atr_mult": null, "max_hold_hours": null },
+  "sessions": { "enabled": false, "utc_start": "07:00", "utc_end": "20:00" },
+  "paper": { "starting_balance": 10000, "commission_per_lot": 7, "currency": "USD", "spread_points": 10 },
+  "mt5": { "terminal_path": null, "magic": 26001, "deviation_points": 20 },
+  "live": { "account_login": null },
+  "poll_seconds": 10,
+  "dashboard_port": 8800
+}
