@@ -14,12 +14,32 @@ APP     <- "statdesign-studio"
 
 if (!requireNamespace("rsconnect", quietly = TRUE)) install.packages("rsconnect")
 
-# Packages the app uses; install any that are missing so rsconnect can record them.
+# Packages the app uses. rsconnect refuses to deploy unless these AND everything they
+# depend on (for example broom, doBy, gdtools, ragg, rbibutils, SparseM) are installed
+# on this computer, so install whatever is missing first.
 pkgs <- c("shiny", "bslib", "ggplot2", "jsonlite", "readxl", "writexl", "rhandsontable", "car", "lmtest",
-          "nortest", "multcomp", "coin", "officer", "flextable", "gridExtra", "png", "base64enc", "htmltools",
-          "curl", "promises", "later", "commonmark")
-missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
-if (length(missing)) install.packages(missing)
+          "nortest", "multcomp", "emmeans", "coin", "officer", "flextable", "gridExtra", "png", "base64enc",
+          "htmltools", "curl", "promises", "later", "commonmark")
+repo <- getOption("repos"); if (is.null(repo) || identical(unname(repo["CRAN"]), "@CRAN@")) options(repos = c(CRAN = "https://cloud.r-project.org"))
+# Follow the requirements of both the installed versions (what rsconnect checks) and the
+# current CRAN versions (what install.packages() will fetch), until nothing new turns up.
+dep_of <- function(p, db) unlist(tools::package_dependencies(p, db = db, which = c("Depends", "Imports", "LinkingTo"), recursive = TRUE), use.names = FALSE)
+cran <- tryCatch(utils::available.packages(), error = function(e) NULL)
+need <- pkgs
+repeat {
+  more <- unique(c(need, dep_of(need, utils::installed.packages()), if (!is.null(cran) && nrow(cran)) dep_of(need, cran)))
+  if (length(more) == length(need)) break
+  need <- more
+}
+have <- rownames(utils::installed.packages())
+missing <- setdiff(need, c(have, rownames(utils::installed.packages(priority = "base"))))
+if (length(missing)) {
+  message("Installing packages the app needs: ", paste(missing, collapse = ", "))
+  install.packages(missing)
+}
+still <- setdiff(need, rownames(utils::installed.packages()))
+if (length(still)) stop("These packages could not be installed: ", paste(still, collapse = ", "),
+                        ". Install them with install.packages(), then run this script again.", call. = FALSE)
 
 rsconnect::setAccountInfo(name = ACCOUNT, token = TOKEN, secret = SECRET)
 rsconnect::deployApp(
