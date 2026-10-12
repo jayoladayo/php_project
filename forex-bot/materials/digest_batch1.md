@@ -31,3 +31,25 @@ lot size, spread/pips/leverage; "The Candlestick Trading Bible" (KohanFx); CFI "
 ## Gaps that must be pinned down before coding (questions for the owner)
 - Exact swing-high/low definition (e.g. N bars each side), and which timeframe(s) for the trend vs. the entry.
 - Is a trade "CHOCH + retrace into POI + candle confirmation", or something else? What is the stop (beyond the POI/swing?) and the target (next liquidity?).
+
+---
+# Batch 2: "ProFx 4.0" (Forex21) — only the user manual was read
+
+Not used, on purpose: the .ex4 expert advisor, the 7 .ex4 indicators, ProFx32.dll and the chart template. They are compiled,
+licence-locked commercial binaries (the licence needs per-account registration with the vendor) shipped from a third-party
+download site. I do not run, decompile or copy them, and the owner should not install the DLL/EX4 files on a funded account.
+The proprietary indicators (Probability Cloud, Strength Oscillator, Multi Analyzes) cannot be reproduced from the manual.
+
+## Rules in the manual that a bot can implement with standard, public indicators
+Entry (all must agree): signal arrow; probability-cloud filter; signal bar opened beyond the custom MA; momentum increasing;
+higher-timeframe (H4 or D1) agrees; prefer EU/US sessions; ignore tight-range/choppy signals.
+Exit: stay in while indicators agree; close when the strength lines cross AND Heiken Ashi colour flips; close immediately on a
+high-impact news spike; optional trailing stop and fixed TP.
+Timeframes: M30 for entries with H4 for trend confirmation; EURUSD/GBPUSD first.
+General: max 1-2 trades per day; no trading on holidays / around new year; keep a trade log; tighten stops before major news;
+trade with the trend; stop = last swing high/low with a minimum distance; risk 1% per trade (percent-of-equity sizing).
+Components named: Heiken Ashi, a moving average, a stochastic (Lane), a strength oscillator, a probability cloud, a multi-indicator.
+
+## Notes
+- It is an MetaTrader 4 expert advisor; our bot talks to MetaTrader 5.
+- The manual's claims of "constant profits" are marketing, not evidence; any ProFx-style rules must be backtested like any other.
