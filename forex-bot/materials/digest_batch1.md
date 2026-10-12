@@ -53,3 +53,24 @@ Components named: Heiken Ashi, a moving average, a stochastic (Lane), a strength
 ## Notes
 - It is an MetaTrader 4 expert advisor; our bot talks to MetaTrader 5.
 - The manual's claims of "constant profits" are marketing, not evidence; any ProFx-style rules must be backtested like any other.
+
+---
+# Batch 3: reading list (30 free research papers) + download script
+
+Read in full: `forex_reading_list.md` and `download_forex_materials.sh`. The script only curls PDFs from bis.org, nber.org, federalreserve.gov,
+fraser.stlouisfed.org, aqr.com and similar into ./forex_materials. I did NOT run it (the sandbox blocked running a user-supplied script) and
+none of the PDFs were available to me, so nothing below is quoted from the papers: it is my prior knowledge of what these well-known papers
+conclude, to be replaced by the real text if the PDFs are uploaded.
+
+## Takeaways relevant to the bot (from prior knowledge, unverified against the PDFs)
+- Technical rules (Neely & Weller; Menkhoff & Taylor): FX technical rules earned excess returns in older data, much smaller or gone in
+  recent decades, and costs matter a lot -> backtest with spread + slippage, hold out recent data, avoid over-fitting parameters.
+- Order clustering (Osler): stops and orders cluster at round numbers and just beyond obvious highs/lows; breaches of those cause cascades.
+  Consistent with the batch-1 liquidity/stop-hunt material -> do not put stops on round numbers; prefer an ATR buffer beyond swing points.
+- Trend / momentum (Hurst-Ooi-Pedersen; Menkhoff et al.): trend following has long evidence across assets, but with long drawdowns; currency
+  momentum profits are concentrated where costs are high -> volatility-scaled sizing, realistic costs, expect losing streaks.
+- Carry (Brunnermeier et al.; Menkhoff et al.): carry earns a premium but crashes when volatility spikes; not an intraday-bot idea.
+- News (Andersen et al.): macro announcements cause jumps and spread blow-outs -> news blackout window + spread filter (already have the spread filter).
+- Execution / conduct (BIS algos; FX Global Code): last look, slippage and wide spreads in thin liquidity -> avoid rollover hours and low liquidity.
+- Positioning (CFTC COT): weekly, lagging data; possible slow bias filter, not an entry signal.
+- Deep-learning review (Sezer et al.): reported accuracies are often inflated by leakage -> no ML until a clean walk-forward test exists.
