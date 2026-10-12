@@ -24,14 +24,19 @@ AI_PROVIDERS <- list(
 # Windows accidents: a ".txt" added to the name, a byte-order mark, CRLF line endings,
 # spaces around "=", quotes and a missing final newline. Variables already set in the
 # real environment (for example on Posit Connect) win. Returns the file used, or NULL.
+RIAZ_KEY_FILES <- c("ai_key.txt", "ai-key.txt", "ai_key", ".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env")
 riaz_load_env <- function(dir = ".") {
-  cands <- file.path(dir, c(".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env"))
+  cands <- file.path(dir, RIAZ_KEY_FILES)
   f <- cands[file.exists(cands)][1]
   if (is.na(f)) return(NULL)
   lines <- tryCatch(readLines(f, warn = FALSE, encoding = "UTF-8"), error = function(e) character(0))
   lines <- sub("^\ufeff", "", sub("^\xef\xbb\xbf", "", lines, useBytes = TRUE))
   lines <- trimws(gsub("\r", "", lines))
-  lines <- lines[nzchar(lines) & !startsWith(lines, "#") & grepl("=", lines, fixed = TRUE)]
+  lines <- lines[nzchar(lines) & !startsWith(lines, "#")]
+  # A file holding only the key itself, with nothing else, is a Gemini key.
+  bare <- lines[!grepl("=", lines, fixed = TRUE) & grepl("^\\S{20,}$", lines)]
+  if (length(bare) && !nzchar(Sys.getenv("RIAZ_API_KEY", ""))) Sys.setenv(RIAZ_API_KEY = bare[1])
+  lines <- lines[grepl("=", lines, fixed = TRUE)]
   for (ln in lines) {
     k <- trimws(sub("=.*$", "", ln)); v <- trimws(sub("^[^=]*=", "", ln))
     k <- sub("^export\\s+", "", k)
@@ -42,7 +47,7 @@ riaz_load_env <- function(dir = ".") {
 }
 
 # A key built into the app by whoever deploys it, read from environment variables on
-# the server (see .Renviron.example). It is never sent to the browser, stored in the
+# the server (see ai_key.example.txt). It is never sent to the browser, stored in the
 # browser, or written to project files. Returns NULL when no key is configured.
 riaz_builtin <- function() {
   key <- trimws(Sys.getenv("RIAZ_API_KEY", ""))
@@ -437,7 +442,8 @@ riaz_server <- function(id, store, page, ctx_fns) {
       updateSelectizeInput(session, "model", choices = if (nzchar(m)) m else character(0), selected = m)
     }, ignoreInit = TRUE)
     output$builtin_note <- renderUI({
-      if (is.null(builtin)) return(NULL)
+      if (is.null(builtin)) return(note(kind = "w", ic = "alert", div(tags$b("No course key on this server. "),
+        "Whoever runs the app can add one: put a file named ai_key.txt, holding the API key, in the same folder as app.R and restart the app. Until then, connect your own key below.")))
       mine <- !isTRUE(cfg()$builtin)
       note(kind = if (mine) "i" else "g", ic = if (mine) "info" else "check", div(
         tags$b(if (mine) "You are using your own key. " else "Ready to use: no key needed. "),

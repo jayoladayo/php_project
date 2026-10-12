@@ -42,8 +42,11 @@ if (length(still)) stop("These packages could not be installed: ", paste(still, 
                         ". Install them with install.packages(), then run this script again.", call. = FALSE)
 
 rsconnect::setAccountInfo(name = ACCOUNT, token = TOKEN, secret = SECRET)
+RIAZ_KEY_FILES_DEPLOY <- c("ai_key.txt", "ai-key.txt", "ai_key", ".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env")
+if (!length(intersect(RIAZ_KEY_FILES_DEPLOY, list.files(".", all.files = TRUE))))
+  message("Note: no ai_key.txt found, so the published app will ask students for their own AI key.")
 files <- c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE),
-           intersect(c(".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env"), list.files(".", all.files = TRUE)))  # the built-in AI key, if you set one
+           intersect(RIAZ_KEY_FILES_DEPLOY, list.files(".", all.files = TRUE)))  # the built-in AI key, if you set one
 deploy <- function() rsconnect::deployApp(appDir = ".", appName = APP, account = ACCOUNT, launch.browser = TRUE,
                                           forceUpdate = TRUE, appFiles = files)
 # If the app was deleted or archived on shinyapps.io, the old record in the rsconnect/

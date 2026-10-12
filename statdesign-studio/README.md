@@ -77,12 +77,12 @@ The **Ask Professor Riaz** button at the bottom right opens a chat with an AI co
 
 To give every student a working assistant without asking for a key, put your own key on the server:
 
-1. Copy `.Renviron.example` to a file named `.Renviron` in the same folder as `app.R`.
+1. Copy `ai_key.example.txt` to a file named `ai_key.txt` in the same folder as `app.R` (or make `ai_key.txt` hold just the key itself, for a Google Gemini key).
 2. Set `RIAZ_PROVIDER` (gemini, openrouter, groq, openai, anthropic or custom), `RIAZ_API_KEY`, and optionally `RIAZ_MODEL` and `RIAZ_SESSION_LIMIT` (questions per student session, default 40; 0 = no limit).
-3. Restart the app. The R console prints "Ask Professor Riaz: built-in key loaded …" and Professor Riaz's settings say "Ready to use: no key needed". If the console says no key was found, it also shows the folder the file must be in. A Windows editor adding ".txt" (`.Renviron.txt`) or saving with a byte-order mark is handled.
-4. To publish, run `deploy.R` as usual: it uploads `.Renviron` with the app. On Posit Connect you can set the same variables under the app's Vars tab instead.
+3. Restart the app. The R console prints "Ask Professor Riaz: built-in key loaded …" and Professor Riaz's settings say "Ready to use: no key needed". If the console says no key was found, it also shows the folder the file must be in. A `.Renviron` file works too, and a byte-order mark from Windows Notepad is handled.
+4. To publish, run `deploy.R` as usual: it uploads `ai_key.txt` with the app. (If you use RStudio's Publish button instead, make sure `ai_key.txt` is ticked in the file list.) On Posit Connect you can set the same variables under the app's Vars tab instead.
 
-The key stays on the server: it is never sent to the browser, stored in the browser, or written to project files, and `.Renviron` is in `.gitignore` so it is never committed. Every student's questions are billed to this key, so use a free-tier service (Google Gemini Flash or Groq) or set a spending limit with your provider. Students can still connect their own key, and switch back to the course service, in the settings.
+The key stays on the server: it is never sent to the browser, stored in the browser, or written to project files, and `ai_key.txt` is in `.gitignore` so it is never committed. Every student's questions are billed to this key, so use a free-tier service (Google Gemini Flash or Groq) or set a spending limit with your provider. Students can still connect their own key, and switch back to the course service, in the settings.
 
 ### Each student's own key
 
@@ -107,7 +107,7 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 - `R/problems.R`: the Problem Sets exercises and their data. `R/problem_engine.R`: structure detection, recommendation, validation, the analyses and the Answer Model. `R/mod_problems.R`: the Problem Sets page and the custom problem editor.
 
-- `R/ai.R`: Ask Professor Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `.Renviron.example`: template for the built-in key.
+- `R/ai.R`: Ask Professor Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `ai_key.example.txt`: template for the built-in key.
 
 - `R/mod_planner.R`: Design Planner. `R/report.R`: pinning and the report exports. `R/mod_learn.R`: Learn guides. `deploy.R`: publish script.
 
