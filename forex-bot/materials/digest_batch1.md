@@ -74,3 +74,39 @@ conclude, to be replaced by the real text if the PDFs are uploaded.
 - Execution / conduct (BIS algos; FX Global Code): last look, slippage and wide spreads in thin liquidity -> avoid rollover hours and low liquidity.
 - Positioning (CFTC COT): weekly, lagging data; possible slow bias filter, not an entry signal.
 - Deep-learning review (Sezer et al.): reported accuracies are often inflated by leakage -> no ML until a clean walk-forward test exists.
+
+---
+# Batch 4: Study_4.zip — 10 real research papers (extracted and read; abstracts, intros and key sections)
+
+Files: Osler SR125 and SR150 (NY Fed), Neely & Weller 2011 (St. Louis Fed), Menkhoff & Taylor (Warwick), Andersen-Bollerslev-Diebold-Vega
+(NBER 8959), Evans & Lyons (NBER 7317, 11748), Chaboud et al. (Fed IFDP 980), BIS Markets Committee FX execution algorithms, BIS Triennial 2025 commentary.
+This batch supersedes the "prior knowledge" guesses in batch 3 where they differ. (Evans-Lyons 11748 and the BIS Triennial were only skimmed.)
+
+## What the papers actually say
+- Osler SR125 (orders at a large dealing bank): stop-loss and take-profit orders cluster at ROUND NUMBERS. Take-profits sit right at the round number
+  (so it acts as a partly reflecting barrier = support/resistance); stop-loss BUY orders cluster just ABOVE and stop-loss SELL orders just BELOW round numbers,
+  so trends gain momentum after a round number is crossed. This is a microstructure explanation for why support/resistance and breakouts work.
+- Osler SR150: price moves faster after rates hit levels where stops cluster; the effect of stop-loss orders is larger and lasts longer than for take-profits
+  (hours, not days). Stop cascades help explain fat tails (USD/JPY 4-sigma days ~85x more often than a normal distribution). "Running the stops" is real.
+- Neely & Weller 2011: simple technical rules on dollar rates earned positive risk-adjusted returns for ~15 years in the 1970s-80s and then it vanished;
+  more complex rules gave modest returns for a similar period (one study: profits in 2003 disappeared by 2008). Results are very sensitive to transaction costs
+  (they quote 2.5-15 bp one-way depending on era) and to data snooping / data mining / publication bias. Consistent with an "adaptive markets" view:
+  edges decay. => Any rule must be tested net of costs, out of sample, and monitored for decay.
+- Menkhoff & Taylor: technical analysis is widely used by FX professionals and can show excess returns over sustained periods; irrational behaviour or
+  central-bank intervention alone do not explain it; it may exploit non-fundamental information (order flow).
+- Andersen et al.: macro-announcement SURPRISES (actual vs expected) move FX prices as immediate JUMPS in the mean, followed by gradual volatility adjustment;
+  bad news moves prices more than good news. => Block entries around scheduled announcements; do not hold unprotected through them.
+- Evans & Lyons: order flow explains >50% of daily FX changes in their model, far more than macro models; $1bn net dollar purchases moved DM/$ ~1 pfennig.
+  (Retail bots cannot see interdealer order flow, so this is background, not a signal source.)
+- Chaboud et al. (EBS data, 2006-07): algorithmic trades are correlated with each other, but algorithmic trading is not associated with higher volatility;
+  some algos step back in the minute after data releases and add liquidity over the following hour.
+- BIS execution-algorithms report: EAs are common but not dominant; transaction cost analysis (TCA) and algorithm safety are central themes; fragmented
+  liquidity; performance degrades in volatile spells (March 2020). => Measure our own fills vs quotes (the paper broker already records spread/slippage).
+
+## Concrete design implications for the bot (to build once the owner confirms the strategy)
+1. Round-number awareness: never place a stop exactly on or just beyond a round number (xx.x000 / xx.x500); put it a buffer further out (ATR-based).
+   Use round numbers as candidate support/resistance and as target zones; expect momentum after a clean break and reversals at first touch.
+2. News blackout: configurable minutes before/after high-impact releases (needs a calendar file the owner supplies); no new entries in the window; optional tighten/flatten.
+3. Cost realism: backtests use measured spread + commission + slippage allowance; report results with and without costs.
+4. Anti-overfitting: fixed parameter sets decided up front, walk-forward / out-of-sample split in the backtester, and a "strategy health" check that flags decay.
+5. Fat tails: stop-loss must be a broker-side order (already) and sizing must assume gaps (stop can fill worse); keep the daily loss cap and total-risk cap.
