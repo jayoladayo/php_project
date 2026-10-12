@@ -110,3 +110,34 @@ This batch supersedes the "prior knowledge" guesses in batch 3 where they differ
 3. Cost realism: backtests use measured spread + commission + slippage allowance; report results with and without costs.
 4. Anti-overfitting: fixed parameter sets decided up front, walk-forward / out-of-sample split in the backtester, and a "strategy health" check that flags decay.
 5. Fat tails: stop-loss must be a broker-side order (already) and sizing must assume gaps (stop can fill worse); keep the daily loss cap and total-risk cap.
+
+---
+# Batch 5: stAGRE_5.zip — 11 files (all extracted; abstracts/intros and key parts read)
+
+Lustig-Roussanov-Verdelhan (carry factor), Rossi (exchange-rate predictability survey), Engel-Mark-West (factor forecasts), Jorda-Taylor (carry + FEER),
+Verdelhan (carry and dollar factors), Della Corte et al. (volatility risk premia), Du-Tepper-Verdelhan (CIP deviations), Reiswich-Wystup (FX vol smile),
+Sezer et al. (deep-learning review), GFXC FX Global Code, and "A Century of Evidence on Trend Following" (only the abstract page + disclaimer was in the zip;
+the full paper was not provided, so only its headline claim is known).
+
+## What they say (relevant parts)
+- Rossi: are exchange rates predictable? "It depends" (predictor, horizon, sample, model). The toughest benchmark is the random walk; predictability is mostly
+  found with Taylor-rule / net-foreign-asset predictors, linear models and few parameters. => No fundamentals-based short-term forecast is worth coding.
+- Engel-Mark-West: factor-model forecasts beat "no change" only at long (8-12 quarter) horizons and only in 1999-2007, not 1987-98 => unstable, not intraday-relevant.
+- Lustig et al.: the carry trade (long high-yield, short low-yield currencies) earned a premium net of transaction costs (low-rate vs high-rate currencies differ by
+  4.8%/yr) and it is counter-cyclical, i.e. it is compensation for global risk. Jorda-Taylor: naive carry has low Sharpe and crash risk; conditioning on
+  valuation (FEER) improves it. Verdelhan: two factors (carry and dollar) explain 20-90% of exchange-rate movements. => Currency moves are heavily correlated:
+  several "different" pair trades can be one dollar bet. Add a currency-exposure cap (e.g. total net USD exposure), not just a per-trade cap.
+- AQR trend-following (abstract only): time-series momentum (long what has risen, short what has fallen) profitable on average since 1985 in most futures and
+  currency forwards, and constructed back to 1880 with consistent profits. Says nothing about intraday FX bots and includes long drawdowns.
+- Della Corte et al.: a currency strategy sorted on volatility risk premia (needs implied-vol data); Reiswich-Wystup: how FX option smiles are quoted (options only);
+  Du-Tepper-Verdelhan: covered-interest-parity violations persist because of bank balance-sheet costs (institutional; not retail-tradable). => Not applicable to this bot.
+- Sezer et al.: survey of deep learning for financial time series incl. forex; mostly reports prediction accuracy of published models. (Per batch 3/4 caution:
+  no ML until a clean walk-forward test exists.)
+- FX Global Code: principles for wholesale market participants (it explicitly excludes retail participants). Useful ideas: last look (the liquidity provider may
+  reject/re-check a trade during a short window, used as a risk control), transparency on execution, and good risk-management/ethics practice. => For us: a broker
+  can reject or requote an order; treat a rejection as normal, log it, never retry blindly in a loop, and track slippage per fill.
+
+## Implications to add to the spec
+- Currency-level exposure cap: sum risk per currency (e.g. long EURUSD + long GBPUSD = double short-USD) and cap it.
+- Order rejection/requote handling with bounded retries and a logged reason (already: failures are logged and never assumed filled).
+- Optional later: time-series-momentum / trend filter on higher timeframes (consistent with the book material); no carry, options, CIP or ML modules.
