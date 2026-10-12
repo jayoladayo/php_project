@@ -1,0 +1,16 @@
+# Built-in AI key for Ask Dr. Riaz.
+# 1. Copy this file and name the copy .Renviron (same folder as app.R).
+# 2. Fill in the values below and save. Restart the app.
+# .Renviron is listed in .gitignore, so the key is never committed. deploy.R uploads
+# it to shinyapps.io with the app. The key stays on the server: it is never sent to
+# students' browsers.
+
+# Service: gemini, openrouter, groq, openai, anthropic or custom
+RIAZ_PROVIDER=gemini
+RIAZ_API_KEY=paste-your-key-here
+# Leave empty to use the service's default model
+RIAZ_MODEL=
+# Only for RIAZ_PROVIDER=custom (an OpenAI-compatible endpoint)
+RIAZ_BASE_URL=
+# Questions each student can ask per session with this key (0 = no limit)
+RIAZ_SESSION_LIMIT=40

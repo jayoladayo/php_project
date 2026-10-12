@@ -20,6 +20,21 @@ AI_PROVIDERS <- list(
                 note = "Any service with an OpenAI-style /chat/completions endpoint: DeepSeek, Mistral, Together, a local Ollama (http://localhost:11434/v1), and others.")
 )
 
+# A key built into the app by whoever deploys it, read from environment variables on
+# the server (see .Renviron.example). It is never sent to the browser, stored in the
+# browser, or written to project files. Returns NULL when no key is configured.
+riaz_builtin <- function() {
+  key <- trimws(Sys.getenv("RIAZ_API_KEY", ""))
+  prov <- trimws(Sys.getenv("RIAZ_PROVIDER", "gemini"))
+  if (!prov %in% names(AI_PROVIDERS)) prov <- "gemini"
+  base <- trimws(Sys.getenv("RIAZ_BASE_URL", ""))
+  if (!nzchar(key) && !(prov == "custom" && nzchar(base))) return(NULL)
+  model <- trimws(Sys.getenv("RIAZ_MODEL", ""))
+  if (!nzchar(model)) model <- AI_PROVIDERS[[prov]]$model
+  lim <- suppressWarnings(as.integer(Sys.getenv("RIAZ_SESSION_LIMIT", "40")))
+  list(provider = prov, key = key, model = model, base = base, builtin = TRUE, limit = if (is.na(lim)) 40L else lim)
+}
+
 ai_base <- function(cfg) {
   b <- if (identical(cfg$provider, "custom")) cfg$base else AI_PROVIDERS[[cfg$provider]]$base
   sub("/+$", "", b %||% "")
@@ -348,6 +363,7 @@ riaz_ui <- function(id) {
             div(class = "riaz-foot", "AI answers can be wrong. Check important results.")),
         div(class = "riaz-view riaz-settings",
             div(class = "col", style = "gap:12px",
+                uiOutput(ns("builtin_note")),
                 h3(class = "ct", "Connect an AI service"),
                 p(class = "small", style = "margin:0", "Use your own API key. Google Gemini, Groq and OpenRouter have free options."),
                 selectInput(ns("provider"), "Service", setNames(names(AI_PROVIDERS), vapply(AI_PROVIDERS, `[[`, "", "name")), "gemini", width = "100%"),
@@ -371,7 +387,9 @@ riaz_ui <- function(id) {
 riaz_server <- function(id, store, page, ctx_fns) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    cfg <- reactiveVal(NULL)
+    builtin <- riaz_builtin()
+    cfg <- reactiveVal(builtin)
+    used <- reactiveVal(0L)
     msgs <- reactiveVal(list())
     pending <- reactiveVal(FALSE)
     status <- reactiveVal(NULL)
@@ -396,6 +414,19 @@ riaz_server <- function(id, store, page, ctx_fns) {
       m <- AI_PROVIDERS[[p]]$model
       updateSelectizeInput(session, "model", choices = if (nzchar(m)) m else character(0), selected = m)
     }, ignoreInit = TRUE)
+    output$builtin_note <- renderUI({
+      if (is.null(builtin)) return(NULL)
+      mine <- !isTRUE(cfg()$builtin)
+      note(kind = if (mine) "i" else "g", ic = if (mine) "info" else "check", div(
+        tags$b(if (mine) "You are using your own key. " else "Ready to use: no key needed. "),
+        sprintf("The app includes a course AI service (%s, %s).%s", AI_PROVIDERS[[builtin$provider]]$name, builtin$model,
+                if (mine) "" else " You can still connect your own key below if you prefer."),
+        if (mine) div(style = "margin-top:8px", btn(ns("use_builtin"), "Use the course service again", "check", "bs", "bsm"))))
+    })
+    observeEvent(input$use_builtin, {
+      cfg(builtin); session$sendCustomMessage("riaz_store", list(clear = TRUE))
+      status(list(kind = "g", text = "Using the course AI service again."))
+    })
     output$prov_note <- renderUI({
       p <- AI_PROVIDERS[[input$provider %||% "gemini"]]
       p(class = "small", style = "margin:-4px 0 0", p$note,
@@ -430,7 +461,7 @@ riaz_server <- function(id, store, page, ctx_fns) {
       cur <- cfg()
       if (!is.null(cur) && identical(cur$provider, c$provider) && !(cur$model %in% df$id)) {
         cur$model <- sel; cfg(cur)
-        if (isTRUE(input$remember)) session$sendCustomMessage("riaz_store", cur)
+        if (isTRUE(input$remember) && !isTRUE(cur$builtin)) session$sendCustomMessage("riaz_store", cur)
       }
       nf <- sum(df$free %in% TRUE)
       status(list(kind = "i", text = paste0(sprintf("Found %d models", nrow(df)),
@@ -519,6 +550,12 @@ riaz_server <- function(id, store, page, ctx_fns) {
       if (!nzchar(q) || pending()) return()
       c <- cfg()
       if (is.null(c)) { session$sendCustomMessage("riaz_view", list(view = "settings")); status(list(kind = "w", text = "Connect an AI service first.")); return() }
+      if (isTRUE(c$builtin) && c$limit > 0 && used() >= c$limit) {
+        msgs(c(msgs(), list(list(role = "user", content = q),
+                            list(role = "assistant", error = TRUE, content = sprintf("You have used the %d questions the course AI service allows per session. Reload the page to start a new session, or connect your own free key in the settings (gear icon).", c$limit)))))
+        return()
+      }
+      if (isTRUE(c$builtin)) used(used() + 1L)
       hist <- c(msgs(), list(list(role = "user", content = q)))
       msgs(hist); pending(TRUE)
       convo <- Filter(function(x) !isTRUE(x$error), hist)
@@ -538,7 +575,7 @@ riaz_server <- function(id, store, page, ctx_fns) {
           function(txt) {
             if (!identical(cc$model, c$model)) {
               txt <- paste0(txt, sprintf("\n\n*(Answered by %s because %s was busy. Dr. Riaz will keep using %s.)*", cc$model, c$model, cc$model))
-              cfg(cc); if (isTRUE(isolate(input$remember))) session$sendCustomMessage("riaz_store", cc)
+              cfg(cc); if (isTRUE(isolate(input$remember)) && !isTRUE(cc$builtin)) session$sendCustomMessage("riaz_store", cc)
               updateSelectizeInput(session, "model", selected = cc$model)
             }
             msgs(c(msgs(), list(list(role = "assistant", content = txt)))); pending(FALSE)
@@ -554,6 +591,6 @@ riaz_server <- function(id, store, page, ctx_fns) {
     })
     observe(session$sendCustomMessage("riaz_busy", list(busy = pending())))
     # The chat and settings views are swapped with CSS, so keep both up to date while hidden.
-    for (o in c("messages", "ctxbar", "set_status", "prov_note")) outputOptions(output, o, suspendWhenHidden = FALSE)
+    for (o in c("messages", "ctxbar", "set_status", "prov_note", "builtin_note")) outputOptions(output, o, suspendWhenHidden = FALSE)
   })
 }

@@ -3,6 +3,9 @@
 library(shiny)
 library(bslib)
 
+# Private settings such as the built-in AI key live in .Renviron next to this file (never committed).
+if (file.exists(".Renviron")) readRenviron(".Renviron")
+
 for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f, local = TRUE)
 
 options(shiny.maxRequestSize = 50 * 1024^2)

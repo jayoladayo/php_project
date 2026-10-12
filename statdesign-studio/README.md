@@ -73,7 +73,20 @@ The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experim
 
 The **Ask Dr. Riaz** button at the bottom right opens a chat with an AI course assistant. It can see the page you are on: your dataset, your column mapping, and on a results page the ANOVA or test tables, assumption checks, post-hoc tables, the interpretation and the generated R code. Ask it to explain results, check assumptions, walk through the R code line by line, or show you how to use the app. Untick **Let Dr. Riaz see my current data and results** in its settings to keep your data private.
 
-Each user connects their own AI service in the chat's settings (gear icon):
+### Built-in key (students need no key)
+
+To give every student a working assistant without asking for a key, put your own key on the server:
+
+1. Copy `.Renviron.example` to a file named `.Renviron` in the same folder as `app.R`.
+2. Set `RIAZ_PROVIDER` (gemini, openrouter, groq, openai, anthropic or custom), `RIAZ_API_KEY`, and optionally `RIAZ_MODEL` and `RIAZ_SESSION_LIMIT` (questions per student session, default 40; 0 = no limit).
+3. Restart the app. Dr. Riaz's settings now say "Ready to use: no key needed".
+4. To publish, run `deploy.R` as usual: it uploads `.Renviron` with the app. On Posit Connect you can set the same variables under the app's Vars tab instead.
+
+The key stays on the server: it is never sent to the browser, stored in the browser, or written to project files, and `.Renviron` is in `.gitignore` so it is never committed. Every student's questions are billed to this key, so use a free-tier service (Google Gemini Flash or Groq) or set a spending limit with your provider. Students can still connect their own key, and switch back to the course service, in the settings.
+
+### Each student's own key
+
+Without a built-in key, each user connects their own AI service in the chat's settings (gear icon):
 
 | Service | Free option | Default model | Get a key |
 |---|---|---|---|
@@ -94,7 +107,7 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 - `R/problems.R`: the Problem Sets exercises and their data. `R/problem_engine.R`: structure detection, recommendation, validation, the analyses and the Answer Model. `R/mod_problems.R`: the Problem Sets page and the custom problem editor.
 
-- `R/ai.R`: Ask Dr. Riaz (providers, non-blocking requests, page context, chat panel).
+- `R/ai.R`: Ask Dr. Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `.Renviron.example`: template for the built-in key.
 
 - `R/mod_planner.R`: Design Planner. `R/report.R`: pinning and the report exports. `R/mod_learn.R`: Learn guides. `deploy.R`: publish script.
 

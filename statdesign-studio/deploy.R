@@ -24,4 +24,5 @@ if (length(missing)) install.packages(missing)
 rsconnect::setAccountInfo(name = ACCOUNT, token = TOKEN, secret = SECRET)
 rsconnect::deployApp(
   appDir = ".", appName = APP, account = ACCOUNT, launch.browser = TRUE, forceUpdate = TRUE,
-  appFiles = c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE)))
+  appFiles = c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE),
+               if (file.exists(".Renviron")) ".Renviron"))  # the built-in AI key, if you set one
