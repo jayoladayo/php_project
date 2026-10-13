@@ -65,7 +65,7 @@ ps_structure <- function(df, roles, transform = "none") {
   for (k in PS_ROLE_KEYS) {
     col <- roles[[k]] %||% ""
     if (!nzchar(col)) next
-    if (!col %in% names(df)) { st$errors <- c(st$errors, sprintf("The %s column \"%s\" is not in the dataset.", tolower(PS_ROLE_NAMES[[k]]), col)); next }
+    if (!col %in% names(df)) { st$errors <- c(st$errors, sprintf("The %s role is set to \"%s\", which is not a column in the data. Choose another column for it, or (none).", PS_ROLE_NAMES[[k]], col)); next }
     v <- trimws(as.character(df[[col]])); v[v == ""] <- NA
     lev <- roles$levels[[k]] %||% unique(v[!is.na(v)])
     d[[k]] <- factor(v, levels = unique(c(lev, unique(v[!is.na(v)]))))

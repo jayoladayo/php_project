@@ -387,10 +387,16 @@ problems_server <- function(id, store, show_crumb) {
 
     # ---------- Custom problem editor ----------
     role_ids <- c(response = "c_response", treatment = "c_treatment", block = "c_block", row = "c_row", column = "c_column")
+    # "(none)" needs a real value: the dropdown cannot send an empty one, so an emptied role
+    # would otherwise keep pointing at a column from the previous dataset.
+    NO_ROLE <- ".none"
     set_roles <- function(df, roles = NULL) {
-      ch <- c("(none)" = "", names(df))
+      ch <- c("(none)" = NO_ROLE, names(df))
       if (is.null(roles)) roles <- ps_guess_roles(df)
-      for (k in names(role_ids)) updateSelectInput(session, role_ids[[k]], choices = ch, selected = roles[[k]] %||% "")
+      for (k in names(role_ids)) {
+        v <- roles[[k]] %||% ""
+        updateSelectInput(session, role_ids[[k]], choices = ch, selected = if (nzchar(v) && v %in% names(df)) v else NO_ROLE)
+      }
     }
     load_data <- function(df, roles = NULL) {
       df <- as.data.frame(df, stringsAsFactors = FALSE, check.names = FALSE)
@@ -478,7 +484,11 @@ problems_server <- function(id, store, show_crumb) {
       load_data(long, roles)
       showNotification(sprintf("Stacked %d columns into %d rows.", length(cols), nrow(long)), type = "message")
     })
-    croles <- reactive(lapply(role_ids, function(x) input[[x]] %||% ""))
+    # Roles as chosen, ignoring any that do not name a column of the current data.
+    croles <- reactive({
+      nm <- names(cdata() %||% data.frame())
+      lapply(role_ids, function(x) { v <- input[[x]] %||% ""; if (identical(v, NO_ROLE) || !v %in% nm) "" else v })
+    })
     cmeta <- reactive({
       df <- cdata(); req(df)
       txt <- input$c_statement %||% ""
@@ -497,7 +507,10 @@ problems_server <- function(id, store, show_crumb) {
       m <- cmeta(); s <- ps_structure(m$data, m$roles); r <- ps_recommend(s, m, m$statement)
       kcard(h3(class = "ct", "Data checks"),
             if (length(s$errors)) div(class = "col", style = "gap:8px;margin-top:10px", lapply(s$errors, function(x) note(kind = "e", ic = "x", x)))
-            else tagList(tags$ul(class = "ps-ul", lapply(ps_layout_text(s, m), tags$li)),
+            else tagList(
+                         if (!nzchar(m$roles$treatment) && sum(vapply(df, function(x) { v <- x[!is.na(x)]; length(v) > 0 && all(!is.na(suppressWarnings(as.numeric(v)))) }, TRUE)) >= 2)
+                           note(kind = "i", ic = "info", "Several numeric columns and no treatment: if each column is a group, press Stack (under the data) so the groups can be compared."),
+                         tags$ul(class = "ps-ul", lapply(ps_layout_text(s, m), tags$li)),
                          div(class = "hrow", style = "margin-top:8px", span(class = "small", "Recommended:"), pill(PS_ANALYSES[[r$kind]]$label, "pass", "wand")),
                          if (length(s$warnings)) div(class = "col", style = "gap:8px;margin-top:8px", lapply(s$warnings, function(x) note(kind = "w", ic = "alert", x)))))
     })
@@ -537,9 +550,12 @@ ps_guess_roles <- function(df) {
   pick <- function(cands, pat) { h <- cands[grepl(pat, tolower(cands))]; if (length(h)) h[1] else "" }
   resp <- pick(num, ROLE_RESPONSE$pattern); if (!nzchar(resp) && length(num)) resp <- tail(num, 1)
   pool <- setdiff(nm, resp)
-  row <- pick(pool, "^row"); col <- pick(setdiff(pool, row), "^col")
-  blk <- pick(setdiff(pool, c(row, col)), "block|pair|inspector|subject|farm|batch|day|girder|rep$")
-  trt <- pick(setdiff(pool, c(row, col, blk)), ROLE_TREAT$pattern)
+  # "Column 1", "Column 2" are names made up for data pasted without a header row, so they
+  # say nothing about the column's role.
+  named <- pool[!grepl("^column \\d+$", tolower(pool))]
+  row <- pick(named, "^rows?$|^row[ _.]"); col <- pick(setdiff(named, row), "^col(umn)?s?$|^col(umn)?[ _.]")
+  blk <- pick(setdiff(named, c(row, col)), "block|pair|inspector|subject|farm|batch|day|girder|rep$")
+  trt <- pick(setdiff(named, c(row, col, blk)), ROLE_TREAT$pattern)
   if (!nzchar(trt)) { rest <- setdiff(intersect(cat, pool), c(row, col, blk)); if (length(rest)) trt <- rest[1] }
   if (nzchar(blk) && !nzchar(trt)) { trt <- blk; blk <- "" }
   list(response = resp, treatment = trt, block = blk, row = row, column = col)
