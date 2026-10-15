@@ -57,17 +57,25 @@ In automatic mode each page recommends the test whose assumptions hold and expla
 
 ## What is in stage 6
 
-- **Problem Sets** (sidebar, first item under Design of experiments): 30 exercises from the course problem sheets, each with its full statement and complete dataset.
-  - **Chapter 2 problems** (15): simple comparative experiments: one-sample t and z tests, a χ² test on a variance, two-sample t and z tests, and three paired problems (2.34, 2.35, 2.36). A paired problem is a block design: each pair is a block, so it is analysed as an RCBD with two treatments, and the answer shows that the paired t-test and the RCBD ANOVA agree (F = t²).
-  - **Chapter 3 problems** (15): single-factor ANOVA: balanced and unbalanced CRDs, count data, a problem that needs a log transformation (3.32) and a random-effects problem with variance components (3.34).
-  - **Create custom problem**: write or paste a statement, paste, type or upload the data (or start from a class example, including the Latin square), stack wide tables into long format, say which column is the response, treatment, block, row or column, and edit everything before running. **Edit this problem** copies any exercise into this editor.
-- Every problem follows **Problem → Data → Recommended analysis → Run analysis**: the statement and questions, the factors and variables, the design type, the assumptions and data requirements, and the data as printed or in long format (scrollable, downloadable as CSV).
-- **Automatic recommendation** from the data structure, with the reasons: one sample, two independent samples, paired (RCBD with two treatments), CRD, random effects, RCBD (complete blocks), Latin square (checked to be a valid square) or a general linear model for unbalanced or incomplete layouts. It also flags unequal replication, count responses and very unequal variances.
-- **Override the analysis**: one-sample test, variance test, two-sample t-test, paired t-test, one-way ANOVA, random-effects ANOVA, RCBD ANOVA, Latin Square ANOVA, general linear model, rank tests, descriptive statistics, and residual diagnostics, with an optional log or square-root transformation. An analysis that does not fit the data says why and what to change. A manual choice is labelled as yours, not the system's.
-- **Answer Model** after **Run analysis**: the design, the variables, the hypotheses, the model, the calculations with the numbers filled in (sums of squares, standard errors, test statistics), the ANOVA or test table, the statistics with df, P-values and critical values, the decision, treatment comparisons (Tukey or Fisher LSD with grouping letters, or a confidence interval for two groups), assumption checks with QQ and residual plots, the statistical conclusion and a plain-language interpretation. **Pin to report** sends it to the Report builder, and Ask Professor Riaz can see it.
-- The page remembers the selected problem and the analysis chosen for each problem, so returning to the list loses nothing.
+**Problem Sets** (sidebar, first item under Design of experiments): 30 exercises from the course problem sheets, each with its full statement and complete dataset, solved with the 7-step hypothesis-testing process taught in the course.
 
-The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experiments) and Chapter 3 (Experiments with a Single Factor). Neither contains a Latin square exercise, so no Latin square problem is invented; the Latin Square ANOVA is available for custom problems and through the class example. The chapter labels are set in `PS_CHAPTERS` at the top of `R/problems.R`.
+- **Grouped by chapter** (tabs Chapter 2, Chapter 3, Custom Problem) and then in collapsible categories:
+  - Chapter 2: **One sample**, **Two sample** and **K sample**, each split into **Parametric** and **Non-parametric** (two-sample problems also say independent or paired). Chapter 2 has no k-sample problem; that group points to Chapter 3.
+  - Chapter 3 (all completely randomized designs): **Parametric** and **Non-parametric**.
+  - A problem is parametric or non-parametric by the same rule step 4 uses: the population is stated to be normal, or the Shapiro-Wilk test finds no evidence against normality, or every sample has n ≥ 30. Problems 2.32 and 3.32 fail normality and are non-parametric.
+- **The 7 steps**, each a tab with Back and Next buttons, plus a separate **Assumption checks** tab:
+  1. **Problem & data**: the question and the data as printed.
+  2. **Hypotheses**: H0 and H1 in words, suggested from the question (type of alternative and hypothesised value included) and editable.
+  3. **Significance level**: α from the question when it states one (else 0.05), editable; the confidence level is 1 − α.
+  4. **Information available**: what is known (response, number and size of samples, independent or paired, σ known or not, stated normality), the independence check first (Durbin-Watson), normality (Shapiro-Wilk), equal variances where relevant, and the resulting parametric or non-parametric choice with the suggested test. The test type, a known σ and the equal-variance assumption are editable.
+  5. **Test**: the suggested test (one-sample t or z, χ² on a variance, pooled or Welch t, two-sample z, paired t, one-way ANOVA, Welch ANOVA, or the rank tests: Wilcoxon signed-rank, sign test, Mann-Whitney, Kruskal-Wallis), changeable, with a **Run test** button, the statistic worked out with the numbers, the result table and the sample summary.
+  6. **Decision**: reject or fail to reject H0, by the rejection region, the confidence interval (Tukey intervals for k samples) and the p-value, each with its plot, and the conclusion in the words of H1.
+  7. **Post-hoc**: when H0 is rejected for three or more groups, Tukey HSD, Fisher LSD, Bonferroni or Scheffé (Games-Howell after Welch ANOVA, Dunn after Kruskal-Wallis), with grouping letters and an interval plot.
+  - **Assumption checks**: normality (Shapiro-Wilk, Anderson-Darling, QQ plot, histogram), independence (Durbin-Watson, residuals in order) and constant variance (F test, Levene, Bartlett, box plot, residuals versus fitted).
+- **Custom Problem**: write or paste a statement, paste, type or upload the data (or start from a class example), stack wide tables, and say which column is the response, the group and, for paired data, the pair ID. Blocked designs (RCBD) are sent to the RCBD page. **Copy to Custom Problem** copies any exercise into the editor.
+- The page remembers each problem's step, hypotheses, α and test, so returning to the list loses nothing. **Pin to report** sends the hypotheses, test result, decision and post-hoc table to the Report builder.
+
+The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experiments) and Chapter 3 (Experiments with a Single Factor). The tests are the course's own (the same engine as the One, Two and k sample pages).
 
 ## Ask Professor Riaz (AI assistant)
 
@@ -105,7 +113,7 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 ## Files
 
-- `R/problems.R`: the Problem Sets exercises and their data. `R/problem_engine.R`: structure detection, recommendation, validation, the analyses and the Answer Model. `R/mod_problems.R`: the Problem Sets page and the custom problem editor.
+- `R/problems.R`: the Problem Sets exercises and their data. `R/problem_engine.R`: the 7-step process (information available, hypotheses, tests, decision, post-hoc, assumptions). `R/mod_problems.R`: the Problem Sets page, its steps and the custom problem editor.
 
 - `R/ai.R`: Ask Professor Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `ai_key.example.txt`: template for the built-in key.
 

@@ -115,7 +115,12 @@ server <- function(input, output, session) {
   desc <- desc_server("desc", store)
   advisor_server("advisor", goto, function(page, m) cmp[[page]]$set_method(m))
 
-  problems <- problems_server("problems", store, show_crumb = function(cr) session$sendCustomMessage("crumb", list(crumb = cr)))
+  problems <- problems_server("problems", store, show_crumb = function(cr) session$sendCustomMessage("crumb", list(crumb = cr)),
+    open_design = function(df, title) {
+      ds <- new_dataset(title, df, source = "Problem Sets")
+      store$datasets[[ds$id]] <- ds; store$active <- ds$id; store$grid_rev <- store$grid_rev + 1
+      goto(list(page = "rcbd", dataset = ds$id, t = Sys.time()))
+    })
   planner <- planner_server("planner")
   report_server("report", store)
   add_example <- function(ex) {
