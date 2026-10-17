@@ -142,15 +142,16 @@ ps_normality <- function(kind, st, alpha) {
   tab
 }
 
-# Durbin-Watson on the residuals in the order the data were recorded (the course check for independence).
+# Breusch-Godfrey (lag 1) on the residuals in the order the data were recorded.
 ps_independence <- function(kind, st) {
   d <- st$d
   fit <- switch(kind,
     one = , variance = stats::lm(y ~ 1, data = d),
     paired = { s <- ps_samples(kind, st); stats::lm(dd ~ 1, data = data.frame(dd = s[[1]] - s[[2]])) },
     stats::lm(y ~ treatment, data = d))
-  dw <- tryCatch(lmtest::dwtest(fit, alternative = "two.sided"), error = function(e) NULL)
-  list(fit = fit, stat = if (!is.null(dw)) unname(dw$statistic) else NA, p = if (!is.null(dw)) dw$p.value else NA)
+  bg <- tryCatch(lmtest::bgtest(fit, order = 1), error = function(e) NULL)
+  list(fit = fit, stat = if (!is.null(bg)) unname(bg$statistic) else NA, df = if (!is.null(bg)) unname(bg$parameter) else NA,
+       p = if (!is.null(bg)) bg$p.value else NA)
 }
 
 ps_equal_var <- function(kind, st, alpha) {
@@ -190,11 +191,14 @@ ps_info <- function(kind, st, meta, s) {
   lab <- ps_lab(meta, "response"); u <- ps_unit(meta)
   lv <- if ("treatment" %in% st$facs) levels(d$treatment) else character(0)
   sizes <- if (length(lv)) table(d$treatment) else c(Sample = st$n)
-  norm <- ps_normality(kind, st, a); ind <- ps_independence(kind, st); ev <- ps_equal_var(kind, st, a)
-  stated <- ps_stated_normal(meta); big <- min(sizes) >= 30; normal_ok <- all(norm$Result != "Not normal")
+  # k samples always start with the parametric test; their assumptions are checked after it.
+  norm <- if (kind != "k") ps_normality(kind, st, a)
+  ind <- if (kind %in% c("two", "paired")) ps_independence(kind, st)
+  ev <- if (kind == "two") ps_equal_var(kind, st, a)
+  stated <- ps_stated_normal(meta); big <- min(sizes) >= 30; normal_ok <- is.null(norm) || all(norm$Result != "Not normal")
   sig <- !is.null(s[["sigma"]]) && (kind != "two" || !is.null(s[["sigma2"]])) && kind %in% c("one", "two")
-  fam_auto <- if (kind == "variance" || stated || normal_ok || big) "param" else "nonpar"
-  fam <- if (isTRUE(s$family %in% c("param", "nonpar")) && kind != "variance") s$family else fam_auto
+  fam_auto <- if (kind %in% c("variance", "k") || stated || normal_ok || big) "param" else "nonpar"
+  fam <- if (isTRUE(s$family %in% c("param", "nonpar")) && !kind %in% c("variance", "k")) s$family else fam_auto
   samples_txt <- switch(kind,
     one = , variance = sprintf("One sample of %d independent observations.", st$n),
     paired = sprintf("Dependent (paired): each %s was measured under both %s, so the two measurements on a %s are related. The analysis uses the %d differences.",
@@ -211,11 +215,13 @@ ps_info <- function(kind, st, meta, s) {
       if (sig) sprintf("Known: %s (stated in the problem).", if (kind == "two") sprintf("σ1 = %s, σ2 = %s", format(s[["sigma"]]), format(s[["sigma2"]])) else sprintf("σ = %s", format(s[["sigma"]])))
       else "Unknown: estimated by the sample standard deviation.",
       if (stated) "Stated to be normal in the problem."
+      else if (kind == "k") "Not stated. Normality, constant variance and independence are checked after the test (assumption checks)."
       else if (normal_ok) "Not stated; the Shapiro-Wilk test below finds no evidence against normality."
       else if (big) "Not normal by Shapiro-Wilk, but every sample has n ≥ 30, so the central limit theorem applies."
       else "Not stated, and the Shapiro-Wilk test below finds the data are not normal."),
     stringsAsFactors = FALSE)
   fam_reason <- if (kind == "variance") "The question is about a variance; the χ² test assumes a normal population."
+    else if (kind == "k") "The parametric test (one-way ANOVA) is always run first. If an assumption check fails afterwards, the Kruskal-Wallis test is used."
     else if (fam != fam_auto) sprintf("You chose a %s test.", if (fam == "param") "parametric" else "non-parametric")
     else if (stated) "The population is stated to be normal, so a parametric test is used."
     else if (normal_ok) "Normality is reasonable, so a parametric test is used."
@@ -227,7 +233,7 @@ ps_info <- function(kind, st, meta, s) {
     variance = "chisq",
     two = if (fam == "nonpar") "mw" else if (sig) "z" else switch(vm, equal = "pooled", unequal = "welch", if (isTRUE(ev$equal)) "pooled" else "welch"),
     paired = if (fam == "nonpar") "wsr" else "paired",
-    k = if (fam == "nonpar") "kw" else if (isTRUE(ev$equal)) "anova" else "welch")
+    k = "anova")
   sug_reason <- switch(sug,
     z = "σ is known, so the z-test is used.",
     t = "σ is unknown and normality is reasonable, so the one-sample t-test is used.",
@@ -239,7 +245,7 @@ ps_info <- function(kind, st, meta, s) {
     mw = "Independent samples that are not normal, so the Mann-Whitney U test is used.",
     paired = "Dependent samples with normal differences, so the paired t-test is used.",
     wsr = "Dependent samples whose differences are not normal, so the Wilcoxon signed-rank test is used.",
-    anova = sprintf("k independent normal samples with equal variances by the %s test, so the one-way ANOVA F test is used.", ev$basis),
+    anova = sprintf("%d independent groups compared on one factor, so the one-way ANOVA F test is used.", length(lv)),
     kw = "k independent samples that are not normal, so the Kruskal-Wallis test is used.")
   list(facts = facts, normality = norm, independence = ind, equal_var = ev, stated = stated, family_auto = fam_auto, family = fam,
        family_reason = fam_reason, suggest = sug, suggest_reason = sug_reason, sigma_known = sig)
@@ -458,16 +464,34 @@ ps_posthoc <- function(res, method) {
 # ---------- Assumptions ----------
 
 ps_assumptions <- function(kind, st, s) {
-  a <- s$alpha; norm <- ps_normality(kind, st, a); ind <- ps_independence(kind, st); ev <- ps_equal_var(kind, st, a)
+  a <- s$alpha; norm <- ps_normality(kind, st, a); ind <- ps_independence(kind, st)
   tg <- ps_norm_targets(kind, st)
   ad <- vapply(tg, function(x) { x <- x[is.finite(x)]; if (length(x) >= 8) { z <- quiet(nortest::ad.test(x)); if (is.null(z)) NA_real_ else z$p.value } else NA_real_ }, 0)
   ntab <- data.frame(Sample = norm$Sample, n = norm$n, `Shapiro-Wilk W` = ps_fmt(norm$W, 4), `Shapiro-Wilk p` = ps_p(norm$p),
                      `Anderson-Darling p` = ifelse(is.na(ad), "n < 8", ps_p(ad)), Result = norm$Result, check.names = FALSE)
-  itab <- data.frame(Test = "Durbin-Watson (residuals in recorded order)", Statistic = sprintf("DW = %s", ps_fmt(ind$stat, 4)), `p-value` = ps_p(ind$p),
+  itab <- data.frame(Test = "Breusch-Godfrey (lag 1)", Statistic = sprintf("LM = %s", ps_fmt(ind$stat, 4)), df = format(ind$df), `p-value` = ps_p(ind$p),
                      Result = if (is.na(ind$p)) "Not available" else if (ind$p < a) "Dependent" else "Independent", check.names = FALSE)
-  vtab <- if (!is.null(ev)) data.frame(Test = ev$table$Test, Statistic = ev$table$Statistic, df = ev$table$df, `p-value` = ps_p(ev$table$p), Result = ev$table$Result, check.names = FALSE)
-  list(normality = ntab, normal_ok = all(norm$Result != "Not normal"), independence = itab, indep_ok = is.na(ind$p) || ind$p >= a,
-       variance = vtab, var_ok = if (is.null(ev)) NA else ev$equal, targets = tg, ind_fit = ind$fit)
+  vtab <- NULL; var_ok <- NA
+  if (kind %in% c("two", "k")) {
+    lev <- quiet(car::leveneTest(y ~ treatment, data = st$d, center = stats::median))
+    if (!is.null(lev)) {
+      vtab <- data.frame(Test = "Levene (median)", Statistic = sprintf("F = %s", ps_fmt(lev$`F value`[1], 4)), df = paste(lev$Df, collapse = ", "),
+                         `p-value` = ps_p(lev$`Pr(>F)`[1]), Result = if (lev$`Pr(>F)`[1] < a) "Unequal" else "Equal", check.names = FALSE)
+      var_ok <- lev$`Pr(>F)`[1] >= a
+    }
+  }
+  normal_ok <- all(norm$Result != "Not normal"); indep_ok <- is.na(ind$p) || ind$p >= a
+  failed <- c(Normality = !normal_ok, `Constant variance` = isFALSE(var_ok), Independence = !indep_ok)
+  list(normality = ntab, normal_ok = normal_ok, independence = itab, indep_ok = indep_ok, variance = vtab, var_ok = var_ok,
+       all_ok = !any(failed), failed = names(failed)[failed], targets = tg, ind_fit = ind$fit,
+       p = c(normality = min(norm$p, na.rm = TRUE), independence = ind$p))
+}
+
+# Group sizes, medians and mean ranks for the Kruskal-Wallis test.
+ps_rank_table <- function(st) {
+  d <- st$d; r <- rank(d$y)
+  data.frame(Group = levels(d$treatment), n = as.integer(table(d$treatment)), Median = ps_fmt(tapply(d$y, d$treatment, stats::median)),
+             `Rank sum` = ps_fmt(tapply(r, d$treatment, sum), 6), `Mean rank` = ps_fmt(tapply(r, d$treatment, mean), 4), check.names = FALSE)
 }
 
 # ---------- Plots ----------
@@ -564,8 +588,12 @@ ps_classify <- function(p) {
   st <- ps_structure(p$data, p$roles); kind <- ps_kind(st, p)
   s <- ps_default_settings(p, kind)
   info <- tryCatch(ps_info(kind, st, p, s), error = function(e) NULL)
-  out <- list(kind = kind, category = unname(PS_CATEGORY[kind]), family = info$family %||% "param",
-              test = if (!is.null(info)) unname(ps_test_choices(kind, s)[info$suggest]) else "")
+  fam <- info$family %||% "param"; test <- if (!is.null(info)) unname(ps_test_choices(kind, s)[info$suggest]) else ""
+  if (identical(kind, "k")) {
+    asm <- tryCatch(ps_assumptions(kind, st, s), error = function(e) NULL)
+    if (!is.null(asm) && !asm$all_ok) { fam <- "nonpar"; test <- "One-way ANOVA, then Kruskal-Wallis" }
+  }
+  out <- list(kind = kind, category = unname(PS_CATEGORY[kind]), family = fam, test = test)
   .ps_class_cache[[p$id]] <- out
   out
 }
