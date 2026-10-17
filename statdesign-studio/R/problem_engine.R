@@ -194,9 +194,10 @@ ps_info <- function(kind, st, meta, s) {
   # k samples always start with the parametric test; their assumptions are checked after it.
   norm <- if (kind != "k") ps_normality(kind, st, a)
   ind <- if (kind %in% c("two", "paired")) ps_independence(kind, st)
-  ev <- if (kind == "two") ps_equal_var(kind, st, a)
-  stated <- ps_stated_normal(meta); big <- min(sizes) >= 30; normal_ok <- is.null(norm) || all(norm$Result != "Not normal")
   sig <- !is.null(s[["sigma"]]) && (kind != "two" || !is.null(s[["sigma2"]])) && kind %in% c("one", "two")
+  # Equal variances only matter when σ1 and σ2 are unknown and have to be estimated.
+  ev <- if (kind == "two" && !sig) ps_equal_var(kind, st, a)
+  stated <- ps_stated_normal(meta); big <- min(sizes) >= 30; normal_ok <- is.null(norm) || all(norm$Result != "Not normal")
   fam_auto <- if (kind %in% c("variance", "k") || stated || normal_ok || big) "param" else "nonpar"
   fam <- if (isTRUE(s$family %in% c("param", "nonpar")) && !kind %in% c("variance", "k")) s$family else fam_auto
   samples_txt <- switch(kind,
@@ -471,20 +472,28 @@ ps_assumptions <- function(kind, st, s) {
                      `Anderson-Darling p` = ifelse(is.na(ad), "n < 8", ps_p(ad)), Result = norm$Result, check.names = FALSE)
   itab <- data.frame(Test = "Breusch-Godfrey (lag 1)", Statistic = sprintf("LM = %s", ps_fmt(ind$stat, 4)), df = format(ind$df), `p-value` = ps_p(ind$p),
                      Result = if (is.na(ind$p)) "Not available" else if (ind$p < a) "Dependent" else "Independent", check.names = FALSE)
-  vtab <- NULL; var_ok <- NA
+  vtab <- NULL; var_ok <- NA; var_p <- NA
   if (kind %in% c("two", "k")) {
     lev <- quiet(car::leveneTest(y ~ treatment, data = st$d, center = stats::median))
     if (!is.null(lev)) {
       vtab <- data.frame(Test = "Levene (median)", Statistic = sprintf("F = %s", ps_fmt(lev$`F value`[1], 4)), df = paste(lev$Df, collapse = ", "),
                          `p-value` = ps_p(lev$`Pr(>F)`[1]), Result = if (lev$`Pr(>F)`[1] < a) "Unequal" else "Equal", check.names = FALSE)
-      var_ok <- lev$`Pr(>F)`[1] >= a
+      var_ok <- lev$`Pr(>F)`[1] >= a; var_p <- lev$`Pr(>F)`[1]
     }
   }
   normal_ok <- all(norm$Result != "Not normal"); indep_ok <- is.na(ind$p) || ind$p >= a
   failed <- c(Normality = !normal_ok, `Constant variance` = isFALSE(var_ok), Independence = !indep_ok)
   list(normality = ntab, normal_ok = normal_ok, independence = itab, indep_ok = indep_ok, variance = vtab, var_ok = var_ok,
        all_ok = !any(failed), failed = names(failed)[failed], targets = tg, ind_fit = ind$fit,
-       p = c(normality = min(norm$p, na.rm = TRUE), independence = ind$p))
+       p = c(normality = min(norm$p, na.rm = TRUE), variance = var_p, independence = ind$p))
+}
+
+# One row per assumption, for the non-parametric restart.
+ps_asm_summary <- function(a) {
+  data.frame(Assumption = c("Normality", "Constant variance", "Independence"),
+             Test = c("Shapiro-Wilk", "Levene (median)", "Breusch-Godfrey (lag 1)"),
+             `p-value` = ps_p(unname(a$p[c("normality", "variance", "independence")])),
+             Result = ifelse(c(a$normal_ok, !isFALSE(a$var_ok), a$indep_ok), "Satisfied", "Not satisfied"), check.names = FALSE)
 }
 
 # Group sizes, medians and mean ranks for the Kruskal-Wallis test.

@@ -2,15 +2,20 @@
 # editor, and the hypothesis-testing steps taught in the course:
 #   One and two samples: 1 Problem & data  2 Hypotheses  3 Significance level
 #                        4 Information available  5 Test  6 Decision
-#   k samples (Chapter 3): the same, with the one-way ANOVA always first, then 7 Post-hoc
-#                        (only if H0 is rejected), 8 Assumption checks, and the Kruskal-Wallis
-#                        test, decision and post-hoc (only if an assumption fails).
+#   k samples (Chapter 3): the parametric process runs to the end first: the one-way ANOVA,
+#                        7 Post-hoc (only if H0 is rejected) and 8 Assumption checks. If an
+#                        assumption fails, the process starts again for the non-parametric test
+#                        (9-14: hypotheses about medians, α, information, Kruskal-Wallis test,
+#                        decision and Dunn post-hoc).
 
 PS_STEP_NAMES <- c("Problem & data", "Hypotheses", "Significance level", "Information available", "Test", "Decision", "Post-hoc",
-                   "Assumption checks", "Kruskal-Wallis test", "Kruskal-Wallis decision", "Kruskal-Wallis post-hoc")
-PS_STEP_SHORT <- c("Problem", "Hypotheses", "α level", "Information", "Test", "Decision", "Post-hoc", "Assumptions", "Test", "Decision", "Post-hoc")
-# The Kruskal-Wallis steps repeat steps 5 to 7 of the process for the non-parametric test.
-ps_step_num <- function(i) c(1:8, 5, 6, 7)[i]
+                   "Assumption checks", "Non-parametric hypotheses", "Significance level (non-parametric)", "Information available (non-parametric)",
+                   "Kruskal-Wallis test", "Kruskal-Wallis decision", "Kruskal-Wallis post-hoc")
+PS_STEP_SHORT <- c("Problem", "Hypotheses", "α level", "Information", "Test", "Decision", "Post-hoc", "Assumptions",
+                   "Hypotheses", "α level", "Information", "Test", "Decision", "Post-hoc")
+PS_K_LAST <- 14L
+# The non-parametric restart repeats steps 2 to 7 of the process.
+ps_step_num <- function(i) c(1:8, 2:7)[i]
 
 PS_GROUP_DESC <- c(
   "One sample" = "Compare one mean, median or variance with a target value.",
@@ -60,7 +65,8 @@ problems_ui <- function(id) {
                   tabPanelBody("1", uiOutput(ns("s1"))), tabPanelBody("2", uiOutput(ns("s2"))), tabPanelBody("3", uiOutput(ns("s3"))),
                   tabPanelBody("4", uiOutput(ns("s4"))), tabPanelBody("5", uiOutput(ns("s5"))), tabPanelBody("6", uiOutput(ns("s6"))),
                   tabPanelBody("7", uiOutput(ns("s7"))), tabPanelBody("8", uiOutput(ns("s8"))), tabPanelBody("9", uiOutput(ns("s9"))),
-                  tabPanelBody("10", uiOutput(ns("s10"))), tabPanelBody("11", uiOutput(ns("s11"))))),
+                  tabPanelBody("10", uiOutput(ns("s10"))), tabPanelBody("11", uiOutput(ns("s11"))), tabPanelBody("12", uiOutput(ns("s12"))),
+                  tabPanelBody("13", uiOutput(ns("s13"))), tabPanelBody("14", uiOutput(ns("s14"))))),
     # ---------- Custom problem editor ----------
     tabPanelBody("edit",
       page_head("Custom problem", "Write or paste a problem, bring in its data and say what each column is. The 7 steps then work as for the course problems.",
@@ -259,10 +265,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
         updateSelectInput(session, kid("test"), choices = stats::setNames(names(ch), ifelse(names(ch) == sug, paste0(ch, "  ★ suggested"), ch)), selected = t)
       })
     })
+    reset_h <- function(sets) for (x in sets) { cur[[x[1]]] <- x[3]; cur[[x[2]]] <- x[3]; updateTextAreaInput(session, kid(x[1]), value = x[3]) }
     observeEvent(input[[paste0("h_reset_", cur$key)]], {
-      h <- ps_hypotheses(cur$kind, cur$st, cur$meta, cur$s, info()$family); hn <- ps_hypotheses(cur$kind, cur$st, cur$meta, cur$s, "nonpar")
-      for (x in list(c("h0", "hs0", h$h0), c("h1", "hs1", h$h1), c("h0n", "hs0n", hn$h0), c("h1n", "hs1n", hn$h1))) {
-        cur[[x[1]]] <- x[3]; cur[[x[2]]] <- x[3]; updateTextAreaInput(session, kid(x[1]), value = x[3]) }
+      h <- ps_hypotheses(cur$kind, cur$st, cur$meta, cur$s, if (is_k()) "param" else info()$family)
+      reset_h(list(c("h0", "hs0", h$h0), c("h1", "hs1", h$h1)))
+    }, ignoreInit = TRUE)
+    observeEvent(input[[paste0("hn_reset_", cur$key)]], {
+      hn <- ps_hypotheses(cur$kind, cur$st, cur$meta, cur$s, "nonpar")
+      reset_h(list(c("h0n", "hs0n", hn$h0), c("h1n", "hs1n", hn$h1)))
     }, ignoreInit = TRUE)
 
     # ---------- Running the tests ----------
@@ -284,15 +294,15 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     }
 
     # ---------- The flow ----------
-    # One and two samples: steps 1-6. k samples: ANOVA first (5, 6), post-hoc only when H0 is
-    # rejected (7), the assumption checks (8), and the Kruskal-Wallis test (9-11) only when an
-    # assumption fails.
+    # One and two samples: steps 1-6. k samples: the parametric process to the end first, the
+    # ANOVA (5, 6), post-hoc only when H0 is rejected (7) and the assumption checks (8); then,
+    # only when an assumption fails, the non-parametric restart (9-14).
     flow_next <- function(n) {
       if (!isTRUE(is_k())) return(if (n < 6) n + 1L else NULL)
       switch(as.character(n),
         "6" = if (isTRUE(cur$res$reject)) 7L else 8L, "7" = 8L,
-        "8" = if (isTRUE(asm()$all_ok)) NULL else 9L, "9" = 10L,
-        "10" = if (isTRUE(cur$res_np$reject)) 11L else NULL, "11" = NULL, n + 1L)
+        "8" = if (isTRUE(asm()$all_ok)) NULL else 9L,
+        "13" = if (isTRUE(cur$res_np$reject)) 14L else NULL, "14" = NULL, n + 1L)
     }
     flow_prev <- function(n) {
       if (n <= 1) return(NULL)
@@ -300,11 +310,11 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       n - 1L
     }
     go <- function(n, scroll = TRUE) {
-      k <- isTRUE(isolate(is_k())); n <- max(1L, min(if (k) 11L else 6L, as.integer(n)))
+      k <- isTRUE(isolate(is_k())); n <- max(1L, min(if (k) PS_K_LAST else 6L, as.integer(n)))
       if (n >= 6 && (is.null(isolate(cur$res)) || isolate(stale()))) if (!run_test(quiet_ok = TRUE)) n <- 5L
       if (k && n == 7 && !isTRUE(isolate(cur$res)$reject)) { showNotification("H0 was not rejected, so no post-hoc analysis is needed. Next come the assumption checks.", type = "message"); n <- 8L }
-      if (k && n >= 9 && isTRUE(isolate(asm())$all_ok)) { showNotification("All the assumptions hold, so the Kruskal-Wallis test is not needed.", type = "message"); n <- 8L }
-      if (k && n >= 10 && (is.null(isolate(cur$res_np)) || isolate(stale_np()))) if (!run_np(quiet_ok = TRUE)) n <- 9L
+      if (k && n >= 9 && isTRUE(isolate(asm())$all_ok)) { showNotification("All the assumptions hold, so the non-parametric analysis is not needed.", type = "message"); n <- 8L }
+      if (k && n >= 13 && (is.null(isolate(cur$res_np)) || isolate(stale_np()))) if (!run_np(quiet_ok = TRUE)) n <- 12L
       cur$step <- n; cur$seen <- max(isolate(cur$seen), n)
       updateTabsetPanel(session, "steps", selected = as.character(n))
       if (scroll) session$sendCustomMessage("scroll_top", list())
@@ -323,8 +333,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     })
     output$stepper <- renderUI({
       req(cur$key); n <- cur$step; seen <- cur$seen; k <- is_k()
-      skipped <- function(i) k && ((i == 7 && !is.null(cur$res) && !cur$res$reject) || (i >= 9 && i <= 11 && isTRUE(asm()$all_ok)) ||
-                                   (i == 11 && !is.null(cur$res_np) && !cur$res_np$reject))
+      skipped <- function(i) k && ((i == 7 && !is.null(cur$res) && !cur$res$reject) || (i >= 9 && isTRUE(asm()$all_ok)) ||
+                                   (i == 14 && !is.null(cur$res_np) && !cur$res_np$reject))
       dot <- function(i) {
         cls <- if (i == n) "cur" else if (skipped(i)) "skip" else if (i <= seen) "done" else ""
         tags$button(class = paste("st", cls), title = sprintf("%s%s", PS_STEP_NAMES[i], if (skipped(i)) " (not needed)" else ""),
@@ -333,15 +343,21 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       }
       row <- function(idx) { parts <- list(); for (j in seq_along(idx)) { parts[[length(parts) + 1]] <- dot(idx[j]); if (j < length(idx)) parts[[length(parts) + 1]] <- div(class = paste("sline", if (idx[j] < seen) "done")) }; parts }
       if (!k) return(div(class = "ps-stepbar", div(class = "stepper ps-stepper", row(1:6))))
-      np_on <- !isTRUE(asm()$all_ok) && !is.null(cur$res)
+      # The phase being worked on is shown in full; the other one is folded to its dots.
+      np_on <- !isTRUE(asm()$all_ok) && !is.null(cur$res); in_np <- n >= 9
       div(class = "ps-stepbar",
-          div(class = "ps-phase", div(class = "ps-phase-lab", "One-way ANOVA (parametric)"), div(class = "stepper ps-stepper many", row(1:8))),
-          div(class = paste("ps-phase np", if (!np_on) "off"), div(class = "ps-phase-lab", if (np_on) "Kruskal-Wallis (non-parametric)" else "Kruskal-Wallis · only if an assumption fails"),
-              div(class = "stepper ps-stepper", row(9:11))))
+          div(class = paste("ps-phase", if (in_np) "fold" else "open"),
+              div(class = "ps-phase-lab", if (in_np) "1 · Parametric" else "1 · Parametric: one-way ANOVA"),
+              div(class = "stepper ps-stepper many", title = if (in_np) "One-way ANOVA: an assumption failed", row(1:8),
+                  if (in_np) span(class = "ps-fold-note", "Done"))),
+          div(class = paste("ps-phase np", if (in_np) "open" else "fold", if (!np_on) "off"),
+              div(class = "ps-phase-lab", if (in_np) "2 · Non-parametric: Kruskal-Wallis" else "2 · Non-parametric"),
+              div(class = "stepper ps-stepper", title = if (!in_np) "Kruskal-Wallis: used only if an ANOVA assumption fails", row(9:PS_K_LAST),
+                  if (!in_np) span(class = "ps-fold-note", if (np_on) "Next" else "If needed"))))
     })
     nav_btn <- function(n, label, primary = FALSE, back = FALSE) tags$button(class = paste("btn-k", if (primary) "bp" else "bs"),
       onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("go"), n), if (back) icon("arrowl", 15), label, if (!back) icon("arrowr", 15))
-    for (i in 1:11) local({
+    for (i in 1:PS_K_LAST) local({
       n <- i
       output[[paste0("nav", n)]] <- renderUI({
         req(cur$key); pv <- flow_prev(n); nx <- flow_next(n)
@@ -390,17 +406,12 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       div(class = "ps-hlab alt", "H1"), textAreaInput(ns(kid(id1)), NULL, v1, rows = 2, width = "100%", resize = "vertical"))
     output$s2 <- renderUI({
       req(cur$key); kind <- isolate(cur$kind); s <- isolate(cur$s)
-      step_card(2, if (kind == "k") "State H0 and H1 for the one-way ANOVA (means, μ) and for the Kruskal-Wallis test (medians, η), which is used only if an assumption fails. The system suggests both; edit them if needed."
+      step_card(2, if (kind == "k") "State H0 and H1 for the one-way ANOVA, about the population means μ. The system suggests both; edit them if needed."
                    else "State the null hypothesis H0 (no effect, no difference) and the alternative H1 (what the question wants to show). The system suggests both; edit them if needed.",
         if (kind != "k") div(class = "grid g2", style = "gap:12px 20px",
             selectInput(ns(kid("alt")), "Type of alternative", ps_alt_choices(kind), s$alt, width = "100%"),
             numericInput(ns(kid("value")), ps_value_label(kind), s$value, width = "100%")),
-        if (kind == "k") tagList(
-          div(class = "ps-hblock", div(class = "ps-hhead", span(class = "pill pass", "Parametric"), span("One-way ANOVA · population means μ")),
-              uiOutput(ns("h_sym")), hyp_inputs("h0", "h1", isolate(cur$h0), isolate(cur$h1))),
-          div(class = "ps-hblock np", div(class = "ps-hhead", span(class = "pill warn", "Non-parametric"), span("Kruskal-Wallis · population medians η · used only if an assumption fails")),
-              uiOutput(ns("h_sym_np")), hyp_inputs("h0n", "h1n", isolate(cur$h0n), isolate(cur$h1n))))
-        else tagList(uiOutput(ns("h_sym")), hyp_inputs("h0", "h1", isolate(cur$h0), isolate(cur$h1))),
+        uiOutput(ns("h_sym")), hyp_inputs("h0", "h1", isolate(cur$h0), isolate(cur$h1)),
         div(class = "hrow", actionLink(ns(kid("h_reset")), tagList(icon("wand", 14), " Restore the suggested wording"), class = "small ps-link")))
     })
     output$h_sym <- renderUI({
@@ -412,7 +423,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     })
     output$h_sym_np <- renderUI({
       req(is_k()); h <- ps_hypotheses(cur$kind, cur$st, cur$meta, cur$s, "nonpar")
-      div(class = "ps-sym", span(class = "chip", h$h0s), span(class = "chip", h$h1s))
+      div(class = "ps-sym", span(class = "chip", h$h0s), span(class = "chip", h$h1s),
+          span(class = "small", "Non-parametric test, so the hypotheses are about the population medians η. H1 is “at least one median differs”."))
     })
 
     # ---------- Step 3: significance level ----------
@@ -451,7 +463,9 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
             if (kind == "one") numericInput(ns(kid("sigma")), "Population σ, if known", s[["sigma"]] %||% NA, min = 0, width = "100%"),
             if (kind == "two") numericInput(ns(kid("sigma")), "Population σ1, if known", s[["sigma"]] %||% NA, min = 0, width = "100%"),
             if (kind == "two") numericInput(ns(kid("sigma2")), "Population σ2, if known", s[["sigma2"]] %||% NA, min = 0, width = "100%"),
-            if (kind == "two") selectInput(ns(kid("var_mode")), "Equal variances?", c("Decide with the F test" = "auto", "Assume equal" = "equal", "Assume unequal" = "unequal"), s$var_mode %||% "auto", width = "100%")),
+            # Equal variances are a question only while σ1 and σ2 are unknown.
+            if (kind == "two") conditionalPanel(sprintf("!(input['%s'] > 0 && input['%s'] > 0)", ns(kid("sigma")), ns(kid("sigma2"))),
+              selectInput(ns(kid("var_mode")), "Equal variances?", c("Decide with the F test" = "auto", "Assume equal" = "equal", "Assume unequal" = "unequal"), s$var_mode %||% "auto", width = "100%"))),
         uiOutput(ns("info_body")))
     })
     output$info_body <- renderUI({
@@ -470,13 +484,16 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       ev_card <- if (!is.null(inf$equal_var)) div(class = "kcard soft ps-card-s", h3(class = "ct", "Equal variances"),
         tbl(transform(inf$equal_var$table, p = ps_p(p))),
         p(class = "small", style = "margin:8px 0 0", sprintf("The %s decides: %s.", inf$equal_var$basis, if (inf$equal_var$equal) "the variances can be treated as equal" else "the variances differ")))
+      else if (kind == "two" && isTRUE(inf$sigma_known)) div(class = "kcard soft ps-card-s", h3(class = "ct", "Equal variances"),
+        div(style = "margin-top:6px", pill("Not needed: σ1 and σ2 are known", "neu", "info")),
+        p(class = "small", style = "margin:8px 0 0", "The population variances σ1² and σ2² are given, so the two-sample z-test uses them directly. An equal-variance test is only needed when they are unknown and must be estimated from the samples."))
       verdict <- if (kind == "k") div(class = "ps-plan",
           div(class = "ps-plan-t", "How this problem is analysed"),
           div(class = "ps-plan-row",
               span(class = "ps-chipstep", "5 · One-way ANOVA"), icon("arrowr", 14), span(class = "ps-chipstep", "6 · Decision"), icon("arrowr", 14),
               span(class = "ps-chipstep alt", "7 · Post-hoc (only if H0 is rejected)"), icon("arrowr", 14), span(class = "ps-chipstep", "8 · Assumption checks"), icon("arrowr", 14),
-              span(class = "ps-chipstep np", "Kruskal-Wallis (only if an assumption fails)")),
-          p(class = "small", style = "margin:8px 0 0", "If every assumption holds, the ANOVA result is the answer. If any fails, the analysis restarts with the Kruskal-Wallis test: its own test, decision and post-hoc (Dunn)."))
+              span(class = "ps-chipstep np", "Non-parametric restart (only if an assumption fails)")),
+          p(class = "small", style = "margin:8px 0 0", "If every assumption holds, the ANOVA result is the answer. If any fails, the process starts again for the non-parametric test: hypotheses about medians (η), α, information, the Kruskal-Wallis test, its decision and Dunn's post-hoc."))
         else div(class = paste("ps-verdict", inf$family),
                  div(class = "ps-vtag", if (inf$family == "param") "Parametric test" else "Non-parametric test"),
                  div(tags$b(inf$family_reason), br(), span(sprintf("Suggested test: %s. %s", ps_test_choices(kind, cur$s)[[inf$suggest]], inf$suggest_reason))))
@@ -595,8 +612,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
             plot_box("pl_ord", "Residuals in the order listed", 210)),
         if (a$all_ok) final_card("All assumptions hold: the analysis stops here",
                                  paste("The one-way ANOVA result stands.", if (!is.null(d)) d$conclusion else ""), if (isTRUE(r$reject)) "rej" else "keep")
-        else div(class = "ps-switch", div(class = "ps-final-t", icon("alert", 15), sprintf("%s failed: move to the non-parametric test", paste(a$failed, collapse = " and "))),
-                 p(sprintf("The ANOVA assumes %s, and the check above says this is not reasonable here, so its result cannot be trusted. The analysis restarts with the Kruskal-Wallis test, which compares the groups through ranks and does not assume normal errors or equal variances.",
+        else div(class = "ps-switch", div(class = "ps-final-t", icon("alert", 15), sprintf("%s failed: start again with the non-parametric test", paste(a$failed, collapse = " and "))),
+                 p(sprintf("The ANOVA assumes %s, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the Kruskal-Wallis test, which compares the groups through ranks: new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.",
                            paste(tolower(a$failed), collapse = " and ")))))
     })
     output$pl_qq <- renderPlot({ a <- asm(); plot_qq_vec(a$targets[[1]], "Residuals") }, bg = "transparent", res = 88)
@@ -605,29 +622,70 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     output$pl_box <- renderPlot({ ps_plot_data(cur$kind, cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_rvf <- renderPlot({ ps_plot_rvf(asm()$ind_fit) }, bg = "transparent", res = 88)
 
-    # ---------- Steps 9-11: Kruskal-Wallis ----------
+    # ---------- Steps 9-11: the non-parametric restart ----------
     output$s9 <- renderUI({
       req(cur$key)
-      step_card(9, "An ANOVA assumption failed, so the groups are compared with the Kruskal-Wallis test, which uses ranks instead of the raw values.",
+      step_card(9, "An ANOVA assumption failed, so the process starts again for the non-parametric test. State H0 and H1 about the population medians η. The system suggests both; edit them if needed.",
         uiOutput(ns("np_why")),
+        uiOutput(ns("h_sym_np")), hyp_inputs("h0n", "h1n", isolate(cur$h0n), isolate(cur$h1n)),
+        div(class = "hrow", actionLink(ns(kid("hn_reset")), tagList(icon("wand", 14), " Restore the suggested wording"), class = "small ps-link")))
+    })
+    output$np_why <- renderUI({
+      a <- asm(); req(!a$all_ok)
+      div(class = "ps-process",
+          div(class = "ps-process-t", sprintf("Why the analysis starts again: %s failed", paste(tolower(a$failed), collapse = " and "))),
+          p(style = "margin:4px 0 0", "The one-way ANOVA compares means and needs normal, independent errors with equal variances. The Kruskal-Wallis test compares the groups through ranks, so its hypotheses are about medians instead of means."))
+    })
+    output$s10 <- renderUI({
+      req(cur$key)
+      step_card(10, "The non-parametric test is judged at the same significance level as the parametric analysis.", uiOutput(ns("alpha_np")))
+    })
+    output$alpha_np <- renderUI({
+      a <- cur$s$alpha; req(a)
+      div(class = "grid g2 ps-alpha",
+          div(class = "ps-kv",
+              div(class = "kv-row", span("α (Type I error)"), span(format(a))),
+              div(class = "kv-row", span("Kruskal-Wallis rejects H0 when"), span(sprintf("p-value < %s", format(a))))),
+          div(class = "col", style = "gap:10px",
+              note(kind = "i", ic = "info", sprintf("α = %s is kept from step 3, so both analyses use the same level.", format(a))),
+              div(class = "hrow", actionLink(ns("np_alpha_edit"), tagList(icon("edit", 14), " Change α in step 3"), class = "small ps-link"))))
+    })
+    observeEvent(input$np_alpha_edit, go(3))
+    output$s11 <- renderUI({
+      req(cur$key)
+      step_card(11, "Collect what is known for the non-parametric test: the samples, what the assumption checks showed, and the data.", uiOutput(ns("info_np")))
+    })
+    output$info_np <- renderUI({
+      a <- asm(); req(!a$all_ok); m <- cur$meta; d <- cur$st$d; sz <- table(d$treatment)
+      facts <- data.frame(What = c("Response", "Number of samples", "Sample sizes", "Samples are", "Population distribution"),
+        Information = c(info()$facts$Information[1], as.character(nlevels(d$treatment)), paste(sprintf("%s: %d", names(sz), as.integer(sz)), collapse = "; "),
+                        info()$facts$Information[4], sprintf("Not assumed normal: the ANOVA assumption checks found %s failed.", paste(tolower(a$failed), collapse = " and "))),
+        stringsAsFactors = FALSE)
+      tagList(
+        div(class = "grid g2 ps-info",
+            div(h3(class = "ct", "What we know"), div(style = "margin-top:6px", lapply(seq_len(nrow(facts)), function(i) div(class = "kv-row ps-fact", span(facts$What[i]), span(facts$Information[i]))))),
+            div(class = "col", style = "gap:6px", h3(class = "ct", "Assumption checks of the ANOVA (step 8)"), tbl(ps_asm_summary(a)))),
+        data_block(m, "The data"),
+        div(class = "ps-verdict nonpar",
+            div(class = "ps-vtag", "Non-parametric test"),
+            div(tags$b(sprintf("%d independent samples and an ANOVA assumption fails, so the Kruskal-Wallis test is used.", nlevels(d$treatment))), br(),
+                span("It needs only independent random samples with distributions of similar shape, and compares the groups through the ranks of all the observations."))))
+    })
+
+    # ---------- Steps 12-14: Kruskal-Wallis test, decision and post-hoc ----------
+    output$s12 <- renderUI({
+      req(cur$key)
+      step_card(12, "Compare the groups with the Kruskal-Wallis test, which uses the ranks of the observations instead of their values.",
+        uiOutput(ns("np_hrecap")),
         div(class = "hrow", style = "align-items:flex-end;gap:14px",
             div(style = "flex:1;min-width:260px", div(class = "klab", "Test"), div(class = "ps-fixed", icon("lock", 14), "Kruskal-Wallis test")),
             actionButton(ns(kid("run_np")), label = tagList(icon("play", 15), "Run test"), icon = NULL, class = "btn-k bp")),
         uiOutput(ns("np_body")))
     })
-    output$np_why <- renderUI({
-      a <- asm(); req(!a$all_ok)
-      tagList(
-        div(class = "ps-process",
-            div(class = "ps-process-t", "How the non-parametric process starts"),
-            tags$ol(tags$li(sprintf("The failed assumption%s: %s.", if (length(a$failed) > 1) "s" else "", paste(a$failed, collapse = ", "))),
-                    tags$li("The hypotheses change from means (μ) to medians (η); they were set in step 2."),
-                    tags$li(sprintf("α stays at %s.", format(cur$s$alpha))),
-                    tags$li("Run the Kruskal-Wallis test, decide, and if H0 is rejected compare the groups with Dunn's test."))),
-        div(class = "ps-hyprecap", span(class = "small", tags$b("H0: "), cur$h0n), span(class = "small", tags$b("H1: "), cur$h1n),
-            actionLink(ns("edit_hn"), "Edit in step 2", class = "small ps-link")))
+    output$np_hrecap <- renderUI({
+      div(class = "ps-hyprecap", span(class = "small", tags$b("H0: "), cur$h0n), span(class = "small", tags$b("H1: "), cur$h1n),
+          span(class = "small", sprintf("α = %s", format(cur$s$alpha))))
     })
-    observeEvent(input$edit_hn, go(2))
     output$np_body <- renderUI({
       r <- cur$res_np
       if (is.null(r)) return(div(class = "ps-empty", icon("play", 20), p(class = "sub", "Press Run test to compute the Kruskal-Wallis statistic.")))
@@ -640,7 +698,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       tagList(result_ui(r, stale_np()), div(class = "col", style = "gap:6px", h3(class = "ct", "Ranks by group"), tbl(ps_rank_table(cur$st))))
     })
     decision_np <- reactive({ r <- cur$res_np; req(r); ps_decision(r, cur$h1n %||% "") })
-    output$s10 <- renderUI({ req(cur$key); step_card(10, "Decide whether to reject H0 for the Kruskal-Wallis test. The rank test has no confidence interval, so the rejection region and the p-value decide.", uiOutput(ns("dec_np_body"))) })
+    output$s13 <- renderUI({ req(cur$key); step_card(13, "Decide whether to reject H0 for the Kruskal-Wallis test. The rank test has no confidence interval, so the rejection region and the p-value decide.", uiOutput(ns("dec_np_body"))) })
     output$dec_np_body <- renderUI({
       d <- decision_np(); r <- cur$res_np
       tagList(decision_ui(d, r, cur$h0n, cur$h1n, c("pl_rr_np", "pl_ci_np", "pl_pv_np")),
@@ -650,7 +708,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     output$pl_rr_np <- renderPlot({ d <- decision_np(); ps_plot_rr(d$ref, cur$res_np$alpha) }, bg = "transparent", res = 88)
     output$pl_pv_np <- renderPlot({ d <- decision_np(); ps_plot_pvalue(d$ref, cur$res_np$p, cur$res_np$alpha) }, bg = "transparent", res = 88)
     posthoc_np <- reactive({ r <- cur$res_np; req(r, r$reject); c(ps_posthoc(r, "dunn"), list(method = "dunn", name = "Dunn test (Holm adjustment)")) })
-    output$s11 <- renderUI({ req(cur$key); step_card(11, "The Kruskal-Wallis test rejected H0, so Dunn's test finds which pairs of groups differ.", uiOutput(ns("ph_np_body"))) })
+    output$s14 <- renderUI({ req(cur$key); step_card(14, "The Kruskal-Wallis test rejected H0, so Dunn's test finds which pairs of groups differ.", uiOutput(ns("ph_np_body"))) })
     output$ph_np_body <- renderUI({
       r <- cur$res_np; req(r)
       if (!r$reject) return(div(class = "ps-empty left", icon("info", 18), p(class = "sub", style = "margin:0", "The Kruskal-Wallis test did not reject H0, so no post-hoc analysis is needed.")))

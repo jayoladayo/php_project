@@ -67,17 +67,27 @@ In automatic mode each page recommends the test whose assumptions hold and expla
   1. **Problem & data**: the question and the data as printed.
   2. **Hypotheses**: H0 and H1 in words, suggested from the question (type of alternative and hypothesised value included) and editable; μ for parametric tests, η (median) for non-parametric tests.
   3. **Significance level**: α from the question when it states one (else 0.05), editable; the confidence level is 1 − α.
-  4. **Information available**: what is known (response, number and size of samples, independent or paired, σ known or not, stated normality) and the data again. One sample: the normality check (Shapiro-Wilk, QQ plot). Two samples: the independence check first (Breusch-Godfrey), then normality and, for independent samples, equal variances. The result is the parametric or non-parametric choice with the suggested test; the test type, a known σ and the equal-variance assumption are editable.
+  4. **Information available**: what is known (response, number and size of samples, independent or paired, σ known or not, stated normality) and the data again. One sample: the normality check (Shapiro-Wilk, QQ plot). Two samples: the independence check first (Breusch-Godfrey), then normality and, for independent samples with unknown σ1 and σ2, equal variances (when both σ are known the z-test uses them, so no equal-variance test is run). The result is the parametric or non-parametric choice with the suggested test; the test type, a known σ and the equal-variance assumption are editable.
   5. **Test**: the suggested test (one-sample t or z, χ² on a variance, pooled or Welch t, two-sample z, paired t, or the rank tests: Wilcoxon signed-rank, sign test, Mann-Whitney), changeable, with a **Run test** button, the statistic worked out with the numbers and the result table.
   6. **Decision**: reject or fail to reject H0, by the rejection region, the confidence interval and the p-value, each with its plot, and the conclusion in the words of H1. This is the last step.
-- **Single-factor problems (Chapter 3): ANOVA first, then assumption checks, then Kruskal-Wallis if needed.**
-  1. **Problem & data**. 2. **Hypotheses**: both sets are shown, μ (means) for the ANOVA and η (medians) for Kruskal-Wallis. 3. **Significance level**.
-  4. **Information available**: the facts and the data again, with no tests; the assumptions are checked after the test, and the page shows the workflow.
-  5. **Test**: always the one-way ANOVA (F test), with the ANOVA table.
-  6. **Decision**: by the rejection region, the Tukey intervals and the p-value.
-  7. **Post-hoc** (only when H0 is rejected): Tukey HSD, Fisher LSD, Bonferroni, Scheffé or Dunnett, with grouping letters and an interval plot.
-  8. **Assumption checks** (on the ANOVA residuals): normality (Shapiro-Wilk, Anderson-Darling, QQ plot), independence (Breusch-Godfrey, residuals in order) and constant variance (Levene, residuals versus fitted). If all pass, the analysis ends with the ANOVA conclusion.
-  - If any assumption fails, the page lists which ones failed and the **Kruskal-Wallis** phase opens (greyed out in the stepper until then): the hypotheses switch to medians (η) and α is kept. 9. **Kruskal-Wallis test**: the H statistic with the tie correction and a rank table. 10. **Kruskal-Wallis decision**. 11. **Kruskal-Wallis post-hoc** (Dunn, only when H0 is rejected) and the final conclusion.
+- **Single-factor problems (Chapter 3): the parametric process runs to the end first, then starts again for the non-parametric test only if an assumption fails.**
+  - *Phase 1, parametric (one-way ANOVA):*
+    1. **Problem & data**.
+    2. **Hypotheses**: about the population means μ only.
+    3. **Significance level**.
+    4. **Information available**: the facts and the data again, with no tests; the assumptions are checked after the test, and the page shows the workflow.
+    5. **Test**: always the one-way ANOVA (F test), with the ANOVA table.
+    6. **Decision**: by the rejection region, the Tukey intervals and the p-value.
+    7. **Post-hoc** (only when H0 is rejected): Tukey HSD, Fisher LSD, Bonferroni, Scheffé or Dunnett, with grouping letters and an interval plot.
+    8. **Assumption checks** (on the ANOVA residuals): normality (Shapiro-Wilk, Anderson-Darling, QQ plot), independence (Breusch-Godfrey, residuals in order) and constant variance (Levene, residuals versus fitted). If all pass, the analysis ends with the ANOVA conclusion.
+  - *Phase 2, non-parametric (Kruskal-Wallis), only when an assumption fails.* The page names the failed assumption(s) and the process starts again from step 2:
+    2. **Hypotheses**: now about the population medians η, suggested and editable.
+    3. **Significance level**: the same α as phase 1.
+    4. **Information available**: the facts, a summary of the assumption checks, the data, and why the Kruskal-Wallis test is used.
+    5. **Kruskal-Wallis test**: the H statistic with the tie correction and a rank table.
+    6. **Decision**: by the rejection region and the p-value.
+    7. **Post-hoc** (only when H0 is rejected): Dunn's test, and the final conclusion.
+  - The stepper shows the phase in progress in full and folds the other one to its dots; phase 2 stays greyed out unless an assumption fails.
 - **Custom Problem**: write or paste a statement, paste, type or upload the data (or start from a class example), stack wide tables, and say which column is the response, the group and, for paired data, the pair ID. Blocked designs (RCBD) are sent to the RCBD page. **Copy to Custom Problem** copies any exercise into the editor.
 - The page remembers each problem's step, hypotheses, α and test, so returning to the list loses nothing. **Pin to report** sends the hypotheses, test result, decision and post-hoc table to the Report builder.
 

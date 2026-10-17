@@ -523,15 +523,23 @@ details[open] > summary > .ps-chev { transform: rotate(90deg); }
 /* Stepper */
 .ps-stepbar { display: flex; gap: 12px; align-items: stretch; position: sticky; top: 72px; z-index: 6; }
 .ps-stepbar > .stepper { flex: 1; }
-.ps-stepper { min-width: 0; padding: 12px 16px; gap: 8px; }
-.ps-stepper .st { gap: 8px; }
+.ps-stepper { min-width: 0; padding: 12px 14px; gap: 6px; }
+.ps-stepper .st { gap: 7px; }
 .ps-stepper .st .dot { width: 26px; height: 26px; font-size: 12px; border-width: 2px; }
 .ps-stepper .st .lbl { font-size: 12.5px; }
-.ps-stepper .sline { min-width: 10px; }
+.ps-stepper .sline { min-width: 8px; }
 .ps-stepper .st.skip { opacity: .45; }
 .ps-stepper .st.skip .dot { border-style: dashed; }
 .ps-phase { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.ps-phase:first-child { flex: 1; }
+.ps-phase.open { flex: 1; }
+.ps-phase.fold { flex: none; max-width: 200px; }
+.ps-phase.fold .ps-phase-lab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ps-phase.fold .stepper { gap: 6px; padding: 12px 14px; align-items: center; }
+.ps-phase.fold .st .lbl, .ps-phase.fold .sline { display: none; }
+.ps-phase.fold .st .dot { width: 12px; height: 12px; font-size: 0; border-width: 2px; box-shadow: none; }
+.ps-phase.fold .st .dot svg { display: none; }
+.ps-fold-note { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 4px; white-space: nowrap; }
+.ps-phase.np .sline.done { background: var(--stone); }
 .ps-phase-lab { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-left: 4px; }
 .ps-phase .stepper { flex: 1; }
 .ps-phase.np .stepper { background: var(--note-w); border-color: #E3D48A; }
@@ -540,10 +548,11 @@ details[open] > summary > .ps-chev { transform: rotate(90deg); }
 .ps-phase.np .st.done .dot { background: var(--stone); border-color: var(--stone); }
 [data-bs-theme="dark"] .ps-phase.np .stepper { background: var(--surface); border-color: var(--line); }
 /* Step card */
-.ps-step { padding: 0; }
+.ps-step { padding: 0; margin-bottom: 64px; } /* room for the assistant button below the Next button */
 .ps-step-head { display: flex; gap: 14px; align-items: flex-start; padding: 18px 22px 14px; border-bottom: 1px solid var(--line2); }
 .ps-step-head .sub { margin-top: 2px; font-size: 13px; line-height: 19px; }
 .ps-step-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 16px; font-size: 13.5px; }
+.ps-step-body > .shiny-html-output { display: flex; flex-direction: column; gap: 16px; }
 .ps-nav { display: flex; gap: 10px; align-items: center; padding: 12px 22px; border-top: 1px solid var(--line2); background: var(--surface3); border-radius: 0 0 12px 12px; flex-wrap: wrap; }
 .ps-nav .ml { margin-left: auto; }
 .ps-end { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--pass); }
@@ -623,7 +632,7 @@ details[open] > summary > .ps-chev { transform: rotate(90deg); }
 .ps-process-t { font-weight: 600; font-size: 13.5px; }
 .ps-process ol { margin: 6px 0 0; padding-left: 20px; }
 [data-bs-theme="dark"] .ps-process { border-color: var(--line); color: var(--text); }
-@media (max-width: 1440px) {
+@media (max-width: 1400px) {
   .ps-stepper.many .st:not(.cur) .lbl { display: none; }
 }
 @media (max-width: 1320px) {
