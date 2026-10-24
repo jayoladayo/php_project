@@ -11,7 +11,8 @@ home_ui <- function() {
   tagList(
     div(class = "hero",
         div(style = "flex:1;min-width:0",
-            span(class = "tag", icon("check", 13, 3), "KFUPM Experimental Design"),
+            div(class = "hrow", style = "gap:14px", tags$img(class = "hero-logo", src = "kfupm_logo.svg", alt = "KFUPM"),
+                span(class = "tag", icon("check", 13, 3), "KFUPM Experimental Design · Group 4")),
             h1("Analyse any designed experiment. No code required."),
             p("Upload your data, tell us what each column means, and get the ANOVA, assumption checks, post-hoc comparisons and a report you can submit."),
             div(class = "hrow",
@@ -22,6 +23,7 @@ home_ui <- function() {
             div(class = "stat", tags$b("3"), span("sample comparisons")),
             div(class = "stat", tags$b("5"), span("post-hoc methods")),
             div(class = "stat", tags$b("0"), span("lines of code needed")))),
+    div(class = "split", aims_card(), team_home_card()),
     div(class = "split",
         div(class = "col",
             div(class = "hrow", h2(class = "ct", "Design of experiments"), span(class = "small", "ANOVA, assumptions, post-hoc and non-parametric tests")),

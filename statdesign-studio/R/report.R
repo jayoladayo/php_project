@@ -46,8 +46,8 @@ doe_pin_items <- function(r, ph_m, letter_m) {
     means_plot = list(label = "Mean plot with letters", default = TRUE, build = function()
       mk_pin("plot", "Mean plot with letters", "bar", plot = plot_means(r, "treatment", letter_m), h = 3.6)),
     assump = list(label = "Assumption checks", default = TRUE, build = function() {
-      parts <- list(Normality = asm$normal, `Equal variance` = asm$variance, Independence = asm$indep)
-      st <- c(Normality = "normality", `Equal variance` = "variance", Independence = "independence")
+      parts <- list(Normality = asm$normal, `Constant variance` = asm$variance, Independence = asm$indep)
+      st <- c(Normality = "normality", `Constant variance` = "variance", Independence = "independence")
       df <- do.call(rbind, lapply(names(parts), function(k) { x <- parts[[k]]
         data.frame(Check = c(k, rep("", nrow(x) - 1)), Test = x$test,
                    Statistic = ifelse(is.na(x$value), "—", sprintf("%s = %s", x$statistic, fmt_g(x$value, 3))), `p-value` = fmt_p(x$p),

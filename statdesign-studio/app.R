@@ -16,16 +16,21 @@ local({
 
 options(shiny.maxRequestSize = 50 * 1024^2)
 
-PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "planner", "report", "learn")
+# Classify every problem once at start-up (problem type, test, post-hoc) so the Problem Sets
+# categories and filters open instantly.
+invisible(lapply(PROBLEMS, ps_classify))
+
+PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "planner", "report", "learn", "team")
 
 JUMP_CHOICES <- c(
   "Home" = "home", "Test Advisor" = "advisor", "Data Studio: upload a file" = "data",
   "Descriptive statistics" = "desc", "One sample tests" = "one", "Two sample tests (t-test, Mann-Whitney)" = "two",
   "k samples (one-way ANOVA, Kruskal-Wallis)" = "k",
-  "Problem Sets: Chapter 2 and 3 exercises, custom problems" = "problems",
+  "Problem Sets: Chapter 2, 3 and 4 exercises, custom problems" = "problems",
   "CRD: Completely Randomized Design" = "crd", "RCBD: Randomized Complete Block Design" = "rcbd",
   "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd",
-  "Design Planner: randomised layouts" = "planner", "Report builder" = "report", "Learn: method guides" = "learn")
+  "Design Planner: randomised layouts" = "planner", "Report builder" = "report", "Learn: method guides" = "learn",
+  "About the team (Group 4), aim and objectives" = "team")
 
 ui <- page(
   theme = bs_theme(version = 5, primary = "#008540", secondary = "#003E51", success = "#008540",
@@ -64,7 +69,8 @@ ui <- page(
                 tabPanelBody("glsd", doe_ui("glsd", DESIGNS$GLSD)),
                 tabPanelBody("planner", planner_ui("planner")),
                 tabPanelBody("report", report_ui("report")),
-                tabPanelBody("learn", learn_ui("learn"))
+                tabPanelBody("learn", learn_ui("learn")),
+                tabPanelBody("team", team_ui())
               ))),
       riaz_ui("riaz"))
 )

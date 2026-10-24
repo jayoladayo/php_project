@@ -45,7 +45,7 @@ rsconnect::setAccountInfo(name = ACCOUNT, token = TOKEN, secret = SECRET)
 RIAZ_KEY_FILES_DEPLOY <- c("ai_key.txt", "ai-key.txt", "ai_key", ".Renviron", ".Renviron.txt", "Renviron", "Renviron.txt", ".env")
 if (!length(intersect(RIAZ_KEY_FILES_DEPLOY, list.files(".", all.files = TRUE))))
   message("Note: no ai_key.txt found, so the published app will ask students for their own AI key.")
-files <- c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE),
+files <- c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE, recursive = TRUE),
            intersect(RIAZ_KEY_FILES_DEPLOY, list.files(".", all.files = TRUE)))  # the built-in AI key, if you set one
 deploy <- function() rsconnect::deployApp(appDir = ".", appName = APP, account = ACCOUNT, launch.browser = TRUE,
                                           forceUpdate = TRUE, appFiles = files)

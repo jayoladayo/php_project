@@ -189,6 +189,9 @@ run_k <- function(y, g, s) {
                    value = c(if (!is.null(lev)) lev$`F value`[1] else NA, if (!is.null(bart)) unname(bart$statistic) else NA),
                    df = c(if (!is.null(lev)) paste(lev$Df, collapse = ", ") else NA, if (!is.null(bart)) unname(bart$parameter) else NA),
                    p = c(if (!is.null(lev)) lev$`Pr(>F)`[1] else NA, if (!is.null(bart)) bart$p.value else NA), stringsAsFactors = FALSE)
+  bp <- quiet(lmtest::bptest(fit))
+  rv <- data.frame(test = "Breusch-Pagan (residuals)", statistic = "BP", value = if (!is.null(bp)) unname(bp$statistic) else NA,
+                   df = if (!is.null(bp)) unname(bp$parameter) else NA, p = if (!is.null(bp)) bp$p.value else NA, stringsAsFactors = FALSE)
   status <- verdict_p(sw$p, alpha)
   equal_var <- switch(s$var_mode %||% "auto", equal = TRUE, unequal = FALSE, is.na(vt$p[1]) || vt$p[1] >= alpha)
   tr <- an$table[1, ]
@@ -207,7 +210,7 @@ run_k <- function(y, g, s) {
                       unname(kw$statistic) / ((N^2 - 1) / (N + 1)), df = unname(kw$parameter), dist = "chisq",
                       about = "Compares the ranks of all groups. Does not assume normality.")
   tests$kw$df1 <- unname(kw$parameter)
-  ph <- posthoc_all(fit, d, "treatment", an$mse, an$dfe, alpha, conf)
+  ph <- posthoc_all(fit, d, "treatment", an$mse, an$dfe, alpha, conf, dunnett = FALSE)
   gh <- games_howell(y, g, conf); gh$signif <- gh$p < alpha
   dn <- dunn_test(y, g, "holm")
   posthoc <- list(tukey = ph$methods$tukey, gh = gh, dunn = dn)
@@ -218,7 +221,7 @@ run_k <- function(y, g, s) {
                   gh = cld_letters(levels(g), as.numeric(tapply(y, g, mean)), gh$i[gh$signif], gh$j[gh$signif]),
                   dunn = cld_letters(levels(g), as.numeric(tapply(rank(y), g, mean)), dn$i[dn$p < alpha], dn$j[dn$p < alpha]))
   desc <- do.call(rbind, lapply(levels(g), function(l) cbind(sample = l, describe_vec(y[g == l], conf))))
-  list(kind = "k", tests = tests, recommend = rec, normal = normal, equal_var = equal_var, var_tests = vt,
+  list(kind = "k", tests = tests, recommend = rec, normal = normal, equal_var = equal_var, var_tests = vt, resid_var = rv,
        anova = an, fit = fit, posthoc = posthoc, letters = letters, means = ph$means,
        normality = rbind(data.frame(sample = "Residuals (all groups)", n = length(rs), W = sw$W, p = sw$p, status = status, stringsAsFactors = FALSE),
                          data.frame(sample = levels(g), n = as.integer(table(g)), W = vapply(per, `[[`, 0, "W"), p = vapply(per, `[[`, 0, "p"),

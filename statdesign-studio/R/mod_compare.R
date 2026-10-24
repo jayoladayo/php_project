@@ -479,7 +479,9 @@ cmp_server <- function(id, kind, store, goto) {
                           p(class = "small", style = "margin:10px 0 0",
                             if (s$var_mode != "auto") "You fixed this in the settings."
                             else if (r$equal_var) sprintf("No evidence of unequal variances, so the %s is used for the parametric result.", if (r$kind == "k") "one-way ANOVA" else "pooled t-test")
-                            else sprintf("The variances differ, so the %s is used for the parametric result.", if (r$kind == "k") "Welch ANOVA" else "Welch t-test"))),
+                            else sprintf("The variances differ, so the %s is used for the parametric result.", if (r$kind == "k") "Welch ANOVA" else "Welch t-test")),
+                          if (!is.null(r$resid_var)) div(style = "margin-top:12px", div(class = "klab", "Constant variance of the ANOVA residuals"), test_tbl_ui(r$resid_var),
+                                                         p(class = "small", style = "margin:6px 0 0", "Breusch-Pagan checks the spread of the residuals of the one-way model; Levene and Bartlett above compare the spread of the groups."))),
                       plotOutput(ns("pl_box"), height = "240px"))),
                 if (is.null(r$var_tests)) kcard(div(class = "hrow", h2(class = "ct", if (r$kind == "paired") "The pairs" else "The sample"), tools(if (r$kind == "paired") "pl_paired" else "pl_box")),
                                                 plotOutput(ns(if (r$kind == "paired") "pl_paired" else "pl_box"), height = "280px")),

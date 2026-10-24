@@ -19,7 +19,8 @@ NAV <- list(
   list(group = "Tools"),
   list(page = "planner", label = "Design Planner", icon = "map"),
   list(page = "report", label = "Report", icon = "file", badge = "report-count"),
-  list(page = "learn", label = "Learn", icon = "book")
+  list(page = "learn", label = "Learn", icon = "book"),
+  list(page = "team", label = "About the team", icon = "users")
 )
 
 PAGE_CRUMB <- list(
@@ -28,7 +29,8 @@ PAGE_CRUMB <- list(
   one = c("Compare", "One sample"), two = c("Compare", "Two samples"), k = c("Compare", "k samples"),
   problems = c("Design of experiments", "Problem Sets"), crd = c("Design of experiments", "CRD"), rcbd = c("Design of experiments", "RCBD"),
   lsd = c("Design of experiments", "Latin Square"), glsd = c("Design of experiments", "Graeco-Latin Square"),
-  planner = c("Tools", "Design Planner"), report = c("Tools", "Report"), learn = c("Tools", "Learn")
+  planner = c("Tools", "Design Planner"), report = c("Tools", "Report"), learn = c("Tools", "Learn"),
+  team = c("StatDesign Studio", "About the team")
 )
 
 nav_js <- function(page) sprintf("Shiny.setInputValue('nav', '%s', {priority: 'event'}); return false;", page)
@@ -44,7 +46,7 @@ sidebar_ui <- function() {
       div(class = "brand", div(class = "logo", icon("bar", 22, 2.4)),
           div(div(class = "bname", "StatDesign Studio"), div(class = "bsub", "Experimental design, no code"))),
       items,
-      div(class = "sfoot", "KFUPM · Experimental Design", br(), "Version 1.0 · ",
+      div(class = "sfoot", tags$img(class = "sfoot-logo", src = "kfupm_logo.svg", alt = "KFUPM"), "Experimental Design · Group 4", br(), "Version 1.0 · ",
           tags$a(href = "#", onclick = "Shiny.setInputValue('help', Math.random()); return false;", style = "color:inherit", "Help & About")))
 }
 

@@ -32,7 +32,7 @@ Press **Run analysis** on any of CRD, RCBD, Latin square or Graeco-Latin square 
 - **Summary**: plain-English conclusion, key numbers, means chart with grouping letters, assumption scorecard, the decision made three ways, and a paragraph you can copy.
 - **Explore**: box plots, a summary table, and a block profile (RCBD) or the square as laid out (LSD/GLSD).
 - **ANOVA**: full table with F critical and partial eta squared, fit statistics, relative efficiency, and the p-value, rejection-region and confidence-interval methods.
-- **Assumptions**: Shapiro-Wilk and Anderson-Darling, Breusch-Pagan and Levene, Durbin-Watson and Breusch-Godfrey, with QQ, residual and run-order plots.
+- **Assumptions**: Shapiro-Wilk and Anderson-Darling (normality), Breusch-Pagan (constant variance of the residuals), Durbin-Watson and Breusch-Godfrey (independence), with QQ, residual and run-order plots. The CRD page also shows Levene and Bartlett as a separate check of the equal variances of the groups.
 - **Post-hoc**: Tukey, Fisher LSD, Bonferroni, Scheffé and Dunnett with intervals, letters and a side-by-side comparison.
 - **Non-parametric**: Kruskal-Wallis (CRD), Friedman and Quade (RCBD), or the class rank-on-residuals permutation test (LSD/GLSD), with post-hoc tests. In automatic mode it becomes the recommended result when normality or equal variance fails.
 - **R code**: a script that reproduces every number, ready to run in R.
@@ -75,11 +75,11 @@ In automatic mode each page recommends the test whose assumptions hold and expla
     1. **Problem & data**.
     2. **Hypotheses**: about the population means μ only.
     3. **Significance level**.
-    4. **Information available**: the facts and the data again, with no tests; the assumptions are checked after the test, and the page shows the workflow.
-    5. **Test**: always the one-way ANOVA (F test), with the ANOVA table.
-    6. **Decision**: by the rejection region, the Tukey intervals and the p-value.
-    7. **Post-hoc** (only when H0 is rejected): Tukey HSD, Fisher LSD, Bonferroni, Scheffé or Dunnett, with grouping letters and an interval plot.
-    8. **Assumption checks** (on the ANOVA residuals): normality (Shapiro-Wilk, Anderson-Darling, QQ plot), independence (Breusch-Godfrey, residuals in order) and constant variance (Levene, residuals versus fitted). If all pass, the analysis ends with the ANOVA conclusion.
+    4. **Information available**: the facts and the data again, and the **equal variances of the groups** (Levene or Bartlett, the student's choice): equal → one-way ANOVA, unequal → Welch ANOVA. The other assumptions are checked after the test, and the page shows the workflow.
+    5. **Test**: the one-way ANOVA (or Welch ANOVA), with the ANOVA table.
+    6. **Decision**: by the rejection region, the Tukey (or Games-Howell) intervals and the p-value.
+    7. **Post-hoc** (only when H0 is rejected): Tukey HSD, Fisher LSD, Bonferroni or Scheffé (Games-Howell after Welch ANOVA), with grouping letters and an interval plot. Dunnett's test is offered, and suggested, only when the problem names a control group (3.10: Sham).
+    8. **Assumption checks** (on the ANOVA residuals): normality (Shapiro-Wilk, Anderson-Darling, QQ plot), independence (Breusch-Godfrey, residuals in order) and constant variance of the residuals (Breusch-Pagan, residuals versus fitted; not required after Welch ANOVA). If all pass, the analysis ends with the ANOVA conclusion.
   - *Phase 2, non-parametric (Kruskal-Wallis), only when an assumption fails.* The page names the failed assumption(s) and the process starts again from step 2:
     2. **Hypotheses**: now about the population medians η, suggested and editable.
     3. **Significance level**: the same α as phase 1.
@@ -88,10 +88,18 @@ In automatic mode each page recommends the test whose assumptions hold and expla
     6. **Decision**: by the rejection region and the p-value.
     7. **Post-hoc** (only when H0 is rejected): Dunn's test, and the final conclusion.
   - The stepper shows the phase in progress in full and folds the other one to its dots; phase 2 stays greyed out unless an assumption fails.
-- **Custom Problem**: write or paste a statement, paste, type or upload the data (or start from a class example), stack wide tables, and say which column is the response, the group and, for paired data, the pair ID. Blocked designs (RCBD) are sent to the RCBD page. **Copy to Custom Problem** copies any exercise into the editor.
+- **Custom Problem**: write or paste a statement, paste, type or upload the data (or start from a class example), stack wide tables, and say which column is the response, the group (treatment) and, for paired data or a block design, the block or pair ID; for a Latin square the row and column (and the Greek letter for a Graeco-Latin square). If the problem names a control group, choose it to enable Dunnett's test. Block designs and squares follow the Chapter 4 steps. **Copy to Custom Problem** copies any exercise into the editor.
 - The page remembers each problem's step, hypotheses, α and test, so returning to the list loses nothing. **Pin to report** sends the hypotheses, test result, decision and post-hoc table to the Report builder.
 
-The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experiments) and Chapter 3 (Experiments with a Single Factor). The tests are the course's own (the same engine as the One, Two and k sample pages).
+The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experiments), Chapter 3 (Experiments with a Single Factor) and Chapter 4 (Randomized Blocks, Latin Squares, and Related Designs). The tests are the course's own (the same engine as the One, Two and k sample pages).
+
+## What is in stage 7
+
+- **Categories and filters in Problem Sets.** The chapter tabs stay (Chapter 2, Chapter 3, Chapter 4, Custom Problem). Inside a chapter, filter by **problem type** (one sample, two sample independent or paired, k sample, RCBD, Latin square, Graeco-Latin square, BIBD), **test type** (parametric or non-parametric) and **post-hoc** (Tukey HSD, Fisher LSD, Dunnett, Games-Howell, Dunn, Nemenyi, none), and group the problems by any of these. Every card shows its problem type, test type, test and post-hoc as chips.
+- **Chapter 4 (25 problems with their data)**: 4.8, 4.9, 4.10, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18, 4.19, 4.23, 4.24, 4.26, 4.27, 4.28, 4.29, 4.31, 4.34, 4.40, 4.41, 4.45, 4.47 and 4.59 (the problems of Section 4.5 that have data and can be solved with the steps). Each follows the same steps as Chapter 3: the ANOVA for the design (RCBD, Latin square, Graeco-Latin square, or BIBD with treatments adjusted for blocks) first, post-hoc if H0 is rejected, then the assumption checks on the residuals. If one fails, the process starts again with the course's rank test: Friedman (then Nemenyi) for an RCBD, and for the squares and the BIBD the class approach (remove the blocking factors, rank the residuals, Kruskal-Wallis statistic with the permutation p-value, then Dunn). Missing values (4.23, 4.24, 4.34) are estimated with the textbook formula and the exact analysis is shown; random blocks (4.29, 4.31) get the block variance component; 4.10, 4.11 and 4.15 show the treatment means against a scaled t distribution.
+- **Constant variance of the residuals is the Breusch-Pagan test** in every ANOVA assumption check (Problem Sets, CRD, RCBD, Latin and Graeco-Latin pages, and the k samples page). Levene and Bartlett are kept only to compare the **variances of the groups**, which decides between the one-way ANOVA and the Welch ANOVA.
+- **Dunnett's test** is suggested only when the problem names a control group.
+- **Home page**: the KFUPM logo, the aim and objectives, and the project team. Clicking a name opens **About the team** (also in the sidebar), with every member's photo, department and role. To change a photo, replace the file in `www/team/` (or set `photo` in `R/mod_team.R`); a member without a photo shows initials.
 
 ## Ask Professor Riaz (AI assistant)
 
@@ -129,7 +137,9 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 ## Files
 
-- `R/problems.R`: the Problem Sets exercises and their data. `R/problem_engine.R`: the step-by-step process (information available, hypotheses, tests, decision, post-hoc, assumption checks, Kruskal-Wallis). `R/mod_problems.R`: the Problem Sets page, its steps and the custom problem editor.
+- `R/problems.R`: the Problem Sets exercises and their data (Chapters 2, 3 and 4). `R/problem_engine.R`: the step-by-step process (information available, hypotheses, tests, decision, post-hoc, assumption checks, classification for the filters). `R/problem_blocks.R`: the Chapter 4 designs (RCBD, Latin, Graeco-Latin, BIBD, missing values, Friedman and the rank test on residuals). `R/mod_problems.R`: the Problem Sets page, its categories and filters, its steps and the custom problem editor.
+
+- `R/mod_team.R`: the team, aim and objectives (home page and About the team). `www/team/`: team photos. `www/kfupm_logo.svg`: the KFUPM logo.
 
 - `R/ai.R`: Ask Professor Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `ai_key.example.txt`: template for the built-in key.
 

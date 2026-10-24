@@ -105,7 +105,7 @@ doe_step3_ui <- function(ns, design) {
                     div(class = "divider"),
                     radioButtons(ns("assump"), "Assumption handling",
                                  choiceNames = list(
-                                   tagList(tags$b("Automatic (recommended)"), div(class = "small", sprintf("Switch to %s if normality or equal variance fails", design$nonpar))),
+                                   tagList(tags$b("Automatic (recommended)"), div(class = "small", sprintf("Switch to %s if normality or constant variance fails", design$nonpar))),
                                    "Always report ANOVA", "Always report the non-parametric test"),
                                  choiceValues = list("auto", "anova", "nonpar"), selected = "auto"),
                     tags$details(
@@ -534,7 +534,7 @@ doe_server <- function(id, design, store, goto) {
             kpi("Treatment effect", p_txt(tr$p), sprintf("F(%d, %d) = %.2f · partial η² = %.2f", tr$df, r$anova$dfe, tr$F, tr$eta2p), if (tr$p < a) "good"),
             kpi(sprintf("Highest mean %s", r$names$treatment), best$level, sprintf("Mean %.2f%s, highest of %d", best$mean, if (nzchar(unit)) paste0(" ", unit) else "", nrow(ph$means))),
             third,
-            kpi("Assumptions", sprintf("%d of 3 pass", npass), "Normality, equal variance, independence", if (npass == 3) "good")),
+            kpi("Assumptions", sprintf("%d of 3 pass", npass), "Normality, constant variance, independence", if (npass == 3) "good")),
         div(class = "split wide",
             kcard(div(class = "hrow", h2(class = "ct", sprintf("Mean %s by %s", r$settings$response_name %||% r$map$response, r$names$treatment)), plot_card_tools("pl_means")),
                   p(class = "small", style = "margin:2px 0 6px", sprintf("Squares show means with %g%% confidence intervals; dots are the observations. Different letters mean significantly different (%s, α = %s).",
@@ -545,7 +545,7 @@ doe_server <- function(id, design, store, goto) {
                           tags$a(href = "#", class = "small ml", style = "color:var(--green);font-weight:600",
                                  onclick = sprintf("Shiny.setInputValue('%s', 'assump', {priority: 'event'}); return false;", ns("rtab")), "Details")),
                       div(class = "kv-row", style = "align-items:center", span("Normality", br(), span(class = "small", sprintf("Shapiro-Wilk %s", p_txt(asm$normal$p[1])))), status_pill(asm$status[["normality"]])),
-                      div(class = "kv-row", style = "align-items:center", span("Equal variance", br(), span(class = "small", sprintf("Breusch-Pagan %s", p_txt(asm$variance$p[1])))), status_pill(asm$status[["variance"]])),
+                      div(class = "kv-row", style = "align-items:center", span("Constant variance", br(), span(class = "small", sprintf("Breusch-Pagan %s", p_txt(asm$variance$p[1])))), status_pill(asm$status[["variance"]])),
                       div(class = "kv-row", style = "align-items:center", span("Independence", br(), span(class = "small", sprintf("Durbin-Watson %s", p_txt(asm$indep$p[1])))), status_pill(asm$status[["independence"]]))),
                 kcard(h2(class = "ct", "Decision, three ways"),
                       dec_row("P-value", NULL, sprintf("%s vs α = %s", p_txt(tr$p), format(a)), tr$p < a),
@@ -632,7 +632,7 @@ doe_server <- function(id, design, store, goto) {
       n_ok <- sum(st == "pass")
       head_txt <- if (n_ok == 3) "All three assumptions hold, so the parametric ANOVA is reported."
                   else if (any(st[c("normality", "variance")] == "fail")) sprintf("%s fails, so %s is recommended.",
-                       paste(c("Normality", "Equal variance")[st[c("normality", "variance")] == "fail"], collapse = " and "), npname)
+                       paste(c("Normality", "Constant variance")[st[c("normality", "variance")] == "fail"], collapse = " and "), npname)
                   else if (st["independence"] == "fail") "Independence fails. A non-parametric test does not fix this; check how the runs were ordered and randomised."
                   else "Some checks are borderline. ANOVA is kept; compare with the non-parametric result."
       card <- function(title, q, ic, status, tab, plot_id, pass_txt, fail_txt, extra = NULL) {
@@ -655,16 +655,19 @@ doe_server <- function(id, design, store, goto) {
             card("Normality", "Are the residuals normally distributed?", "bar", st[["normality"]], asm$normal, "pl_qq",
                  "Points follow the line and stay near the band, and the formal tests do not reject normality.",
                  sprintf("The residuals depart from normality. %s does not need this assumption.", npname)),
-            card("Equal variance", "Is the spread of residuals constant?", "scale", st[["variance"]], asm$variance, "pl_rvf",
-                 "Residuals scatter evenly around zero with no funnel shape, so the variance looks constant.",
-                 sprintf("The spread changes across fitted values. Consider %s or a transformation such as log(y).", npname)),
+            card("Constant variance", "Is the spread of the residuals constant? (Breusch-Pagan)", "scale", st[["variance"]], asm$variance, "pl_rvf",
+                 "Residuals scatter evenly around zero with no funnel shape, and the Breusch-Pagan test does not reject constant variance.",
+                 sprintf("The spread of the residuals changes across fitted values. Consider %s or a transformation such as log(y).", npname),
+                 if (!is.null(asm$groups)) div(class = "col", style = "gap:6px",
+                   div(class = "klab", "Equal variances of the groups (separate check)"), test_tbl_ui(asm$groups),
+                   p(class = "small", style = "margin:0", sprintf("Levene and Bartlett compare the spread of the %s groups directly. If they differ, the Welch ANOVA (k samples page) does not assume equal variances.", r$names$treatment)))),
             card("Independence", "Are the residuals independent of run order?", "clock", st[["independence"]], asm$indep, "pl_order",
                  "No trend or long runs above or below zero in run order, so the errors look independent.",
                  "The residuals show a pattern over run order. Rank tests also need independent errors, so the fix is the run order or randomisation, not a different test.",
                  if (!nzchar(r$map$run %||% "")) p(class = "small", style = "margin:0", "No run-order column was mapped, so the order of rows in the data is used."))),
         kcard(class = "soft", h3(class = "ct", "What happens when a check fails"),
               div(class = "grid g3", style = "margin-top:10px",
-                  note(kind = "e", ic = "x", tags$b("Normality or equal variance fails (p < α). "), sprintf("In automatic mode the results switch to %s, marked Recommended, and the Summary explains why.", npname)),
+                  note(kind = "e", ic = "x", tags$b("Normality or constant variance fails (p < α). "), sprintf("In automatic mode the results switch to %s, marked Recommended, and the Summary explains why.", npname)),
                   note(kind = "w", ic = "alert", tags$b("Borderline (α ≤ p < 0.10). "), "ANOVA is kept, with a note to inspect the plot and compare with the non-parametric result."),
                   note(kind = "e", ic = "x", tags$b("Independence fails. "), "Both tests are shown with a warning; rank tests also need independent errors.")))
       )
@@ -760,7 +763,7 @@ doe_server <- function(id, design, store, goto) {
       }
       tagList(
         if (r$recommend == "nonpar") note(kind = "g", ic = "check", tags$b("Recommended. "), if (r$failed) "An ANOVA assumption failed, so this test is the one to report." else "You chose to report the non-parametric test.")
-        else note(tags$b("Shown for comparison. "), sprintf("The ANOVA assumptions hold, so %s is recommended. When normality or equal variance fails, this tab is marked Recommended.", design_model_name(design))),
+        else note(tags$b("Shown for comparison. "), sprintf("The ANOVA assumptions hold, so %s is recommended. When normality or constant variance fails, this tab is marked Recommended.", design_model_name(design))),
         div(class = "split wide",
             section(np, "", r$names$treatment),
             div(class = "col",
@@ -915,10 +918,10 @@ how_text <- function(design) {
   switch(design$key,
     CRD = tagList(p("Every experimental unit is assigned to a treatment completely at random. Use it when units are alike, such as plots on uniform land or identical samples in a lab."),
                   p(class = "mono", "Response ~ Treatment"),
-                  p("If normality or equal variance fails, the Kruskal-Wallis test compares the treatments using ranks.")),
+                  p("If normality or constant variance fails, the Kruskal-Wallis test compares the treatments using ranks.")),
     RCBD = tagList(p("Units are grouped into blocks that are alike (farms, days, batches). Every treatment appears once in every block, and the order is randomised inside each block. Blocking removes the block-to-block variation from the error."),
                    p(class = "mono", "Response ~ Treatment + Block"),
-                   p("If normality or equal variance fails, the Friedman test ranks the treatments within each block.")),
+                   p("If normality or constant variance fails, the Friedman test ranks the treatments within each block.")),
     LSD = tagList(p("Two blocking factors, such as rows and columns of a field. Each treatment appears exactly once in every row and every column, so the number of rows, columns and treatments is the same."),
                   p(class = "mono", "Response ~ Treatment + Row + Column"),
                   p("A 3 × 3 square leaves only 2 error degrees of freedom, so tests have little power.")),

@@ -1,5 +1,5 @@
 # Problem Sets: exercises copied from the course problem sheets (Montgomery,
-# Design and Analysis of Experiments, Sections 2.7 and 3.12).
+# Design and Analysis of Experiments, Sections 2.7, 3.12 and 4.5).
 # Each problem keeps its full statement and its complete dataset. Data are stored
 # in long format (one row per observation) for analysis, with the textbook layout
 # kept for display.
@@ -10,7 +10,10 @@ PS_CHAPTERS <- list(
              blurb = "One-sample, two-sample (independent and paired) comparisons."),
   ch3 = list(key = "ch3", num = 3, label = "Chapter 3 problems", icon = "layers",
              title = "Chapter 3: Experiments with a Single Factor (ANOVA)",
-             blurb = "Single-factor completely randomized designs: one-way ANOVA and the Kruskal-Wallis test.")
+             blurb = "Single-factor completely randomized designs: one-way ANOVA and the Kruskal-Wallis test."),
+  ch4 = list(key = "ch4", num = 4, label = "Chapter 4 problems", icon = "grid",
+             title = "Chapter 4: Randomized Blocks, Latin Squares, and Related Designs",
+             blurb = "Randomized complete block, Latin square, Graeco-Latin square and balanced incomplete block designs.")
 )
 
 # ---------- Builders for the three textbook layouts ----------
@@ -62,12 +65,43 @@ ps_single <- function(resp_name, x, ncol, byrow = FALSE) {
   list(long = long, wide = wide)
 }
 
+# A grid with treatments as rows and blocks as columns (Chapter 4). NA cells are not in the
+# design (incomplete blocks); cells listed in `missing` are in the design but were lost.
+ps_grid <- function(trt_name, blk_name, resp_name, trt, blk, m, missing = NULL) {
+  m <- matrix(m, nrow = length(trt), byrow = TRUE)
+  lost <- matrix(FALSE, nrow(m), ncol(m)); for (x in missing) lost[x[1], x[2]] <- TRUE
+  idx <- which(!is.na(m) | lost, arr.ind = TRUE); idx <- idx[order(idx[, 1], idx[, 2]), , drop = FALSE]
+  long <- data.frame(trt = trt[idx[, 1]], blk = blk[idx[, 2]], resp = ifelse(lost[idx], NA, m[idx]), stringsAsFactors = FALSE)
+  names(long) <- c(trt_name, blk_name, resp_name)
+  wide <- data.frame(trt, stringsAsFactors = FALSE)
+  for (j in seq_along(blk)) wide[[blk[j]]] <- ifelse(lost[, j], "missing", ifelse(is.na(m[, j]), "", format(m[, j])))
+  names(wide)[1] <- trt_name
+  list(long = long, wide = wide)
+}
+
+# A Latin (or Graeco-Latin) square: rows and columns as printed, a letter and a value in each cell.
+ps_square <- function(row_name, col_name, trt_name, resp_name, rows, cols, L, V, G = NULL, greek_name = NULL, missing = NULL) {
+  p <- length(rows); L <- matrix(L, p, byrow = TRUE); V <- matrix(V, p, byrow = TRUE); if (!is.null(G)) G <- matrix(G, p, byrow = TRUE)
+  if (!is.null(missing)) V[missing[1], missing[2]] <- NA
+  ij <- expand.grid(j = seq_len(p), i = seq_len(p))[, 2:1]
+  long <- data.frame(r = rows[ij$i], c = cols[ij$j], t = L[cbind(ij$i, ij$j)], stringsAsFactors = FALSE)
+  if (!is.null(G)) long$g <- G[cbind(ij$i, ij$j)]
+  long$y <- V[cbind(ij$i, ij$j)]
+  names(long) <- c(row_name, col_name, trt_name, if (!is.null(G)) greek_name, resp_name)
+  cell <- matrix(paste0(L, if (!is.null(G)) G else "", " = ", ifelse(is.na(V), "missing", format(V, trim = TRUE))), p)
+  wide <- data.frame(rows, cell, stringsAsFactors = FALSE, check.names = FALSE)
+  names(wide) <- c(row_name, cols)
+  list(long = long, wide = wide)
+}
+
 prob <- function(id, chapter, title, statement, parts, data, roles, labels, settings = list(), target = "mean",
-                 random = FALSE, tags = character(0), covers = NULL, note = NULL, source = NULL) {
+                 random = FALSE, tags = character(0), covers = NULL, note = NULL, source = NULL,
+                 control = NULL, design = NULL, random_blocks = FALSE, scaled_t = FALSE) {
   list(id = id, chapter = chapter, num = id, title = title, statement = statement, parts = parts,
        data = data$long, display = data$wide, roles = roles, labels = labels,
        settings = modifyList(list(alpha = 0.05, conf = 0.95, alt = "two.sided"), settings),
        target = target, random = random, tags = tags, covers = covers, note = note,
+       control = control, design = design, random_blocks = random_blocks, scaled_t = scaled_t,
        source = source %||% sprintf("Problem %s, Montgomery, Design and Analysis of Experiments, Chapter %d.", id, chapter))
 }
 
@@ -239,7 +273,7 @@ PROBLEMS_CH3 <- list(
          `PEMF 2 h/day` = c(4.73, 5.81, 5.69, 3.86, 4.06, 6.56, 8.34, 3.01, 6.71, 6.51, 1.70, 5.89, 6.55, 5.34, 5.88, 7.50, 3.28, 5.38, 7.30, 5.46),
          `PEMF 4 h/day` = c(7.03, 4.65, 6.65, 5.49, 6.98, 4.85, 7.26, 5.92, 5.58, 7.91, 4.90, 4.54, 8.18, 5.42, 6.03, 7.04, 5.17, 7.60, 7.90, 7.91))),
        roles = list(response = "BMD loss", treatment = "Treatment"), labels = list(response = "BMD loss", unit = "%", treatment = "PEMF treatment"),
-       tags = c("one-way ANOVA", "CRD")),
+       control = "Sham", tags = c("one-way ANOVA", "CRD", "control group")),
   prob("3.11", 3, "Tensile strength of Portland cement",
        "The tensile strength of Portland cement is being studied. Four different mixing techniques can be used economically. A completely randomized experiment was conducted and the following data (lb/in²) were collected.",
        c("(a) Test the hypothesis that mixing techniques affect the strength of the cement. Use α = 0.05.",
@@ -376,7 +410,203 @@ PROBLEMS_CH3 <- list(
        roles = list(response = "Calcium", treatment = "Batch"), labels = list(response = "calcium content", treatment = "batch"), tags = c("random effects", "variance components"))
 )
 
-PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3)
+# ---------- Chapter 4 ----------
+
+CH4_TXT <- list(
+  p48 = "A chemist wishes to test the effect of four chemical agents on the strength of a particular type of cloth. Because there might be variability from one bolt to another, the chemist decides to use a randomized block design, with the bolts of cloth considered as blocks. She selects five bolts and applies all four chemicals in random order to each bolt. The resulting tensile strengths follow. Analyze the data from this experiment (use α = 0.05) and draw appropriate conclusions.",
+  p49 = "Three different washing solutions are being compared to study their effectiveness in retarding bacteria growth in 5-gallon milk containers. The analysis is done in a laboratory, and only three trials can be run on any day. Because days could represent a potential source of variability, the experimenter decides to use a randomized block design. Observations are taken for four days, and the data are shown here. Analyze the data from this experiment (use α = 0.05) and draw conclusions.",
+  p412 = "Consider the hardness testing experiment described in Section 4.1. Suppose that the experiment was conducted as described and that the following Rockwell C-scale data (coded by subtracting 40 units) obtained:",
+  p413 = "A consumer products company relies on direct mail marketing pieces as a major component of its advertising campaigns. The company has three different designs for a new brochure and wants to evaluate their effectiveness, as there are substantial differences in costs between the three designs. The company decides to test the three designs by mailing 5000 samples of each to potential customers in four different regions of the country. Since there are known regional differences in the customer base, regions are considered as blocks. The number of responses to each mailing is as follows.",
+  p414 = "The effect of three different lubricating oils on fuel economy in diesel truck engines is being studied. Fuel economy is measured using brake-specific fuel consumption after the engine has been running for 15 minutes. Five different truck engines are available for the study, and the experimenters conduct the following RCBD.",
+  p427 = "The effect of five different ingredients (A, B, C, D, E) on the reaction time of a chemical process is being studied. Each batch of new material is only large enough to permit five runs to be made. Furthermore, each run requires approximately 1½ hours, so only five runs can be made in one day. The experimenter decides to run the experiment as a Latin square so that day and batch effects may be systematically controlled. She obtains the data that follow. Analyze the data from this experiment (use α = 0.05) and draw conclusions.",
+  p428 = "An industrial engineer is investigating the effect of four assembly methods (A, B, C, D) on the assembly time for a color television component. Four operators are selected for the study. Furthermore, the engineer knows that each assembly method produces such fatigue that the time required for the last assembly may be greater than the time required for the first, regardless of the method. That is, a trend develops in the required assembly time. To account for this source of variability, the engineer uses the Latin square design that follows. Analyze the data from this experiment (α = 0.05) and draw appropriate conclusions.")
+ctx <- function(id, key) sprintf("Problem %s: %s", id, CH4_TXT[[key]])
+
+D48 <- c(73, 68, 74, 71, 67,  73, 67, 75, 72, 70,  75, 68, 78, 73, 68,  73, 71, 75, 75, 69)
+D49 <- c(13, 22, 18, 39,  16, 24, 17, 44,  5, 4, 1, 22)
+D412 <- c(9.3, 9.4, 9.6, 10.0,  9.4, 9.3, 9.8, 9.9,  9.2, 9.4, 9.5, 9.7,  9.7, 9.6, 10.0, 10.2)
+D413 <- c(250, 350, 219, 375,  400, 525, 390, 580,  275, 340, 200, 310)
+D414 <- c(0.500, 0.634, 0.487, 0.329, 0.512,  0.535, 0.675, 0.520, 0.435, 0.540,  0.513, 0.595, 0.488, 0.400, 0.510)
+L427 <- c("A", "B", "D", "C", "E",  "C", "E", "A", "D", "B",  "B", "A", "C", "E", "D",  "D", "C", "E", "B", "A",  "E", "D", "B", "A", "C")
+V427 <- c(8, 7, 1, 7, 3,  11, 2, 7, 3, 8,  4, 9, 10, 1, 5,  6, 8, 6, 6, 10,  4, 2, 3, 8, 8)
+L428 <- c("C", "D", "A", "B",  "B", "C", "D", "A",  "A", "B", "C", "D",  "D", "A", "B", "C")
+V428 <- c(10, 14, 7, 8,  7, 18, 11, 8,  5, 10, 11, 9,  10, 10, 12, 14)
+
+g48 <- function(missing = NULL) ps_grid("Chemical", "Bolt", "Strength", as.character(1:4), as.character(1:5), D48, missing)
+g49 <- function() ps_grid("Solution", "Day", "Bacteria", as.character(1:3), as.character(1:4), D49)
+g412 <- function(missing = NULL) ps_grid("Tip", "Coupon", "Hardness", as.character(1:4), as.character(1:4), D412, missing)
+g413 <- function() ps_grid("Design", "Region", "Responses", as.character(1:3), c("NE", "NW", "SE", "SW"), D413)
+g414 <- function() ps_grid("Oil", "Truck", "BSFC", as.character(1:3), as.character(1:5), D414)
+s427 <- function(missing = NULL) ps_square("Batch", "Day", "Ingredient", "Time", as.character(1:5), as.character(1:5), L427, V427, missing = missing)
+s428 <- function() ps_square("Order", "Operator", "Method", "Time", as.character(1:4), as.character(1:4), L428, V428)
+
+R_RCBD <- function(trt, blk, resp) list(response = resp, treatment = trt, block = blk)
+LAB48 <- list(response = "tensile strength", treatment = "chemical", block = "bolt")
+LAB49 <- list(response = "bacteria count", treatment = "solution", block = "day")
+LAB412 <- list(response = "hardness", unit = "Rockwell C − 40", treatment = "tip", block = "coupon")
+LAB413 <- list(response = "number of responses", treatment = "design", block = "region")
+LAB414 <- list(response = "brake-specific fuel consumption", treatment = "oil", block = "truck")
+LAB427 <- list(response = "reaction time", treatment = "ingredient", row = "batch", column = "day")
+LAB428 <- list(response = "assembly time", treatment = "assembly method", row = "order of assembly", column = "operator")
+
+PROBLEMS_CH4 <- list(
+  prob("4.8", 4, "Four chemical agents and cloth strength (bolts as blocks)", CH4_TXT$p48, character(0), g48(),
+       roles = R_RCBD("Chemical", "Bolt", "Strength"), labels = LAB48, design = "rcbd", tags = c("RCBD")),
+  prob("4.9", 4, "Washing solutions and bacteria growth (days as blocks)", CH4_TXT$p49, character(0), g49(),
+       roles = R_RCBD("Solution", "Day", "Bacteria"), labels = LAB49, design = "rcbd", tags = c("RCBD")),
+  prob("4.10", 4, "Chemical means against a scaled t distribution",
+       c("Plot the mean tensile strengths observed for each chemical type in Problem 4.8 and compare them to an appropriately scaled t distribution. What conclusions would you draw from this display?", ctx("4.8", "p48")),
+       character(0), g48(), roles = R_RCBD("Chemical", "Bolt", "Strength"), labels = LAB48, design = "rcbd", scaled_t = TRUE,
+       note = "The data are those of Problem 4.8. The scaled t display is in the Decision step.", tags = c("RCBD", "scaled t")),
+  prob("4.11", 4, "Solution means against a scaled t distribution",
+       c("Plot the average bacteria counts for each solution in Problem 4.9 and compare them to a scaled t distribution. What conclusions can you draw?", ctx("4.9", "p49")),
+       character(0), g49(), roles = R_RCBD("Solution", "Day", "Bacteria"), labels = LAB49, design = "rcbd", scaled_t = TRUE,
+       note = "The data are those of Problem 4.9. The scaled t display is in the Decision step.", tags = c("RCBD", "scaled t")),
+  prob("4.12", 4, "Hardness testing: four tips on four coupons", CH4_TXT$p412,
+       c("(a) Analyze the data from this experiment.",
+         "(b) Use the Fisher LSD method to make comparisons among the four tips to determine specifically which tips differ in mean hardness readings.",
+         "(c) Analyze the residuals from this experiment."),
+       g412(), roles = R_RCBD("Tip", "Coupon", "Hardness"), labels = LAB412, design = "rcbd", settings = list(posthoc = "lsd"), tags = c("RCBD", "Fisher LSD")),
+  prob("4.13", 4, "Direct mail brochure designs (regions as blocks)", CH4_TXT$p413,
+       c("(a) Analyze the data from this experiment.",
+         "(b) Use the Fisher LSD method to make comparisons among the three designs to determine specifically which designs differ in the mean response rate.",
+         "(c) Analyze the residuals from this experiment."),
+       g413(), roles = R_RCBD("Design", "Region", "Responses"), labels = LAB413, design = "rcbd", settings = list(posthoc = "lsd"), tags = c("RCBD", "Fisher LSD")),
+  prob("4.14", 4, "Lubricating oils and fuel economy (trucks as blocks)", CH4_TXT$p414,
+       c("(a) Analyze the data from this experiment.",
+         "(b) Use the Fisher LSD method to make comparisons among the three lubricating oils to determine specifically which oils differ in brake-specific fuel consumption.",
+         "(c) Analyze the residuals from this experiment."),
+       g414(), roles = R_RCBD("Oil", "Truck", "BSFC"), labels = LAB414, design = "rcbd", settings = list(posthoc = "lsd"), tags = c("RCBD", "Fisher LSD")),
+  prob("4.15", 4, "Nozzle design and the shape factor of water jets",
+       "An article in the Fire Safety Journal (“The Effect of Nozzle Design on the Stability and Performance of Turbulent Water Jets,” Vol. 4, August 1981) describes an experiment in which a shape factor was determined for several different nozzle designs at six levels of jet efflux velocity. Interest focused on potential differences between nozzle designs, with velocity considered as a nuisance variable. The data are shown below:",
+       c("(a) Does nozzle design affect the shape factor? Compare the nozzles with a scatter plot and with an analysis of variance, using α = 0.05.",
+         "(b) Analyze the residuals from this experiment.",
+         "(c) Which nozzle designs are different with respect to shape factor? Draw a graph of the average shape factor for each nozzle type and compare this to a scaled t distribution. Compare the conclusions that you draw from this plot to those from Duncan’s multiple range test."),
+       ps_grid("Nozzle", "Velocity", "Shape", as.character(1:5), c("11.73", "14.37", "16.59", "20.43", "23.46", "28.74"),
+               c(0.78, 0.80, 0.81, 0.75, 0.77, 0.78,  0.85, 0.85, 0.92, 0.86, 0.81, 0.83,  0.93, 0.92, 0.95, 0.89, 0.89, 0.83,
+                 1.14, 0.97, 0.98, 0.88, 0.86, 0.83,  0.97, 0.86, 0.78, 0.76, 0.76, 0.75)),
+       roles = R_RCBD("Nozzle", "Velocity", "Shape"), labels = list(response = "shape factor", treatment = "nozzle design", block = "jet efflux velocity", unit = ""),
+       design = "rcbd", scaled_t = TRUE, note = "Duncan's multiple range test is not part of the course; the post-hoc step offers Tukey HSD, Fisher LSD, Bonferroni and Scheffé. Velocity (m/s) is the blocking factor.",
+       tags = c("RCBD", "scaled t")),
+  prob("4.16", 4, "Software cost estimation algorithms (projects as blocks)",
+       "An article in Communications of the ACM (Vol. 30, No. 5, 1987) studied different algorithms for estimating software development costs. Six algorithms were applied to several different software development projects and the percent error in estimating the development cost was observed. Some of the data from this experiment is shown in the table below.",
+       c("(a) Do the algorithms differ in their mean cost estimation accuracy?", "(b) Analyze the residuals from this experiment.",
+         "(c) Which algorithm would you recommend for use in practice?"),
+       ps_grid("Algorithm", "Project", "Error", c("1 (SLIM)", "2 (COCOMO-A)", "3 (COCOMO-R)", "4 (COCONO-C)", "5 (Function points)", "6 (ESTIMALS)"), as.character(1:6),
+               c(1244, 21, 82, 2221, 905, 839,  281, 129, 396, 1306, 336, 910,  220, 84, 458, 543, 300, 794,
+                 225, 83, 425, 552, 291, 826,  19, 11, -34, 121, 15, 103,  -20, 35, -53, 170, 104, 199)),
+       roles = R_RCBD("Algorithm", "Project", "Error"), labels = list(response = "percent error", unit = "%", treatment = "algorithm", block = "project"),
+       design = "rcbd", tags = c("RCBD")),
+  prob("4.17", 4, "Gene expression under three leukemia treatments",
+       "An article in Nature Genetics (2003, Vol. 34, pp. 85–90) “Treatment-Specific Changes in Gene Expression Discriminate in vivo Drug Response in Human Leukemia Cells” studied gene expression as a function of different treatments for leukemia. Three treatment groups are as follows: mercaptopurine (MP) only; low-dose methotrexate (LDMTX) and MP; and high-dose methotrexate (HDMTX) and MP. Each group contained ten subjects. The responses from a specific gene are shown in the table below.",
+       c("(a) Is there evidence to support the claim that the treatment means differ?",
+         "(b) Check the normality assumption. Can we assume these samples are from normal populations?",
+         "(c) Take the logarithm of the raw data. Is there evidence to support the claim that the treatment means differ for the transformed data?",
+         "(d) Analyze the residuals from the transformed data and comment on model adequacy."),
+       ps_grid("Treatment", "Subject", "Expression", c("MP only", "MP + HDMTX", "MP + LDMTX"), as.character(1:10),
+               c(334.5, 31.6, 701, 41.2, 61.2, 69.6, 67.5, 66.6, 120.7, 881.9,
+                 919.4, 404.2, 1024.8, 54.1, 62.8, 671.6, 882.1, 354.2, 321.9, 91.1,
+                 108.4, 26.1, 240.8, 191.1, 69.7, 242.8, 62.7, 396.9, 23.6, 290.4)),
+       roles = R_RCBD("Treatment", "Subject", "Expression"), labels = list(response = "gene expression", treatment = "treatment", block = "subject"),
+       design = "rcbd", note = "Problem 4.33 treats the ten subjects (the columns) as blocks, so the data are analysed as a randomized block design. For part (c), use Copy to Custom Problem and replace the values by their logarithms.",
+       tags = c("RCBD", "normality", "transformation")),
+  prob("4.18", 4, "Ratio control algorithms and cell voltage (time periods as blocks)",
+       "Consider the ratio control algorithm experiment described in Section 3.8. The experiment was actually conducted as a randomized block design, where six time periods were selected as the blocks, and all four ratio control algorithms were tested in each time period. The average cell voltage and the standard deviation of voltage (shown in parentheses) for each cell are as follows:",
+       c("(a) Analyze the average cell voltage data. (Use α = 0.05.) Does the choice of ratio control algorithm affect the average cell voltage?",
+         "(b) Perform an appropriate analysis on the standard deviation of voltage. (Recall that this is called “pot noise.”) Does the choice of ratio control algorithm affect the pot noise?",
+         "(c) Conduct any residual analyses that seem appropriate.",
+         "(d) Which ratio control algorithm would you select if your objective is to reduce both the average cell voltage and the pot noise?"),
+       local({
+         v <- matrix(c(4.93, 4.86, 4.75, 4.95, 4.79, 4.88,  4.85, 4.91, 4.79, 4.85, 4.75, 4.85,  4.83, 4.88, 4.90, 4.75, 4.82, 4.90,  4.89, 4.77, 4.94, 4.86, 4.79, 4.76), 4, byrow = TRUE)
+         sdv <- matrix(c(0.05, 0.04, 0.05, 0.06, 0.03, 0.05,  0.04, 0.02, 0.03, 0.05, 0.03, 0.02,  0.09, 0.13, 0.11, 0.15, 0.08, 0.12,  0.03, 0.04, 0.05, 0.05, 0.03, 0.02), 4, byrow = TRUE)
+         ij <- expand.grid(j = 1:6, i = 1:4)
+         wide <- data.frame(Algorithm = as.character(1:4), stringsAsFactors = FALSE)
+         for (j in 1:6) wide[[as.character(j)]] <- sprintf("%.2f (%.2f)", v[, j], sdv[, j])
+         list(long = data.frame(Algorithm = as.character(ij$i), Period = as.character(ij$j), Voltage = v[cbind(ij$i, ij$j)], SD = sdv[cbind(ij$i, ij$j)], stringsAsFactors = FALSE),
+              wide = wide)
+       }),
+       roles = R_RCBD("Algorithm", "Period", "Voltage"), labels = list(response = "average cell voltage", unit = "V", treatment = "ratio control algorithm", block = "time period"),
+       design = "rcbd", note = "The steps analyse the average cell voltage, part (a). For part (b), use Copy to Custom Problem and choose the SD column as the response.",
+       tags = c("RCBD")),
+  prob("4.19", 4, "Stirring rate and grain size (furnaces as blocks)",
+       "An aluminum master alloy manufacturer produces grain refiners in ingot form. The company produces the product in four furnaces. Each furnace is known to have its own unique operating characteristics, so any experiment run in the foundry that involves more than one furnace will consider furnaces as a nuisance variable. The process engineers suspect that stirring rate affects the grain size of the product. Each furnace can be run at four different stirring rates. A randomized block design is run for a particular refiner, and the resulting grain size data is as follows.",
+       c("(a) Is there any evidence that stirring rate affects grain size?", "(b) Graph the residuals from this experiment on a normal probability plot. Interpret this plot.",
+         "(c) Plot the residuals versus furnace and stirring rate. Does this plot convey any useful information?",
+         "(d) What should the process engineers recommend concerning the choice of stirring rate and furnace for this particular grain refiner if small grain size is desirable?"),
+       ps_grid("Stirring rate", "Furnace", "Grain size", c("5", "10", "15", "20"), as.character(1:4), c(8, 4, 5, 6,  14, 5, 6, 9,  14, 6, 9, 2,  17, 9, 3, 6)),
+       roles = R_RCBD("Stirring rate", "Furnace", "Grain size"), labels = list(response = "grain size", treatment = "stirring rate", block = "furnace"),
+       design = "rcbd", tags = c("RCBD")),
+  prob("4.23", 4, "Problem 4.8 with one missing value",
+       c("Suppose that the observation for chemical type 2 and bolt 3 is missing in Problem 4.8. Analyze the problem by estimating the missing value. Perform the exact analysis and compare the results.", ctx("4.8", "p48")),
+       character(0), g48(list(c(2, 3))), roles = R_RCBD("Chemical", "Bolt", "Strength"), labels = LAB48, design = "rcbd",
+       note = "The missing value is estimated in step 5, which also shows the exact analysis (general regression significance test).", tags = c("RCBD", "missing value")),
+  prob("4.24", 4, "Problem 4.12 with one missing value",
+       c("Consider the hardness testing experiment in Problem 4.12. Suppose that the observation for tip 2 in coupon 3 is missing. Analyze the problem by estimating the missing value.", ctx("4.12", "p412")),
+       character(0), g412(list(c(2, 3))), roles = R_RCBD("Tip", "Coupon", "Hardness"), labels = LAB412, design = "rcbd",
+       note = "The missing value is estimated in step 5.", tags = c("RCBD", "missing value")),
+  prob("4.26", 4, "Eye focus time at four distances (subjects as blocks)",
+       "An industrial engineer is conducting an experiment on eye focus time. He is interested in the effect of the distance of the object from the eye on the focus time. Four different distances are of interest. He has five subjects available for the experiment. Because there may be differences among individuals, he decides to conduct the experiment in a randomized block design. The data obtained follow. Analyze the data from this experiment (use α = 0.05) and draw appropriate conclusions.",
+       character(0),
+       ps_grid("Distance (ft)", "Subject", "Focus time", c("4", "6", "8", "10"), as.character(1:5), c(10, 6, 6, 6, 6,  7, 6, 6, 1, 6,  5, 3, 3, 2, 5,  6, 4, 4, 2, 3)),
+       roles = R_RCBD("Distance (ft)", "Subject", "Focus time"), labels = list(response = "focus time", treatment = "distance", block = "subject"),
+       design = "rcbd", tags = c("RCBD")),
+  prob("4.27", 4, "Five ingredients and reaction time (Latin square)", CH4_TXT$p427, character(0), s427(),
+       roles = list(response = "Time", treatment = "Ingredient", row = "Batch", column = "Day"), labels = LAB427, tags = c("Latin square")),
+  prob("4.28", 4, "Four assembly methods and assembly time (Latin square)", CH4_TXT$p428, character(0), s428(),
+       roles = list(response = "Time", treatment = "Method", row = "Order", column = "Operator"), labels = LAB428, tags = c("Latin square")),
+  prob("4.29", 4, "Problem 4.9 with random days: block variance component",
+       c("Consider the randomized complete block design in Problem 4.9. Assume that the days are random. Estimate the block variance component.", ctx("4.9", "p49")),
+       character(0), g49(), roles = R_RCBD("Solution", "Day", "Bacteria"), labels = LAB49, design = "rcbd", random_blocks = TRUE,
+       note = "The block variance component is estimated in step 5, under the ANOVA table.", tags = c("RCBD", "random blocks")),
+  prob("4.31", 4, "Problem 4.14 with random trucks: block variance component",
+       c("Consider the randomized complete block design in Problem 4.14. Assume that the trucks are random. Estimate the block variance component.", ctx("4.14", "p414")),
+       character(0), g414(), roles = R_RCBD("Oil", "Truck", "BSFC"), labels = LAB414, design = "rcbd", random_blocks = TRUE,
+       note = "The block variance component is estimated in step 5, under the ANOVA table.", tags = c("RCBD", "random blocks")),
+  prob("4.34", 4, "Problem 4.27 with one missing value (Latin square)",
+       c("Suppose that in Problem 4.27 the observation from batch 3 on day 4 is missing. Estimate the missing value and perform the analysis using the value.", ctx("4.27", "p427")),
+       character(0), s427(c(3, 4)), roles = list(response = "Time", treatment = "Ingredient", row = "Batch", column = "Day"), labels = LAB427,
+       note = "The missing value is estimated in step 5.", tags = c("Latin square", "missing value")),
+  prob("4.40", 4, "Chemical yield: Graeco-Latin square",
+       "The yield of a chemical process was measured using five batches of raw material, five acid concentrations, five standing times (A, B, C, D, E), and five catalyst concentrations (α, β, γ, δ, ε). The Graeco-Latin square that follows was used. Analyze the data from this experiment (use α = 0.05) and draw conclusions.",
+       character(0),
+       ps_square("Batch", "Acid concentration", "Standing time", "Yield", as.character(1:5), as.character(1:5),
+                 c("A", "B", "C", "D", "E",  "B", "C", "D", "E", "A",  "C", "D", "E", "A", "B",  "D", "E", "A", "B", "C",  "E", "A", "B", "C", "D"),
+                 c(26, 16, 19, 16, 13,  18, 21, 18, 11, 21,  20, 12, 16, 25, 13,  15, 15, 22, 14, 17,  10, 24, 17, 17, 14),
+                 c("α", "β", "γ", "δ", "ε",  "γ", "δ", "ε", "α", "β",  "ε", "α", "β", "γ", "δ",  "β", "γ", "δ", "ε", "α",  "δ", "ε", "α", "β", "γ"), "Catalyst"),
+       roles = list(response = "Yield", treatment = "Standing time", row = "Batch", column = "Acid concentration", greek = "Catalyst"),
+       labels = list(response = "yield", treatment = "standing time", row = "batch", column = "acid concentration", greek = "catalyst concentration"),
+       note = "Latin letters are the standing times and Greek letters the catalyst concentrations; the ANOVA table tests both.", tags = c("Graeco-Latin square")),
+  prob("4.41", 4, "Assembly methods with workplaces: Graeco-Latin square",
+       c("Suppose that in Problem 4.28 the engineer suspects that the workplaces used by the four operators may represent an additional source of variation. A fourth factor, workplace (α, β, γ, δ) may be introduced and another experiment conducted, yielding the Graeco-Latin square that follows. Analyze the data from this experiment (use α = 0.05) and draw conclusions.", ctx("4.28", "p428")),
+       character(0),
+       ps_square("Order", "Operator", "Method", "Time", as.character(1:4), as.character(1:4),
+                 c("C", "B", "D", "A",  "B", "C", "A", "D",  "A", "D", "B", "C",  "D", "A", "C", "B"),
+                 c(11, 10, 14, 8,  8, 12, 10, 12,  9, 11, 7, 15,  9, 8, 18, 6),
+                 c("β", "γ", "δ", "α",  "α", "δ", "γ", "β",  "δ", "α", "β", "γ",  "γ", "β", "α", "δ"), "Workplace"),
+       roles = list(response = "Time", treatment = "Method", row = "Order", column = "Operator", greek = "Workplace"),
+       labels = list(response = "assembly time", treatment = "assembly method", row = "order of assembly", column = "operator", greek = "workplace"),
+       tags = c("Graeco-Latin square")),
+  prob("4.45", 4, "Gasoline additives and mileage (balanced incomplete blocks)",
+       "An engineer is studying the mileage performance characteristics of five types of gasoline additives. In the road test he wishes to use cars as blocks; however, because of a time constraint, he must use an incomplete block design. He runs the balanced design with the five blocks that follow. Analyze the data from this experiment (use α = 0.05) and draw conclusions.",
+       character(0),
+       ps_grid("Additive", "Car", "Mileage", as.character(1:5), as.character(1:5),
+               c(NA, 17, 14, 13, 12,  14, 14, NA, 13, 10,  12, NA, 13, 12, 9,  13, 11, 11, 12, NA,  11, 12, 10, NA, 8)),
+       roles = R_RCBD("Additive", "Car", "Mileage"), labels = list(response = "mileage", treatment = "additive", block = "car"), design = "bibd", tags = c("BIBD")),
+  prob("4.47", 4, "Hardwood concentration and paper strength (balanced incomplete blocks)",
+       "Seven different hardwood concentrations are being studied to determine their effect on the strength of the paper produced. However, the pilot plant can only produce three runs each day. As days may differ, the analyst uses the BIBD that follows. Analyze the data from this experiment (use α = 0.05) and draw conclusions.",
+       character(0),
+       ps_grid("Hardwood (%)", "Day", "Strength", c("2", "4", "6", "8", "10", "12", "14"), as.character(1:7),
+               c(114, NA, NA, NA, 120, NA, 117,  126, 120, NA, NA, NA, 119, NA,  NA, 137, 117, NA, NA, NA, 134,  141, NA, 129, 149, NA, NA, NA,
+                 NA, 145, NA, 150, 143, NA, NA,  NA, NA, 120, NA, 118, 123, NA,  NA, NA, NA, 136, NA, 130, 127)),
+       roles = R_RCBD("Hardwood (%)", "Day", "Strength"), labels = list(response = "paper strength", treatment = "hardwood concentration", block = "day"),
+       design = "bibd", tags = c("BIBD")),
+  prob("4.59", 4, "Problem 4.13 analysed as a completely randomized design",
+       c("Consider the direct mail marketing experiment in Problem 4.13. Suppose that this experiment had been run as a completely randomized design, ignoring potential regional differences, but that exactly the same data was obtained. Reanalyze the experiment under this new assumption. What difference would ignoring blocking have on the results and conclusions?", ctx("4.13", "p413")),
+       character(0), g413(), roles = list(response = "Responses", treatment = "Design"), labels = LAB413,
+       note = "The regions are ignored here, so the problem follows the one-way (Chapter 3) steps. Compare the result with Problem 4.13.", tags = c("one-way ANOVA", "CRD", "blocking"))
+)
+
+PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3, PROBLEMS_CH4)
 names(PROBLEMS) <- vapply(PROBLEMS, `[[`, "", "id")
 
 ps_by_chapter <- function(ch) Filter(function(p) p$chapter == PS_CHAPTERS[[ch]]$num, PROBLEMS)

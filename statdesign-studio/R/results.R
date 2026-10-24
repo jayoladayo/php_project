@@ -157,7 +157,7 @@ results_tables <- function(res) {
   t1 <- rbind(t1, data.frame(source = "Residuals", df = an$dfe, ss = an$sse, ms = an$mse, F = NA, p = NA, Fcrit = NA, eta2p = NA),
               data.frame(source = "Total", df = an$dft, ss = an$sst, ms = NA, F = NA, p = NA, Fcrit = NA, eta2p = NA))
   out <- list(ANOVA = t1,
-              Assumptions = rbind(cbind(check = "Normality", res$assumptions$normal), cbind(check = "Equal variance", res$assumptions$variance),
+              Assumptions = rbind(cbind(check = "Normality", res$assumptions$normal), cbind(check = "Constant variance", res$assumptions$variance),
                                   cbind(check = "Independence", res$assumptions$indep)))
   for (t in names(res$posthoc)) {
     ph <- res$posthoc[[t]]

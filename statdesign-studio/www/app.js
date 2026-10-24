@@ -30,6 +30,21 @@
     Shiny.addCustomMessageHandler('learn_on', function (m) {
       document.querySelectorAll('.lnav .lnk').forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-k') === m.k); });
     });
+    // After opening the team page from a name, bring that member's card into view.
+    window.teamFocus = function (id) {
+      var n = 0;
+      (function wait() {
+        var pane = document.querySelector('.tab-pane[data-value="team"]');
+        if (pane && pane.classList.contains('active')) {
+          setTimeout(function () {
+            var e = document.getElementById('tm-' + id);
+            if (!e) return;
+            e.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            e.classList.remove('flash'); void e.offsetWidth; e.classList.add('flash');
+          }, 80);
+        } else if (n++ < 40) setTimeout(wait, 100);
+      })();
+    };
     Shiny.addCustomMessageHandler('nav', function (m) {
       document.querySelectorAll('.side a.nav-item').forEach(function (a) {
         a.classList.toggle('on', a.getAttribute('data-page') === m.page);

@@ -97,23 +97,27 @@ relative_efficiency <- function(design, an, d) {
 
 safe_test <- function(expr) tryCatch(expr, error = function(e) NULL)
 
-assumption_checks <- function(fit, d, alpha = 0.05) {
+# Constant variance is checked on the residuals (Breusch-Pagan). The equal variances of the
+# groups (Levene, Bartlett) are a separate question, kept for one-way layouts only.
+assumption_checks <- function(fit, d, alpha = 0.05, group_var = FALSE) {
   rs <- stats::rstandard(fit)
   rs <- rs[is.finite(rs)]
   n <- length(rs)
   sw <- if (n >= 3 && n <= 5000 && stats::var(rs) > 0) safe_test(stats::shapiro.test(rs)) else NULL
   ad <- if (n >= 8) safe_test(nortest::ad.test(rs)) else NULL
   bp <- safe_test(lmtest::bptest(fit))
-  lev <- safe_test(car::leveneTest(y ~ treatment, data = d))
+  lev <- if (group_var) safe_test(car::leveneTest(y ~ treatment, data = d))
+  bart <- if (group_var) safe_test(stats::bartlett.test(y ~ treatment, data = d))
   dw <- safe_test(lmtest::dwtest(fit, alternative = "two.sided"))
   bg <- safe_test(lmtest::bgtest(fit, order = 1))
   row <- function(name, stat_lab, stat, df = NA, p) data.frame(test = name, statistic = stat_lab, value = stat, df = df, p = p, stringsAsFactors = FALSE)
   normal <- rbind(
     if (!is.null(sw)) row("Shapiro-Wilk", "W", unname(sw$statistic), NA, sw$p.value) else row("Shapiro-Wilk", "W", NA, NA, NA),
     if (!is.null(ad)) row("Anderson-Darling", "A", unname(ad$statistic), NA, ad$p.value) else row("Anderson-Darling", "A", NA, NA, NA))
-  variance <- rbind(
-    if (!is.null(bp)) row("Breusch-Pagan", "BP", unname(bp$statistic), unname(bp$parameter), bp$p.value) else row("Breusch-Pagan", "BP", NA, NA, NA),
-    if (!is.null(lev)) row("Levene (median)", "F", lev$`F value`[1], paste(lev$Df, collapse = ", "), lev$`Pr(>F)`[1]) else row("Levene (median)", "F", NA, NA, NA))
+  variance <- if (!is.null(bp)) row("Breusch-Pagan", "BP", unname(bp$statistic), unname(bp$parameter), bp$p.value) else row("Breusch-Pagan", "BP", NA, NA, NA)
+  groups <- if (group_var) rbind(
+    if (!is.null(lev)) row("Levene (median)", "F", lev$`F value`[1], paste(lev$Df, collapse = ", "), lev$`Pr(>F)`[1]) else row("Levene (median)", "F", NA, NA, NA),
+    if (!is.null(bart)) row("Bartlett", "K²", unname(bart$statistic), unname(bart$parameter), bart$p.value) else row("Bartlett", "K²", NA, NA, NA))
   indep <- rbind(
     if (!is.null(dw)) row("Durbin-Watson", "DW", unname(dw$statistic), NA, dw$p.value) else row("Durbin-Watson", "DW", NA, NA, NA),
     if (!is.null(bg)) row("Breusch-Godfrey (lag 1)", "LM", unname(bg$statistic), unname(bg$parameter), bg$p.value) else row("Breusch-Godfrey (lag 1)", "LM", NA, NA, NA))
@@ -122,9 +126,9 @@ assumption_checks <- function(fit, d, alpha = 0.05) {
     if (p < alpha) "fail" else if (alpha < 0.10 && p < 0.10) "borderline" else "pass"
   }
   p_norm <- if (!is.na(normal$p[1])) normal$p[1] else normal$p[2]
-  p_var <- if (!is.na(variance$p[1])) variance$p[1] else variance$p[2]
+  p_var <- variance$p[1]
   p_ind <- indep$p[1]
-  list(normal = normal, variance = variance, indep = indep,
+  list(normal = normal, variance = variance, groups = groups, indep = indep,
        status = c(normality = verdict(p_norm), variance = verdict(p_var), independence = verdict(p_ind)),
        primary = c(normality = p_norm, variance = p_var, independence = p_ind),
        resid = data.frame(order = d$.order, fitted = stats::fitted(fit), resid = stats::residuals(fit),
@@ -136,7 +140,7 @@ assumption_checks <- function(fit, d, alpha = 0.05) {
 pair_index <- function(k) { ij <- utils::combn(k, 2); list(i = ij[1, ], j = ij[2, ]) }
 
 # Pairwise comparisons for one factor, using the model's error mean square.
-posthoc_all <- function(fit, d, term, mse, dfe, alpha = 0.05, conf = 0.95, control = NULL, seed = 1) {
+posthoc_all <- function(fit, d, term, mse, dfe, alpha = 0.05, conf = 0.95, control = NULL, seed = 1, dunnett = TRUE) {
   f <- d[[term]]; lev <- levels(f); k <- length(lev)
   means <- tapply(d$y, f, mean); n <- tapply(d$y, f, length)
   sds <- tapply(d$y, f, stats::sd)
@@ -166,7 +170,7 @@ posthoc_all <- function(fit, d, term, mse, dfe, alpha = 0.05, conf = 0.95, contr
                            lwr = diff - sc * se, upr = diff + sc * se, crit = sc * se)
   # Dunnett against the control
   ctrl <- if (!is.null(control) && control %in% lev) control else lev[1]
-  out$dunnett <- tryCatch({
+  out$dunnett <- if (dunnett) tryCatch({
     d2 <- d; d2[[term]] <- stats::relevel(d2[[term]], ref = ctrl)
     fit2 <- stats::aov(stats::formula(fit), data = d2)
     set.seed(seed)
@@ -340,7 +344,7 @@ run_doe <- function(design, df, map, labels, settings) {
   fit <- stats::aov(form, data = d)
   an <- anova_table(fit, d, terms, names, settings$sstype %||% "I", alpha)
   re <- relative_efficiency(design, an, d)
-  asm <- assumption_checks(fit, d, alpha)
+  asm <- assumption_checks(fit, d, alpha, group_var = design$key == "CRD")
   ph <- lapply(setNames(compared_terms(design), compared_terms(design)), function(t)
     posthoc_all(fit, d, t, an$mse, an$dfe, alpha, conf,
                 control = if (t == "treatment") label_of(labels$treatment, settings$control) else NULL,
