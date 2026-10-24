@@ -6,6 +6,10 @@
 #    share this file once it has your token in it.
 # 3. Press Source. The first deploy takes a few minutes while the server
 #    installs the packages.
+#
+# Use this script rather than RStudio's blue Publish button: the button does not install
+# the packages rsconnect needs on this computer (for example doBy and gdtools), and fails
+# with "required package(s) not installed".
 
 ACCOUNT <- "your-account-name"
 TOKEN   <- "paste-token-here"
