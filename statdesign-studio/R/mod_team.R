@@ -2,11 +2,11 @@
 # the About the team page. Photos live in www/team; a member without one shows initials.
 
 TEAM <- list(
-  list(id = "qudus", name = "Qudus Owoyemi", dept = "Statistics Department", photo = "team/qudus.jpg"),
-  list(id = "oladayo", name = "Oladayo Jayeola", dept = "Industrial and Systems Engineering (ISE) Department", photo = "team/oladayo.jpg"),
+  list(id = "qudus", name = "Qudus Owoyemi", dept = "Statistics Department", photo = "team/qudus.jpg?v=2"),
+  list(id = "oladayo", name = "Oladayo Jayeola", dept = "Industrial and Systems Engineering (ISE) Department", photo = "team/oladayo.jpg?v=2"),
   list(id = "mubarak", name = "Mubarak Abdhamid", dept = "Statistics Department", role = "Team leader", photo = NULL),
-  list(id = "sodiq", name = "Sodiq Babawale", dept = "Industrial and Systems Engineering (ISE) Department", photo = "team/sodiq.jpg"),
-  list(id = "ovie", name = "Ovie Ederhite", dept = "Industrial and Systems Engineering (ISE) Department", photo = "team/ovie.jpg")
+  list(id = "sodiq", name = "Sodiq Babawale", dept = "Industrial and Systems Engineering (ISE) Department", photo = "team/sodiq.jpg?v=2"),
+  list(id = "ovie", name = "Ovie Ederhite", dept = "Industrial and Systems Engineering (ISE) Department", photo = "team/ovie.jpg?v=2")
 )
 
 APP_AIM <- "To give students of the KFUPM Experimental Design course one place to plan, analyse and report designed experiments correctly, step by step, without writing code."
