@@ -10,7 +10,12 @@ def main(argv=None):
     sub.add_parser("report")
     d = sub.add_parser("digests"); d.add_argument("--out", default="digests.json")
     r = sub.add_parser("recommend"); r.add_argument("user", type=int)
+    v = sub.add_parser("preview"); v.add_argument("url"); v.add_argument("--browser", action="store_true")
     a = ap.parse_args(argv)
+    if a.cmd == "preview":
+        from . import preview
+        (preview.launch_music_link if a.browser else preview.play_platform_link)(a.url)
+        return
     con = db.connect(a.db)
     if a.cmd == "seed":
         synth.generate(con, bots=a.bots); print("seeded synthetic data")
