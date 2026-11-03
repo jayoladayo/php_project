@@ -106,7 +106,6 @@ ar_tpl(
   "SS_Treatments = %s on %d df,   SS_Error = %s on %d df" = "SS_Treatments = $1 على $2 درجة حرية،   SS_Error = $3 على $4 درجة حرية",
   "MS_Treatments = SS / df = %s,   MS_Error = %s" = "MS_Treatments = SS / df = $1،   MS_Error = $2",
   "F0 = MS_Treatments / MS_Error = %s,   df = (%d, %d)" = "F0 = MS_Treatments / MS_Error = $1،   درجات الحرية = ($2، $3)",
-  "Reject H0 if %s. %s %s = %s, which %s the rejection region." = "نرفض H0 إذا $1. $2 $3 = $4، وهي $5 منطقة الرفض.",
   "The %s gives the standard normal equivalent" = "يعطي $1 المكافئ الطبيعي المعياري", "The test statistic is" = "إحصائية الاختبار هي",
   "falls in" = "تقع في", "is not in" = "ليست في",
   "The %s has no confidence interval, so decide with the p-value or the rejection region." = "لا فترة ثقة لـ$1، فاحسم القرار بالقيمة الاحتمالية أو بمنطقة الرفض.",

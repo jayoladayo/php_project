@@ -1199,8 +1199,9 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
 
     # ---------- Worked-solution PDF ----------
     sol_target <- reactiveVal(NULL)
+    ui_lang <- function() { l <- tryCatch(isolate(session$rootScope()$input$lang), error = function(e) NULL); if (identical(l, "ar")) "ar" else "en" }
     sol_make <- function(m, s, test, ph, file) {
-      tryCatch(ps_solution_pdf(m, file, s = s, test = test, ph = ph), error = function(e) {
+      tryCatch(ps_solution_pdf(m, file, s = s, test = test, ph = ph, lang = ui_lang()), error = function(e) {
         showNotification(paste("The solution could not be built:", conditionMessage(e)), type = "error", duration = 10)
         grDevices::cairo_pdf(file); grid::grid.text("The solution could not be built."); grDevices::dev.off() })
     }

@@ -25,6 +25,8 @@
     }
     return null;
   }
+  // the text in the language of the page (the dictionary of i18n.js; unchanged in English)
+  function L(x) { return (window.SDSLang && SDSLang.get() === 'ar' && x) ? (SDSLang.tr(x) || x) : x; }
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   function page() {
     var p = document.getElementById('pages'), pane = p && p.parentElement.querySelector(':scope > .tab-content > .tab-pane.active');
@@ -66,7 +68,7 @@
       { t: ['.top .ib[title="Light or dark"]'], place: 'bottom', title: 'Light or dark', text: 'Switch the colour theme to suit your room and your eyes.' },
       { t: ['.top .ib[title="Help"]'], place: 'bottom', title: 'Help and About', text: 'Short explanations of the app, its stages and what each test needs.' },
       { t: ['#save_project'], place: 'bottom', title: 'Save your project', text: 'Download everything (datasets, settings, pinned results) in one file and open it again later, so you never lose your work.' },
-      { t: ['.riaz-fab'], place: 'left', title: 'Ask Professor Riaz', text: 'The AI course assistant sees the page you are on. Ask it to explain a result, check an assumption or walk through the R code.' },
+      { t: ['.riaz-fab'], place: 'left', title: 'Ask Professor Riaz', text: 'The AI course assistant sees the page you are on. Ask it to explain a result, check an assumption or walk through a step.' },
       { title: 'You are ready', text: 'A good way to begin: open <b>Problem Sets</b>, pick a problem, and press <b>Guided tour</b> there for the step-by-step walk-through. Or open <b>Data Studio</b> and bring in your own data.' }
     ];
   }
@@ -180,7 +182,7 @@
       10: [ { t: [A + '.ps-alpha'], place: 'bottom', title: 'Step 3 again · Significance level', text: 'The same α is used for both analyses. Change it in step 3 if you need to.' }, next ],
       11: [ { t: [A + '.ps-info'], place: 'bottom', title: 'Step 4 again · Information', text: 'The facts, the data, and a summary of the ANOVA assumption checks that failed.' },
             { t: [A + '.ps-verdict'], place: 'top', title: 'Why this rank test', text: 'The app names the rank test and why it is the right one for this design.' }, next ],
-      12: [ { t: [A + 'button[id^="' + PX() + 'run_np_"]'], place: 'left', title: 'Step 5 again · The rank test', text: 'Run the rank test: Kruskal-Wallis for groups, Friedman for blocks, or the rank test on residuals for squares. Its statistic and p-value appear below with the ranks.' },
+      12: [ { t: [A + 'button[id^="' + PX() + 'run_np_"]'], place: 'left', title: 'Step 5 again · The rank test', text: 'Run the rank test: Kruskal-Wallis for groups, Friedman for blocks, or Quade\'s test for squares. Its statistic and p-value appear below with the ranks.' },
             { t: [A + '.tscroll'], place: 'top', title: 'Ranks', text: 'The mean ranks show which groups tend to be higher.' }, next ],
       13: [ { t: [A + '.ps-decision'], place: 'bottom', title: 'Step 6 again · Decision', text: 'The decision for the rank test, by the rejection region and the p-value (a rank test has no confidence interval).' },
             { t: [A + '.ps-final'], opt: true, place: 'top', title: 'Final conclusion', text: 'If H0 is not rejected, the analysis ends here with the final conclusion.' }, next ],
@@ -295,10 +297,10 @@
       var t = s.t ? find(s.t) : null;
       // a step marked optional only applies to some problems: skip it when its box is not on screen
       if (s.opt && !t) { var nx = i + dir; if (nx >= 0 && nx < S.steps.length) return T.go(nx, dir); if (dir > 0) return T.end(); return T.go(Math.max(0, i - 1), 1); }
-      el.count.textContent = 'Guided tour · step ' + (i + 1) + ' of ' + S.steps.length;
-      el.title.textContent = s.title || '';
-      el.text.innerHTML = (s.text || '') + (s.t && !t ? '<div class="tour-miss">This part is not on screen yet. It appears once you reach that point.</div>' : '');
-      el.back.style.visibility = i === 0 ? 'hidden' : 'visible'; el.next.textContent = i === S.steps.length - 1 ? 'Finish' : 'Next';
+      el.count.textContent = (window.SDSLang && SDSLang.get() === 'ar') ? 'جولة إرشادية · الخطوة ' + (i + 1) + ' من ' + S.steps.length : 'Guided tour · step ' + (i + 1) + ' of ' + S.steps.length;
+      el.title.textContent = L(s.title || '');
+      el.text.innerHTML = L(s.text || '') + (s.t && !t ? '<div class="tour-miss">' + L('This part is not on screen yet. It appears once you reach that point.') + '</div>' : '');
+      el.back.style.visibility = i === 0 ? 'hidden' : 'visible'; el.next.textContent = L(i === S.steps.length - 1 ? 'Finish' : 'Next');
       el.dots.innerHTML = ''; var n = S.steps.length, lo = Math.max(0, Math.min(i - 5, n - 11)), hi = Math.min(n, lo + 11);
       for (var k = lo; k < hi; k++) { var b = document.createElement('i'); if (k === i) b.className = 'on'; else if (k < i) b.className = 'done'; el.dots.appendChild(b); }
       el.card.classList.remove('busy');

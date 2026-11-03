@@ -10,7 +10,7 @@
 
 AR_EXACT <- character(0)
 AR_RX <- list()
-ar_add <- function(...) { x <- c(...); AR_EXACT[names(x)] <<- unname(x); invisible(NULL) }
+ar_add <- function(...) { x <- c(...); AR_EXACT[ar_norm(names(x))] <<- unname(x); invisible(NULL) }
 ar_rx <- function(pattern, replacement) { AR_RX[[length(AR_RX) + 1]] <<- c(pattern, replacement); invisible(NULL) }
 # A sprintf template as a pattern: %s matches any text, %d an integer, %g / %.2f a number, %% a percent sign.
 # The Arabic text uses $1, $2 ... for the pieces in the order they appear in the English template.
@@ -32,7 +32,7 @@ ar_tpl <- function(..., variants = TRUE) {
     rx <- gsub("%%", "\001", rx, fixed = TRUE)
     rx <- gsub("%[0-9.]*[gf]", "(-?[0-9.]+(?:e-?[0-9]+)?)", rx)
     rx <- gsub("%d", "(-?[0-9]+)", rx, fixed = TRUE)
-    rx <- gsub("%s", "(.+?)", rx, fixed = TRUE)
+    rx <- gsub("%s", "(.*?)", rx, fixed = TRUE)
     rx <- gsub("\001", "%", rx, fixed = TRUE)
     ar_rx(rx, unname(x[i]))
   }

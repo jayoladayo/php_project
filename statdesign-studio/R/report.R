@@ -34,6 +34,20 @@ fmt_df <- function(df) {
   out
 }
 
+# The report in Arabic: titles, notes, table headings and cells are translated through the dictionary; numbers, names and
+# plots stay as they are. Tables are mirrored (first column on the right) and text is right-aligned in the exports.
+report_ar <- function(pins, srcs, o) {
+  pins <- lapply(pins, function(p) {
+    for (f in c("title", "text")) if (!is.null(p[[f]]) && is.character(p[[f]])) p[[f]] <- ar_text(p[[f]])
+    if (!is.null(p$df)) { df <- p$df; df[] <- lapply(df, function(x) ar_text(as.character(x))); names(df) <- ar_text(names(df)); p$df <- df }
+    p
+  })
+  srcs <- lapply(srcs, function(s) { for (f in c("label", "title", "subtitle")) if (!is.null(s[[f]]) && is.character(s[[f]])) s[[f]] <- ar_text(s[[f]]); s })
+  o$title <- ar_text(o$title); o$subtitle <- ar_text(o$subtitle %||% ""); o$rtl <- TRUE
+  list(pins = pins, srcs = srcs, o = o)
+}
+report_mirror <- function(df, num) list(df = df[, rev(seq_along(df)), drop = FALSE], num = rev(num))
+
 pin_button <- function(ns) btn(ns("pin"), "Pin to report", "pin", size = "bsm")
 
 pin_observers <- function(input, session, store, items, src) {
@@ -165,11 +179,13 @@ REPORT_CSS <- "
 "
 
 report_html_doc <- function(pins, srcs, o) {
-  paste0('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+  rtl <- isTRUE(o$rtl)
+  paste0(if (rtl) '<!doctype html><html lang="ar" dir="rtl"><head>' else '<!doctype html><html lang="en"><head>',
+         '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
          sprintf("<title>%s</title>", htmltools::htmlEscape(o$title)),
-         '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto+Mono&display=swap">',
+         '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Cairo:wght@400;600;700&family=Roboto+Mono&display=swap">',
          "<style>body{margin:0;background:#F7F8FA}.page{max-width:820px;margin:32px auto;background:#fff;padding:48px 56px;box-shadow:0 1px 4px rgba(0,0,0,.08)}",
-         "@media print{body{background:#fff}.page{margin:0;box-shadow:none;padding:0}}", REPORT_CSS, "</style></head><body><div class=\"page\">",
+         "@media print{body{background:#fff}.page{margin:0;box-shadow:none;padding:0}}", if (rtl) "body{font-family:Cairo,Poppins,sans-serif}.page{direction:rtl;text-align:right}", REPORT_CSS, "</style></head><body><div class=\"page\">",
          report_html_body(pins, srcs, o), "</div></body></html>")
 }
 
@@ -179,7 +195,8 @@ report_docx <- function(pins, srcs, o, file) {
   fam <- if (o$template == "thesis") "Times New Roman" else "Calibri"
   green <- if (o$template == "thesis") "#1F2321" else "#00573F"
   tx <- function(size = 11, bold = FALSE, color = "#1F2321", italic = FALSE, f = fam) officer::fp_text(font.size = size, bold = bold, color = color, italic = italic, font.family = f)
-  par <- function(doc, txt, prop = tx(), before = 0, after = 6, align = "left", keep = FALSE)
+  rtl <- isTRUE(o$rtl); if (rtl) fam <- "Arial"
+  par <- function(doc, txt, prop = tx(), before = 0, after = 6, align = if (rtl) "right" else "left", keep = FALSE)
     officer::body_add_fpar(doc, officer::fpar(officer::ftext(txt, prop), fp_p = officer::fp_par(padding.top = before, padding.bottom = after, text.align = align, keep_with_next = keep)))
   num <- report_numbering(pins, o$template)
   kind <- names(REPORT_TEMPLATES)[REPORT_TEMPLATES == o$template]
@@ -194,6 +211,7 @@ report_docx <- function(pins, srcs, o, file) {
     if (p$kind %in% c("note", "text")) doc <- par(doc, p$text, tx(10.5, italic = p$kind == "note"), after = 8)
     if (p$kind == "table") {
       if (!is.null(n$caption)) doc <- par(doc, n$caption, tx(10, TRUE), before = 6, after = 2, keep = TRUE)
+      if (rtl) { m <- report_mirror(p$df, p$num); p$df <- m$df; p$num <- m$num }
       ft <- flextable::flextable(p$df)
       ft <- if (o$template == "thesis") flextable::theme_booktabs(ft) else flextable::theme_vanilla(ft)
       ft <- flextable::font(ft, fontname = fam, part = "all")
@@ -202,7 +220,7 @@ report_docx <- function(pins, srcs, o, file) {
       for (j in which(p$num)) ft <- flextable::align(ft, j = j, align = "right", part = "all")
       ft <- flextable::autofit(ft)
       ft <- flextable::fit_to_width(ft, 6.5)
-      doc <- flextable::body_add_flextable(doc, ft, align = "left")
+      doc <- flextable::body_add_flextable(doc, ft, align = if (rtl) "right" else "left")
       doc <- par(doc, "", after = 4)
     }
     if (p$kind == "plot") {
@@ -240,6 +258,7 @@ report_pdf <- function(pins, srcs, o, file) {
   fam <- if (serif) "serif" else "sans"
   W <- 8.27; H <- 11.69; mg <- 0.85; cw <- W - 2 * mg
   green <- if (serif) "#1F2321" else "#00573F"
+  rtl <- isTRUE(o$rtl); if (rtl) fam <- "DejaVu Sans"
   # Open the device first so text is measured with the fonts it will be drawn in.
   grDevices::cairo_pdf(file, width = W, height = H, onefile = TRUE)
   on.exit(grDevices::dev.off())
@@ -247,17 +266,18 @@ report_pdf <- function(pins, srcs, o, file) {
   keep <- FALSE
   add <- function(h, draw) { blocks[[length(blocks) + 1]] <<- list(h = h, draw = draw, keep = keep) }
   # Wrapped text: about 0.5 em per character.
-  text_block <- function(txt, size = 10.5, bold = FALSE, col = "#1F2321", f = fam, after = 0.08, italic = FALSE, mono = FALSE, hjust = 0) {
+  text_block <- function(txt, size = 10.5, bold = FALSE, col = "#1F2321", f = fam, after = 0.08, italic = FALSE, mono = FALSE, hjust = if (rtl) 1 else 0) {
     width <- floor(cw * 72 / (size * if (mono) 0.6 else 0.5))
     lines <- unlist(lapply(strsplit(txt, "\n", fixed = TRUE)[[1]], function(l) if (!nzchar(l)) "" else strwrap(l, width)))
     lh <- size * 1.38 / 72
     for (k in seq_along(lines)) local({ l <- lines[k]; last <- k == length(lines)
-      add(lh + if (last) after else 0, function(y) grid::grid.text(l, x = grid::unit(if (hjust == 0.5) W / 2 else mg, "in"), y = grid::unit(y - lh * 0.82, "in"), just = c(if (hjust == 0.5) "centre" else "left", "bottom"),
+      add(lh + if (last) after else 0, function(y) grid::grid.text(l, x = grid::unit(if (hjust == 0.5) W / 2 else if (hjust == 1) W - mg else mg, "in"), y = grid::unit(y - lh * 0.82, "in"), just = c(if (hjust == 0.5) "centre" else if (hjust == 1) "right" else "left", "bottom"),
                                                               gp = grid::gpar(fontsize = size, col = col, fontfamily = if (mono) "mono" else f, fontface = if (bold) "bold" else if (italic) "italic" else "plain"))) })
   }
   table_block <- function(p) {
+    if (rtl) { m <- report_mirror(p$df, p$num); p$df <- m$df; p$num <- m$num }
     df <- p$df
-    hj <- ifelse(p$num, 1, 0); xx <- ifelse(p$num, 0.95, 0.05)
+    hj <- ifelse(p$num | rtl, 1, 0); xx <- ifelse(p$num | rtl, 0.95, 0.05)
     chunks <- split(seq_len(nrow(df)), ceiling(seq_len(nrow(df)) / 28))
     for (rows in chunks) local({
       nr <- length(rows)
@@ -269,15 +289,15 @@ report_pdf <- function(pins, srcs, o, file) {
       wid <- sum(grid::convertWidth(g$widths, "in", valueOnly = TRUE))
       if (wid > cw) g$widths <- g$widths * (cw / wid)
       hh <- sum(grid::convertHeight(g$heights, "in", valueOnly = TRUE))
-      add(hh + 0.18, function(y) { grid::pushViewport(grid::viewport(x = grid::unit(mg, "in"), y = grid::unit(y, "in"), width = grid::unit(min(wid, cw), "in"),
-                                                                     height = grid::unit(hh, "in"), just = c("left", "top")))
+      add(hh + 0.18, function(y) { grid::pushViewport(grid::viewport(x = grid::unit(if (rtl) W - mg else mg, "in"), y = grid::unit(y, "in"), width = grid::unit(min(wid, cw), "in"),
+                                                                     height = grid::unit(hh, "in"), just = c(if (rtl) "right" else "left", "top")))
         grid::grid.draw(g); grid::popViewport() })
     })
   }
   plot_block <- function(p) {
     w <- if (o$template == "brief") cw * 0.68 else cw; h <- w * p$h / 7
     img <- png::readPNG(p$png)
-    add(h + 0.12, function(y) grid::grid.raster(img, x = grid::unit(mg, "in"), y = grid::unit(y, "in"), width = grid::unit(w, "in"), height = grid::unit(h, "in"), just = c("left", "top")))
+    add(h + 0.12, function(y) grid::grid.raster(img, x = grid::unit(if (rtl) W - mg else mg, "in"), y = grid::unit(y, "in"), width = grid::unit(w, "in"), height = grid::unit(h, "in"), just = c(if (rtl) "right" else "left", "top")))
   }
   kind <- names(REPORT_TEMPLATES)[REPORT_TEMPLATES == o$template]
   text_block(sprintf("StatDesign Studio · %s · %s%s", kind, format(Sys.Date(), "%e %B %Y"), if (nzchar(o$author %||% "")) paste0(" · ", o$author) else ""), 8.5, col = "#6B6F7B", after = 0.05)
@@ -316,7 +336,7 @@ report_pdf <- function(pins, srcs, o, file) {
   footer <- function() grid::grid.text(sprintf("%s · page %d", o$title, page), x = grid::unit(W / 2, "in"), y = grid::unit(0.45, "in"),
                                        gp = grid::gpar(fontsize = 8, col = "#8A8F9C", fontfamily = fam))
   new_page <- function() { footer(); grid::grid.newpage(); page <<- page + 1; y <<- H - mg }
-  grid::grid.newpage()
+  # (the measuring above has already started the first page)
   for (i in seq_along(blocks)) {
     b <- blocks[[i]]
     if (b$h < 0) { new_page(); next }
@@ -445,10 +465,12 @@ report_server <- function(id, store) {
     export <- function(file) {
       ps <- pins(); o <- opts()
       if (!length(ps)) ps <- list(mk_pin("note", "Note", text = "Nothing is pinned yet. Run an analysis and press Pin to report."))
+      sr <- srcs()
+      if (identical(tryCatch(isolate(session$rootScope()$input$lang), error = function(e) NULL), "ar")) { x <- report_ar(ps, sr, o); ps <- x$pins; sr <- x$srcs; o <- x$o }
       switch(fmt(),
-        docx = report_docx(ps, srcs(), o, file),
-        pdf = report_pdf(ps, srcs(), o, file),
-        html = writeLines(report_html_doc(ps, srcs(), o), file, useBytes = TRUE),
+        docx = report_docx(ps, sr, o, file),
+        pdf = report_pdf(ps, sr, o, file),
+        html = writeLines(report_html_doc(ps, sr, o), file, useBytes = TRUE),
         xlsx = report_xlsx(ps, file))
     }
     fname <- function() sprintf("%s.%s", gsub("[^A-Za-z0-9]+", "_", substr(opts()$title, 1, 50)), REPORT_FORMATS[[fmt()]][2])
