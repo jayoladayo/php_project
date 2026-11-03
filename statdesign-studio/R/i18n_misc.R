@@ -3,7 +3,15 @@
 ar_part_misc <- function() {
 ar_add(
   "KFUPM · Experimental Design · Worked solution" = "جامعة الملك فهد للبترول والمعادن · التصميم التجريبي · حل مفصَّل",
-  "What" = "ماذا", "Theoretical quantiles" = "الكميات النظرية", "Sample quantiles" = "كميات العيّنة", "Standardised residuals" = "البواقي المعيارية", "Run order" = "ترتيب التشغيل", "Standard normal" = "الطبيعي المعياري", "Value" = "القيمة", "Count" = "العدد", "Density" = "الكثافة", "Blocks" = "القطاعات",
+  "What" = "ماذا", "Share analysis" = "شارِك التحليل", "Open shared analysis" = "افتح تحليلًا مشاركًا", "Download file" = "تنزيل الملف", "Copy code" = "نسخ الرمز", "Copied" = "تم النسخ",
+  "Share this analysis" = "مشاركة هذا التحليل", "Your name (optional)" = "اسمك (اختياري)", "Note for the lecturer (optional)" = "ملاحظة للمحاضر (اختيارية)",
+  "Or send this code (paste it under Open shared analysis):" = "أو أرسل هذا الرمز (يُلصق ضمن «افتح تحليلًا مشاركًا»):",
+  "Whoever opens it (Open shared analysis, at the top) sees exactly this analysis: your data, settings and wording, the test and post-hoc you chose, and the step you are on. The results are recomputed and checked against yours." = "من يفتحه (عبر «افتح تحليلًا مشاركًا» في الأعلى) يرى هذا التحليل نفسه تمامًا: بياناتك وإعداداتك وصياغتك، والاختبار والاختبار البعدي اللذين اخترتهما، والخطوة التي أنت فيها. وتُعاد حساب النتائج وتُقارن بنتائجك.",
+  "Open a shared analysis" = "افتح تحليلًا مشاركًا", "Open" = "افتح", "Shared analysis opened" = "فُتح التحليل المشارَك", "Choose file" = "اختر ملفًا", "A .sdsa file" = "ملف ‎.sdsa",
+  "Choose the file a student sent you (it ends in .sdsa), or paste the code they sent. You will see their exact data, settings, wording and results, at the step they reached." = "اختر الملف الذي أرسله لك طالب (ينتهي بـ ‎.sdsa)، أو الصق الرمز الذي أرسله. سترى بياناته وإعداداته وصياغته ونتائجه نفسها، عند الخطوة التي وصل إليها.",
+  "Or paste the code here (it starts with SDS1:)" = "أو الصق الرمز هنا (يبدأ بـ SDS1:)",
+  "The numbers computed here are identical to those in the shared file." = "الأرقام المحسوبة هنا مطابقة لتلك الواردة في الملف المشارَك.",
+  "The numbers computed here differ from those in the shared file. The file may come from another version of the app." = "الأرقام المحسوبة هنا تختلف عن تلك الواردة في الملف المشارَك. قد يكون الملف من إصدار آخر للتطبيق.", "R script" = "شيفرة R", "Download solution (PDF)" = "تنزيل الحل (PDF)", "Theoretical quantiles" = "الكميات النظرية", "Sample quantiles" = "كميات العيّنة", "Standardised residuals" = "البواقي المعيارية", "Run order" = "ترتيب التشغيل", "Standard normal" = "الطبيعي المعياري", "Value" = "القيمة", "Count" = "العدد", "Density" = "الكثافة", "Blocks" = "القطاعات",
   "Two factors (3 temperatures × 3 pressures), two replicates of every combination, completely randomised (Montgomery, Problem 5.x)." = "عاملان (3 درجات حرارة × 3 ضغوط)، ومكرَّران لكل توليفة، بتوزيع عشوائي كامل (مونتغمري، المسألة 5.x).", "Conclusion" = "الاستنتاج", "Step" = "الخطوة",
   "home" = "الرئيسية", "descriptive statistics" = "الإحصاء الوصفي", "test advisor" = "مرشد الاختبارات", "data studio" = "استوديو البيانات", "design planner" = "مخطط التصميم", "learn" = "تعلّم",
   "pairs" = "أزواج", "treatments" = "معالجات", "comparisons" = "مقارنات", "levels" = "مستويات", "(none)" = "(لا شيء)",
@@ -23,6 +31,7 @@ ar_add(
   "Mean difference" = "فرق المتوسطين"
 )
 ar_tpl(
+  "It is open at step %d, with the student's data, settings and wording." = "فُتح عند الخطوة $1، ببيانات الطالب وإعداداته وصياغته.",
   "Difference in means (%g%%)" = "الفرق بين المتوسطات ($1%)", "critical %.2f" = "الحرجة $1", "One line per %s" = "خط لكل $1",
   "Difference in means%s, %g%% interval" = "الفرق بين المتوسطات$1، فترة $2%", "One line per pair; green where %s is higher" = "خط لكل زوج؛ أخضر حيث يكون $1 أعلى",
   "Mean %s" = "متوسط $1",

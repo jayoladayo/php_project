@@ -470,6 +470,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
                 btn(ns("back"), if (is.null(md)) "All problems" else "Change data or columns", "arrowl", "bs", "bsm"),
                 if (identical(m$id, "custom")) btn(ns("edit_custom"), "Edit problem", "edit", "bs", "bsm"),
                 downloadButton(ns("dl_solution"), label = tagList(icon("download", 15), "Download solution (PDF)"), icon = NULL, class = "btn-k bs bsm"),
+                downloadButton(ns("dl_script"), label = tagList(icon("code", 15), "R script"), icon = NULL, class = "btn-k bs bsm"),
+                btn(ns("share"), "Share analysis", "link", "bs", "bsm"),
                 pin_button(ns))
     })
     output$stepper <- renderUI({
@@ -1213,6 +1215,80 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     output$dl_solution <- downloadHandler(
       filename = function() sprintf("solution_%s.pdf", gsub("[^A-Za-z0-9]+", "_", cur$meta$id)),
       content = function(file) sol_make(isolate(cur$meta), isolate(cur$s), isolate(cur$test), isolate(cur$ph), file))
+    output$dl_script <- downloadHandler(
+      filename = function() sprintf("solution_%s.R", gsub("[^A-Za-z0-9]+", "_", if (is.null(mode)) cur$meta$id else paste0(mode, "_", cur$meta$id))),
+      content = function(file) {
+        hyp <- isolate(list(h0 = cur$h0, h1 = cur$h1, fh = cur$fh))
+        code <- tryCatch(ps_solution_script(isolate(cur$meta), isolate(cur$s), isolate(cur$test), isolate(cur$ph), hyp),
+                         error = function(e) { showNotification(paste("The script could not be built:", conditionMessage(e)), type = "error", duration = 10); paste("# The script could not be built:", conditionMessage(e)) })
+        writeLines(code, file, useBytes = TRUE)
+      })
+    # ---------- Share the analysis (file or code) ----------
+    share_state <- function(name = "", note = "") {
+      m <- isolate(cur$meta); req(m)
+      sv <- isolate(list(s = cur$s, h0 = cur$h0, h1 = cur$h1, hs0 = cur$hs0, hs1 = cur$hs1, h0n = cur$h0n, h1n = cur$h1n, hs0n = cur$hs0n, hs1n = cur$hs1n,
+                         fh = cur$fh, fhn = cur$fhn, test = cur$test, test_user = cur$test_user, ph = cur$ph, step = cur$step, seen = cur$seen))
+      meta <- if (identical(m$id, "custom")) m[intersect(c("title", "statement", "parts", "roles", "labels", "settings", "target", "control", "random_blocks", "design"), names(m))]
+      sm <- tryCatch(ps_share_summary(m, sv$s, sv$test), error = function(e) NULL)
+      list(app = "StatDesign Studio", kind = "analysis", version = 1, saved = format(Sys.time(), "%Y-%m-%d %H:%M"), from = name, note = note,
+           page = if (is.null(mode)) "problems" else mode, problem_id = m$id, title = prob_label(m), edited = isTRUE(m$edited),
+           meta = meta, data = as.data.frame(m$data, check.names = FALSE), state = sv, summary = sm)
+    }
+    observeEvent(input$share, {
+      req(cur$meta)
+      showModal(modalDialog(title = "Share this analysis", size = "m", easyClose = TRUE,
+        p(class = "small", "Whoever opens it (Open shared analysis, at the top) sees exactly this analysis: your data, settings and wording, the test and post-hoc you chose, and the step you are on. The results are recomputed and checked against yours."),
+        div(class = "grid g2", style = "gap:12px", textInput(ns("share_name"), "Your name (optional)", width = "100%"),
+            div()), textAreaInput(ns("share_note"), "Note for the lecturer (optional)", rows = 2, width = "100%"),
+        div(class = "hrow", style = "gap:10px;flex-wrap:wrap", downloadButton(ns("dl_share"), label = tagList(icon("download", 15), "Download file"), icon = NULL, class = "btn-k bp"),
+            tags$button(type = "button", class = "btn-k bs", onclick = sprintf("var t=document.getElementById('%s'); if(t){t.select(); navigator.clipboard && navigator.clipboard.writeText(t.value); this.textContent='Copied';}", ns("share_code_box")),
+                        icon("copy", 15), "Copy code")),
+        p(class = "small", style = "margin:12px 0 4px", "Or send this code (paste it under Open shared analysis):"),
+        uiOutput(ns("share_code_ui")),
+        footer = modalButton("Close")))
+    })
+    output$share_code_ui <- renderUI({
+      code <- tryCatch(share_encode(share_state(input$share_name %||% "", input$share_note %||% "")), error = function(e) conditionMessage(e))
+      tags$textarea(id = ns("share_code_box"), class = "form-control", rows = 4, readonly = NA, style = "font-family:var(--mono,monospace);font-size:11px", code)
+    })
+    output$dl_share <- downloadHandler(
+      filename = function() sprintf("analysis_%s.sdsa", gsub("[^A-Za-z0-9]+", "_", if (is.null(mode)) cur$meta$id else paste0(mode, "_", cur$meta$id))),
+      content = function(file) writeLines(as.character(jsonlite::toJSON(share_state(isolate(input$share_name) %||% "", isolate(input$share_note) %||% ""), auto_unbox = TRUE, null = "null", na = "null", digits = NA, dataframe = "columns")), file, useBytes = TRUE))
+    # Open a shared analysis here: the page and the step are restored, then the numbers are checked against the student's.
+    restore_share <- function(x) {
+      sv <- x$state; df <- x$data; id <- x$problem_id
+      keep <- c("s", "h0", "h1", "hs0", "hs1", "h0n", "h1n", "hs0n", "hs1n", "fh", "fhn", "test", "test_user", "ph", "step", "seen")
+      memo_new <- sv[intersect(keep, names(sv))]; memo_new$res <- NULL; memo_new$res_np <- NULL
+      memo_new$s <- Filter(Negate(is.null), as.list(memo_new$s))
+      if (!is.null(memo_new$fh)) memo_new$fh <- lapply(memo_new$fh, as.list); if (!is.null(memo_new$fhn)) memo_new$fhn <- lapply(memo_new$fhn, as.list)
+      step <- as.integer(sv$step %||% 1)
+      if (!identical(id, "custom") && !is.null(PROBLEMS[[id]])) {
+        orig <- PROBLEMS[[id]]$data
+        if (isTRUE(x$edited) && identical(names(df), names(orig))) {
+          for (n in names(df)) if (is.numeric(orig[[n]])) df[[n]] <- as.numeric(df[[n]]) else df[[n]] <- as.character(df[[n]])
+          edits[[id]] <- df
+        } else edits[[id]] <- NULL
+        memo[[id]] <- memo_new; cur$id <- NULL; open_problem(id, step = step)
+      } else {
+        mt <- x$meta; roles <- as.list(mt$roles); for (n in names(df)) if (!identical(n, roles$response)) df[[n]] <- as.character(df[[n]])
+        m <- list(id = "custom", chapter = 0, num = "Custom", title = mt$title %||% "", statement = as.character(mt$statement), parts = as.character(mt$parts %||% character(0)),
+                  data = df, display = df, roles = roles, labels = as.list(mt$labels), settings = as.list(mt$settings), target = mt$target %||% "mean",
+                  source = "Shared analysis", control = mt$control)
+        if (!is.null(mt$random_blocks)) m$random_blocks <- isTRUE(mt$random_blocks)
+        if (!is.null(mt$design)) m$design <- mt$design
+        custom(m); if (!is.null(mode)) { load_data(df, roles); updateTextInput(session, "c_title", value = m$title) }
+        memo[["custom"]] <- memo_new; cur$id <- NULL; open_problem("custom", step = step)
+      }
+      mm <- cur$meta
+      now <- tryCatch(ps_share_summary(mm, cur$s, cur$test), error = function(e) NULL)
+      same <- share_same(now, x$summary)
+      showModal(modalDialog(title = "Shared analysis opened", easyClose = TRUE, footer = modalButton("Close"),
+        p(tags$b(x$title %||% "Analysis"), if (nzchar(x$from %||% "")) sprintf(" · from %s", x$from), if (nzchar(x$saved %||% "")) sprintf(" · saved %s", x$saved)),
+        if (nzchar(x$note %||% "")) div(class = "note g", icon("chat", 14), span(x$note)),
+        p(sprintf("It is open at step %d, with the student's data, settings and wording.", step)),
+        if (isTRUE(same)) note(kind = "g", ic = "check", "The numbers computed here are identical to those in the shared file.")
+        else if (isFALSE(same)) note(kind = "w", ic = "alert", "The numbers computed here differ from those in the shared file. The file may come from another version of the app.")))
+    }
     observeEvent(input$sol_pick, { sol_target(input$sol_pick); session$sendCustomMessage("click_dl", list(id = ns("dl_sol_any"))) })
     output$dl_sol_any <- downloadHandler(
       filename = function() sprintf("solution_%s.pdf", gsub("[^A-Za-z0-9]+", "_", sol_target() %||% "problem")),
@@ -1371,7 +1447,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       use_dataset = function(id) { use_ds(id); view("edit") },
       set_paired = function(p) { paired_hint(isTRUE(p)); if (!is.null(cdata())) set_roles(cdata()) },
       set_method = function(m) method_hint(m),
-      get_state = function() NULL, set_state = function(x) invisible(NULL)),
+      get_state = function() NULL, set_state = function(x) invisible(NULL), restore = restore_share),
       list(ai = function(full) {
       i <- cur$id
       if (is.null(i) && !is.null(md)) return(list(label = sprintf("the %s page", md$title), kind = "general",

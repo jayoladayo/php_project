@@ -174,6 +174,24 @@ server <- function(input, output, session) {
     show_page(g$page)
   })
 
+  # Open an analysis someone shared (a .sdsa file or a code): the right page opens at the right step.
+  observeEvent(input$open_share_ui, showModal(modalDialog(title = "Open a shared analysis", easyClose = TRUE,
+    p(class = "small", "Choose the file a student sent you (it ends in .sdsa), or paste the code they sent. You will see their exact data, settings, wording and results, at the step they reached."),
+    fileInput("share_file", NULL, accept = c(".sdsa", ".json", ".txt"), buttonLabel = "Choose file", placeholder = "A .sdsa file"),
+    textAreaInput("share_code", NULL, rows = 4, width = "100%", placeholder = "Or paste the code here (it starts with SDS1:)"),
+    footer = tagList(modalButton("Cancel"), actionButton("share_open", "Open", class = "btn-k bp")))))
+  observeEvent(input$share_open, {
+    x <- tryCatch({
+      if (nzchar(trimws(input$share_code %||% ""))) share_decode(input$share_code)
+      else if (!is.null(input$share_file)) share_read_file(input$share_file$datapath)
+      else stop("Choose a file or paste a code first.")
+    }, error = function(e) { showNotification(conditionMessage(e), type = "error", duration = 10); NULL })
+    req(x)
+    target <- if (identical(x$page, "problems")) problems else pages[[x$page]]
+    if (is.null(target)) { showNotification("This analysis belongs to a page this version does not have.", type = "error"); return() }
+    removeModal(); show_page(x$page); target$restore(x)
+  })
+
   # Sidebar badge with the number of datasets.
   observe(session$sendCustomMessage("badge", list(id = "data-count", n = length(store$datasets))))
 
