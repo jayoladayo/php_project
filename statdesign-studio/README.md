@@ -126,6 +126,11 @@ The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experim
 - **Edit data.** In Problem Sets press **Edit data** on step 1 to change a value, add or delete a row, then **Apply** (the steps restart on your values) or **Reset data**.
 - **English and Arabic.** The button at the top switches the menus, instructions, step texts, results sentences, tables, chart labels, the guided tour and the Learn guides to Arabic (right-to-left layout and Arabic statistical terms). The PDF solutions and the Word, PDF and HTML reports follow the language chosen. The statements of the textbook problems, the data, your own names and the formulas stay as written. The dictionary is in `R/i18n*.R` (one file per area) and the switch in `www/i18n.js`.
 
+## What is new in stage 10
+
+- **R script.** Every problem and every analysis page has an **R script** button next to Download solution. It writes the worked solution as a script you can run top to bottom: the data, then steps 1 to 8 (hypotheses, α, information, test, decision, post-hoc, assumption checks) and, when an assumption fails, the rank test (steps 9 to 14). It follows your choices (the test chosen in step 5, α, the alternative, the post-hoc method, edited data) and uses base R and `lmtest`. The small helper functions it needs (Tukey-Kramer, Dunn, Games-Howell, Nemenyi, Scheffé, Levene) are written inside the script, so there is nothing else to install. For all 87 problems the script gives the same p-values as the app (tested).
+- **Share an analysis.** **Share analysis** (problem header and every analysis page) opens a box with your name and a note for the lecturer, a **Download file** button (`.sdsa`) and a text code to copy. **Open shared analysis** (top bar) takes the file or the code, opens the right page at the step the student had reached, with their data (including edited values), settings, wording of the hypotheses, test and post-hoc, and then recomputes the results and tells you whether they are identical to those in the file. A share code is the same information compressed into text, so it can be pasted into a chat or an email. Files do not need the internet or an account; nothing is stored on the server.
+
 ## Ask Professor Riaz (AI assistant)
 
 The **Ask Professor Riaz** button at the bottom right opens a chat with an AI course assistant. It can see the page you are on: your dataset, your column mapping, and on a results page the ANOVA or test tables, assumption checks, post-hoc tables, the interpretation and the generated R code. Ask it to explain results, check assumptions, walk through the R code line by line, or show you how to use the app. Untick **Let Professor Riaz see my current data and results** in its settings to keep your data private.
@@ -170,6 +175,7 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 - `R/ai.R`: Ask Professor Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `ai_key.example.txt`: template for the built-in key.
 
+- `R/script_export.R`: the R script of a worked solution. `R/share.R`: sharing and opening an analysis (file and code).
 - `R/mod_problems.R`: the five-step process (Problem Sets and, in page mode, every analysis page). `R/solution_pdf.R`: the worked-solution PDF. `R/i18n.R`, `R/i18n_*.R`, `www/i18n.js`: the English/Arabic switch.
 - `R/mod_planner.R`: Design Planner. `R/report.R`: pinning and the report exports. `R/mod_learn.R`: Learn guides. `deploy.R`: publish script.
 
