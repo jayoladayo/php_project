@@ -469,8 +469,6 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       page_head(prob_label(m), if (!is.null(md)) sprintf("%s · your own data", md$title) else if (identical(m$id, "custom")) "Your own problem" else m$title,
                 btn(ns("back"), if (is.null(md)) "All problems" else "Change data or columns", "arrowl", "bs", "bsm"),
                 if (identical(m$id, "custom")) btn(ns("edit_custom"), "Edit problem", "edit", "bs", "bsm"),
-                downloadButton(ns("dl_solution"), label = tagList(icon("download", 15), "Download solution (PDF)"), icon = NULL, class = "btn-k bs bsm"),
-                downloadButton(ns("dl_script"), label = tagList(icon("code", 15), "R script"), icon = NULL, class = "btn-k bs bsm"),
                 btn(ns("share"), "Share analysis", "link", "bs", "bsm"),
                 pin_button(ns))
     })
@@ -504,10 +502,17 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       n <- i
       output[[paste0("nav", n)]] <- renderUI({
         req(cur$key); pv <- flow_prev(n); nx <- flow_next(n)
-        div(class = "ps-nav",
-            if (!is.null(pv)) nav_btn(pv, sprintf("Back: %s", ps_step_name(pv, cur$kind)), back = TRUE), div(class = "ml"),
-            if (!is.null(nx)) nav_btn(nx, sprintf("Next: %s", ps_step_name(nx, cur$kind)), primary = TRUE)
-            else if (n >= 6) span(class = "ps-end", icon("check", 14, 2.6), "End of the analysis"))
+        end <- is.null(nx) && n >= 6
+        tagList(
+          if (end) div(class = "ps-export",
+                       div(class = "ps-export-t", icon("check", 14, 2.6), "End of the analysis"),
+                       p(class = "small", "Keep your work: the worked solution as a PDF, or an R script you can run to check the numbers yourself."),
+                       div(class = "hrow", style = "gap:10px;flex-wrap:wrap",
+                           downloadButton(ns(paste0("dl_solution_", n)), label = tagList(icon("download", 15), "Download solution (PDF)"), icon = NULL, class = "btn-k bp"),
+                           downloadButton(ns(paste0("dl_script_", n)), label = tagList(icon("code", 15), "R script"), icon = NULL, class = "btn-k bs"))),
+          div(class = "ps-nav",
+              if (!is.null(pv)) nav_btn(pv, sprintf("Back: %s", ps_step_name(pv, cur$kind)), back = TRUE), div(class = "ml"),
+              if (!is.null(nx)) nav_btn(nx, sprintf("Next: %s", ps_step_name(nx, cur$kind)), primary = TRUE)))
       })
     })
     step_card <- function(n, sub, ...) {
@@ -1212,10 +1217,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
         showNotification(paste("The solution could not be built:", conditionMessage(e)), type = "error", duration = 10)
         grDevices::cairo_pdf(file); grid::grid.text("The solution could not be built."); grDevices::dev.off() })
     }
-    output$dl_solution <- downloadHandler(
+    dl_solution_h <- downloadHandler(
       filename = function() sprintf("solution_%s.pdf", gsub("[^A-Za-z0-9]+", "_", cur$meta$id)),
       content = function(file) sol_make(isolate(cur$meta), isolate(cur$s), isolate(cur$test), isolate(cur$ph), file))
-    output$dl_script <- downloadHandler(
+    dl_script_h <- downloadHandler(
       filename = function() sprintf("solution_%s.R", gsub("[^A-Za-z0-9]+", "_", if (is.null(mode)) cur$meta$id else paste0(mode, "_", cur$meta$id))),
       content = function(file) {
         hyp <- isolate(list(h0 = cur$h0, h1 = cur$h1, fh = cur$fh))
@@ -1223,6 +1228,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
                          error = function(e) { showNotification(paste("The script could not be built:", conditionMessage(e)), type = "error", duration = 10); paste("# The script could not be built:", conditionMessage(e)) })
         writeLines(code, file, useBytes = TRUE)
       })
+    # the two downloads sit at the end of the analysis; each step that can be the last has its own button id
+    for (i in 6:PS_K_LAST) local({ n <- i; output[[paste0("dl_solution_", n)]] <- dl_solution_h; output[[paste0("dl_script_", n)]] <- dl_script_h })
     # ---------- Share the analysis (file or code) ----------
     share_state <- function(name = "", note = "") {
       m <- isolate(cur$meta); req(m)
@@ -1237,13 +1244,13 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     observeEvent(input$share, {
       req(cur$meta)
       showModal(modalDialog(title = "Share this analysis", size = "m", easyClose = TRUE,
-        p(class = "small", "Whoever opens it (Open shared analysis, at the top) sees exactly this analysis: your data, settings and wording, the test and post-hoc you chose, and the step you are on. The results are recomputed and checked against yours."),
+        p(class = "small", "Whoever opens it sees exactly this analysis: your data, settings and wording, the test and post-hoc you chose, and the step you are on. The results are recomputed and checked against yours."),
         div(class = "grid g2", style = "gap:12px", textInput(ns("share_name"), "Your name (optional)", width = "100%"),
             div()), textAreaInput(ns("share_note"), "Note for the lecturer (optional)", rows = 2, width = "100%"),
         div(class = "hrow", style = "gap:10px;flex-wrap:wrap", downloadButton(ns("dl_share"), label = tagList(icon("download", 15), "Download file"), icon = NULL, class = "btn-k bp"),
-            tags$button(type = "button", class = "btn-k bs", onclick = sprintf("var t=document.getElementById('%s'); if(t){t.select(); navigator.clipboard && navigator.clipboard.writeText(t.value); this.textContent='Copied';}", ns("share_code_box")),
-                        icon("copy", 15), "Copy code")),
-        p(class = "small", style = "margin:12px 0 4px", "Or send this code (paste it under Open shared analysis):"),
+            tags$button(type = "button", class = "btn-k bs", onclick = sprintf("return sdsCopyShare('%s', this, 'link');", ns("share_code_box")), icon("link", 15), "Copy link"),
+            tags$button(type = "button", class = "btn-k bs", onclick = sprintf("return sdsCopyShare('%s', this, 'code');", ns("share_code_box")), icon("copy", 15), "Copy code")),
+        p(class = "small", style = "margin:12px 0 4px", "Send the link, the file or the code. The other person opens the link in their browser, or uses Open shared analysis (at the top) with the file or the code."),
         uiOutput(ns("share_code_ui")),
         footer = modalButton("Close")))
     })

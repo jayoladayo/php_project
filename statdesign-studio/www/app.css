@@ -787,3 +787,9 @@ html[dir="rtl"] .tour-card, html[dir="rtl"] .tour-menu, html[dir="rtl"] .tour-nu
 .content { padding-bottom: 96px; }
 html[dir="rtl"] .selectize-input input { text-align: right; padding-right: 4px; }
 html[dir="rtl"] .selectize-input { padding-left: 12px; }
+
+/* the downloads at the end of an analysis */
+.ps-export { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--line, #e2e8f0); border-left: 4px solid var(--pass); border-radius: 10px; background: var(--surface-2, rgba(0,0,0,.025)); }
+.ps-export-t { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--pass); margin-bottom: 4px; }
+.ps-export p { margin: 0 0 10px; }
+html[dir="rtl"] .ps-export { border-left: 1px solid var(--line, #e2e8f0); border-right: 4px solid var(--pass); }

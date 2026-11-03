@@ -15,7 +15,7 @@ local({
   miss <- names(need)[!vapply(names(need), function(n) exists(n, envir = here), TRUE)]
   if (length(miss)) stop(sprintf("Your copy of StatDesign Studio mixes old and new files: %s is missing. Replace the whole folder (keep your ai_key.txt) with the latest version, in particular %s.",
                                  paste0(miss, "()", collapse = ", "), paste(unique(need[miss]), collapse = ", ")), call. = FALSE)
-  if (!file.exists("www/tour.js")) stop("www/tour.js is missing: copy the whole www folder from the latest version.", call. = FALSE)
+  if (!file.exists("www/share.js") || !file.exists("www/tour.js")) stop("www/share.js or www/tour.js is missing: copy the whole www folder from the latest version.", call. = FALSE)
 })
 
 # Private settings such as the built-in AI key live in .Renviron next to this file (never committed).
@@ -62,6 +62,7 @@ ui <- page(
     tags$script(HTML(sprintf("window.SDS_I18N = %s;", i18n_json()))),
     tags$script(src = "app.js"),
     tags$script(src = "i18n.js"),
+    tags$script(src = "share.js"),
     tags$script(src = "tour.js")
   ),
   div(class = "app",
@@ -180,16 +181,23 @@ server <- function(input, output, session) {
     fileInput("share_file", NULL, accept = c(".sdsa", ".json", ".txt"), buttonLabel = "Choose file", placeholder = "A .sdsa file"),
     textAreaInput("share_code", NULL, rows = 4, width = "100%", placeholder = "Or paste the code here (it starts with SDS1:)"),
     footer = tagList(modalButton("Cancel"), actionButton("share_open", "Open", class = "btn-k bp")))))
+  open_shared <- function(x) {
+    target <- if (identical(x$page, "problems")) problems else pages[[x$page]]
+    if (is.null(target)) { showNotification("This analysis belongs to a page this version does not have.", type = "error"); return() }
+    removeModal(); show_page(x$page); target$restore(x)
+  }
   observeEvent(input$share_open, {
     x <- tryCatch({
       if (nzchar(trimws(input$share_code %||% ""))) share_decode(input$share_code)
       else if (!is.null(input$share_file)) share_read_file(input$share_file$datapath)
       else stop("Choose a file or paste a code first.")
     }, error = function(e) { showNotification(conditionMessage(e), type = "error", duration = 10); NULL })
-    req(x)
-    target <- if (identical(x$page, "problems")) problems else pages[[x$page]]
-    if (is.null(target)) { showNotification("This analysis belongs to a page this version does not have.", type = "error"); return() }
-    removeModal(); show_page(x$page); target$restore(x)
+    req(x); open_shared(x)
+  })
+  # a share link (address#share=code): the page hands over the code when it opens
+  observeEvent(input$share_hash, {
+    x <- tryCatch(share_decode(input$share_hash), error = function(e) { showNotification(paste("The share link could not be opened:", conditionMessage(e)), type = "error", duration = 10); NULL })
+    req(x); open_shared(x)
   })
 
   # Sidebar badge with the number of datasets.

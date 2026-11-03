@@ -2,6 +2,10 @@
 
 ar_part_misc <- function() {
 ar_add(
+  "Copy link" = "نسخ الرابط", "Press Ctrl+C" = "اضغط Ctrl+C", "End of the analysis" = "نهاية التحليل",
+  "Keep your work: the worked solution as a PDF, or an R script you can run to check the numbers yourself." = "احتفظ بعملك: الحل المفصَّل بصيغة PDF، أو سكربت R يمكنك تشغيله للتحقق من الأرقام بنفسك.",
+  "Send the link, the file or the code. The other person opens the link in their browser, or uses Open shared analysis (at the top) with the file or the code." = "أرسل الرابط أو الملف أو الرمز. يفتح الطرف الآخر الرابط في متصفحه، أو يستخدم «افتح تحليلًا مشاركًا» (في الأعلى) مع الملف أو الرمز.",
+  "Whoever opens it sees exactly this analysis: your data, settings and wording, the test and post-hoc you chose, and the step you are on. The results are recomputed and checked against yours." = "من يفتحه يرى هذا التحليل نفسه: بياناتك وإعداداتك وصياغتك، والاختبار والمقارنات البعدية التي اخترتها، والخطوة التي وصلت إليها. تُعاد حساب النتائج وتُقارَن بنتائجك.",
   "KFUPM · Experimental Design · Worked solution" = "جامعة الملك فهد للبترول والمعادن · التصميم التجريبي · حل مفصَّل",
   "What" = "ماذا", "Share analysis" = "شارِك التحليل", "Open shared analysis" = "افتح تحليلًا مشاركًا", "Download file" = "تنزيل الملف", "Copy code" = "نسخ الرمز", "Copied" = "تم النسخ",
   "Share this analysis" = "مشاركة هذا التحليل", "Your name (optional)" = "اسمك (اختياري)", "Note for the lecturer (optional)" = "ملاحظة للمحاضر (اختيارية)",
