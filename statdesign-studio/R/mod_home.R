@@ -13,7 +13,7 @@ home_ui <- function() {
         div(style = "flex:1;min-width:0",
             div(class = "hrow", style = "gap:14px", tags$img(class = "hero-logo", src = "kfupm_logo.svg", alt = "KFUPM"),
                 span(class = "tag", icon("check", 13, 3), "KFUPM Experimental Design · Group 4")),
-            h1("Analyse any designed experiment. No code required."),
+            h1("Analyse any designed experiment."),
             p("Upload your data, tell us what each column means, and get the ANOVA, assumption checks, post-hoc comparisons and a report you can submit."),
             div(class = "hrow",
                 tags$button(class = "btn-k bgld", onclick = nav_js("data"), icon("upload", 15), "Start with your data"),

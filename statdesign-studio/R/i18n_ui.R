@@ -14,7 +14,7 @@ ar_add(
   "Experimental Design · Group 4" = "التصميم التجريبي · المجموعة 4", "Version 1.0 ·" = "الإصدار 1.0 ·", "Help & About" = "المساعدة وحول التطبيق",
   "Guided tour" = "جولة إرشادية", "Save project" = "حفظ المشروع",
   "KFUPM Experimental Design · Group 4" = "جامعة الملك فهد للبترول والمعادن · التصميم التجريبي · المجموعة 4",
-  "Analyse any designed experiment. No code required." = "حلِّل أي تجربة مصمَّمة. دون الحاجة إلى برمجة.",
+  "Analyse any designed experiment." = "حلِّل أي تجربة مصمَّمة.",
   "Upload your data, tell us what each column means, and get the ANOVA, assumption checks, post-hoc comparisons and a report you can submit." =
     "ارفع بياناتك، وأخبرنا بمعنى كل عمود، لتحصل على تحليل التباين وفحص الافتراضات والمقارنات البعدية وتقرير جاهز للتسليم.",
   "Start with your data" = "ابدأ ببياناتك", "Try the RCBD example" = "جرّب مثال القطاعات العشوائية",
