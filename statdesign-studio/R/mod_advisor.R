@@ -33,6 +33,8 @@ ADV_Q <- list(
                          vis = mini_grid(c("A", "B", "C", "C", "A", "B", "B", "C", "A"))),
                     list(v = "rowcol", t = "Rows and columns", d = "Two nuisance factors; each treatment once per row and column. → Latin Square",
                          vis = mini_grid(c("A", "B", "C", "B", "C", "A", "C", "A", "B"))),
+                    list(v = "factorial", t = "Two or more factors of interest", d = "Factors crossed (every combination run); main effects and interactions. → Factorial",
+                         vis = mini_grid(c("A1B1", "A1B2", "A2B1", "A2B2", "A1B1", "A1B2", "A2B1", "A2B2"), 4)),
                     list(v = "greek", t = "Rows, columns and a Greek factor", d = "Three nuisance factors in a square. → Graeco-Latin Square",
                          vis = mini_grid(c("Aα", "Bβ", "Cγ", "Bγ", "Cα", "Aβ", "Cβ", "Aγ", "Bα"))))),
   response = list(title = "What kind of response did you measure?", sub = "The response is the outcome you compare.",
@@ -90,7 +92,16 @@ adv_recommend <- function(a) {
                 why = c("You are comparing three or more groups of different units.", "Levene decides between the one-way ANOVA and the Welch ANOVA."),
                 run = list(c("Main test", if (ord) "Kruskal-Wallis" else "One-way ANOVA, or Welch ANOVA if variances differ"), c("Assumptions", "Shapiro-Wilk on residuals, Levene and Bartlett"),
                            np_line("Kruskal-Wallis with Dunn post-hoc"), c("Post-hoc", "Tukey HSD, Games-Howell or Dunn")),
-                also = list(list(page = "crd", name = "CRD", desc = "If you assigned the groups at random, the CRD page adds more post-hoc methods and the R code.")))
+                also = list(list(page = "crd", name = "CRD", desc = "If you assigned the groups at random, the CRD page follows the same steps with the design named CRD.")))
+    } else if (identical(g, "factorial")) {
+      r <- list(page = "fact", name = "Factorial design", icon = "cross", sub = "Test every factor and every interaction at once.",
+                why = c("You are studying two or three factors and ran every combination of their levels.", "The interaction tells you whether the effect of one factor depends on the level of another."),
+                run = list(c("Main test", "CRD ANOVA for each factor and each interaction (RCBD, LSD or GLSD ANOVA if the layout has blocks)"),
+                           c("Assumptions", "Shapiro-Wilk, Breusch-Pagan, Breusch-Godfrey on the residuals"),
+                           c(if (ord) "Non-parametric" else "If assumptions fail", "Kruskal-Wallis (CRD), Friedman (blocks) or Quade's test (squares), for each effect"),
+                           c("Post-hoc", "Levels of a significant factor; simple effects for a significant interaction")),
+                also = list(list(page = "crd", name = "CRD", desc = "If only one factor matters, a one-factor CRD is enough."),
+                            list(page = "rcbd", name = "RCBD", desc = "One factor with blocks.")))
     } else {
       d <- switch(g, none = DESIGNS$CRD, one = DESIGNS$RCBD, rowcol = DESIGNS$LSD, greek = DESIGNS$GLSD)
       model <- switch(g, none = "One-way ANOVA (Response ~ Treatment)", one = "Two-way ANOVA (Response ~ Treatment + Block)",

@@ -13,6 +13,17 @@ CLASS_EXAMPLES <- list(
       check.names = FALSE
     )
   ),
+  fact = list(
+    title = "Factorial: yield by temperature and pressure",
+    design = "FACT",
+    desc = "Two factors (3 temperatures × 3 pressures), two replicates of every combination, completely randomised (Montgomery, Problem 5.x).",
+    data = data.frame(
+      Temperature = rep(c(150, 160, 170), times = 6),
+      Pressure = rep(rep(c(200, 215, 230), each = 3), times = 2),
+      Replicate = rep(1:2, each = 9),
+      Yield = c(90.4, 90.1, 90.5, 90.7, 90.5, 90.8, 90.2, 89.9, 90.4, 90.2, 90.3, 90.7, 90.6, 90.6, 90.9, 90.4, 90.1, 90.1)
+    )
+  ),
   crd = list(
     title = "CRD: crop yield by fertilizer",
     design = "CRD",

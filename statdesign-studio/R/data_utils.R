@@ -2,7 +2,7 @@
 
 TYPE_CHOICES <- c("Number" = "number", "Category" = "category", "Text (ID)" = "id")
 
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (length(a) == 1 && is.na(a))) b else a
+`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (is.atomic(a) && length(a) == 1 && is.na(a))) b else a
 
 # Turn text such as "49 kg" or "1,5" into a number; NA when it is not one.
 parse_number_loose <- function(x, dec = ".") {

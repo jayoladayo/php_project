@@ -196,10 +196,11 @@ server <- function(input, output, session) {
     p("A no-code tool for the KFUPM Experimental Design course. Bring your data into Data Studio, choose a design, map your columns, and run the analysis."),
     tags$ol(class = "small", style = "padding-left:18px",
             tags$li("Data Studio: upload Excel or CSV, pick the sheet, or type and paste data."),
-            tags$li("Choose an analysis from the sidebar."),
-            tags$li("Map variables: say which column is the response, the treatment and the blocks."),
-            tags$li("Context and settings: name things, label coded levels, choose α and post-hoc methods."),
-            tags$li("Results: ANOVA, assumption checks, post-hoc and non-parametric tests."),
+            tags$li("Choose an analysis from the sidebar (One sample, Two samples, k samples, CRD, RCBD, Latin Square, Graeco-Latin Square or Factorial)."),
+            tags$li("Pick the dataset and say which column is the response, the treatment and the blocks."),
+            tags$li("Follow the five steps: hypotheses, significance level, information available, test and decision (post-hoc and assumption checks for designs with three or more treatments)."),
+            tags$li("If an ANOVA assumption fails, the process restarts with the rank test: Kruskal-Wallis, Friedman or Quade's test."),
+            tags$li("Every page has a Download solution button: a worked PDF of the steps."),
             tags$li("Not sure which test? The Test Advisor asks a few questions and opens the right page.")),
     p(class = "small", "Save project downloads a file with your datasets and settings. Open it later from Data Studio, Open project.")
   )))

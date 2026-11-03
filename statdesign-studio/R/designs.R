@@ -31,7 +31,10 @@ DESIGNS <- list(
   GLSD = list(key = "GLSD", page = "glsd", name = "Graeco-Latin Square Design", short = "Graeco-Latin Square", icon = "grid4",
               blurb = "Two treatment factors over two blocking factors.",
               roles = list(ROLE_RESPONSE, modifyList(ROLE_TREAT, list(label = "Latin treatment")), ROLE_GREEK, ROLE_ROW, ROLE_COL, ROLE_RUN),
-              example = "glsd", nonpar = "Kruskal-Wallis per factor (approximate)")
+              example = "glsd", nonpar = "Kruskal-Wallis per factor (approximate)"),
+  FACT = list(key = "FACT", page = "fact", name = "Factorial Design", short = "Factorial", icon = "cross",
+              blurb = "Two or three crossed factors: main effects and interactions.",
+              roles = list(ROLE_RESPONSE, ROLE_TREAT), example = "fact", nonpar = "Kruskal-Wallis, Friedman or Quade per effect")
 )
 
 role_keys <- function(design) vapply(design$roles, `[[`, "", "key")
