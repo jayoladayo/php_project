@@ -12,6 +12,43 @@ AR_EXACT <- character(0)
 AR_RX <- list()
 ar_add <- function(...) { x <- c(...); AR_EXACT[names(x)] <<- unname(x); invisible(NULL) }
 ar_rx <- function(pattern, replacement) { AR_RX[[length(AR_RX) + 1]] <<- c(pattern, replacement); invisible(NULL) }
+# A sprintf template as a pattern: %s matches any text, %d an integer, %g / %.2f a number, %% a percent sign.
+# The Arabic text uses $1, $2 ... for the pieces in the order they appear in the English template.
+ar_tpl <- function(..., variants = TRUE) {
+  x <- c(...)
+  if (variants) {   # the sentence also appears with a lower-case start and no final full stop (inside a longer sentence)
+    nm <- names(x); ar <- unname(x); keys <- character(0); vals <- character(0)
+    for (i in seq_along(nm)) {
+      keys <- c(keys, nm[i]); vals <- c(vals, ar[i])
+      lc <- sub("^([A-Z])([a-z])", "\\L\\1\\2", nm[i], perl = TRUE)
+      if (!identical(lc, nm[i]) && !grepl("^[A-Z]{2}", nm[i])) { keys <- c(keys, lc); vals <- c(vals, ar[i]) }
+      if (grepl("\\.$", nm[i])) { keys <- c(keys, sub("\\.$", "", nm[i])); vals <- c(vals, sub("\\.$", "", ar[i]))
+        if (!identical(lc, nm[i]) && !grepl("^[A-Z]{2}", nm[i])) { keys <- c(keys, sub("\\.$", "", lc)); vals <- c(vals, sub("\\.$", "", ar[i])) } }
+    }
+    ok <- !duplicated(keys); x <- stats::setNames(vals[ok], keys[ok])
+  }
+  for (i in seq_along(x)) {
+    t <- ar_norm(names(x)[i]); rx <- gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", t)
+    rx <- gsub("%%", "\001", rx, fixed = TRUE)
+    rx <- gsub("%[0-9.]*[gf]", "(-?[0-9.]+(?:e-?[0-9]+)?)", rx)
+    rx <- gsub("%d", "(-?[0-9]+)", rx, fixed = TRUE)
+    rx <- gsub("%s", "(.+?)", rx, fixed = TRUE)
+    rx <- gsub("\001", "%", rx, fixed = TRUE)
+    ar_rx(rx, unname(x[i]))
+  }
+  invisible(NULL)
+}
+# Patterns with the most fixed text first, so the most specific sentence wins.
+ar_rx_all <- local({
+  cache <- NULL; n <- -1
+  function() {
+    if (is.null(cache) || n != length(AR_RX)) {
+      fixed <- vapply(AR_RX, function(r) nchar(gsub("\\([^)]*\\)", "", gsub("\\(\\?:[^)]*\\)", "", r[[1]]))), 0)
+      cache <<- AR_RX[order(-fixed, seq_along(AR_RX))]; n <<- length(AR_RX)
+    }
+    cache
+  }
+})
 
 ar_norm <- function(x) trimws(gsub("[[:space:]]+", " ", x))
 
@@ -21,7 +58,7 @@ ar_lookup <- function(x) {
   if (!nzchar(t)) return(NA_character_)
   hit <- AR_EXACT[t]
   if (!is.na(hit)) return(unname(hit))
-  for (r in AR_RX) {
+  for (r in ar_rx_all()) {
     m <- regexec(paste0("^", r[[1]], "$"), t, perl = TRUE)
     g <- regmatches(t, m)[[1]]
     if (length(g)) {
@@ -41,5 +78,5 @@ i18n_tr <- function(lang) if (identical(lang, "ar")) function(x) ar_text(x) else
 
 # The dictionary as JSON for the browser.
 i18n_json <- function() {
-  jsonlite::toJSON(list(exact = as.list(AR_EXACT), rx = lapply(AR_RX, function(r) list(r[[1]], r[[2]]))), auto_unbox = TRUE)
+  jsonlite::toJSON(list(exact = as.list(AR_EXACT), rx = lapply(ar_rx_all(), function(r) list(r[[1]], r[[2]]))), auto_unbox = TRUE)
 }
