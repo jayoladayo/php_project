@@ -368,7 +368,7 @@ ps_run_test <- function(kind, test, st, meta, s) {
       out$anova <- r$anova; out$fit <- r$fit
       if (test == "anova") {
         out$ph_all <- posthoc_all(r$fit, data.frame(y = r$data$y, treatment = r$data$g), "treatment", r$anova$mse, r$anova$dfe, a, conf, control = meta$control, dunnett = FALSE)
-        out$ci_tab <- r$posthoc$tukey; out$ci_name <- "Tukey"; out$anova_df <- ps_anova_table(out)
+        out$ci_tab <- r$posthoc$tukey; out$ci_name <- "Tukey"; out$anova$table$source <- ucfirst(ps_lab(meta, "treatment")); out$anova_df <- ps_anova_table(out)
       } else if (test == "welch") { out$ci_tab <- r$posthoc$gh; out$ci_name <- "Games-Howell" }
       else {
         d <- st$d; N <- nrow(d); rk <- rank(d$y); Ri <- tapply(rk, d$treatment, sum); ni <- tapply(rk, d$treatment, length)

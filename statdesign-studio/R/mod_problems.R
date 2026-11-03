@@ -62,6 +62,7 @@ problems_ui <- function(id) {
       kcard(div(class = "hrow", style = "align-items:flex-end",
                 div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Custom Problem" = "custom"), "ch2")),
                 div(class = "ml ps-search", textInput(ns("q"), NULL, placeholder = "Search by number, topic or test"))),
+            downloadLink(ns("dl_sol_any"), "", style = "display:none"),
             uiOutput(ns("cat_blurb")),
             conditionalPanel("input.cat != 'custom'", ns = ns, div(class = "ps-filters",
               div(class = "ps-filter", selectInput(ns("f_type"), "Problem type", c("All problem types" = ""), width = "100%")),
@@ -143,7 +144,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       session$sendCustomMessage("scroll_top", list())
     }
     prob_label <- function(m) if (identical(m$id, "custom")) (if (nzchar(m$title %||% "")) m$title else "Custom problem") else sprintf("Problem %s", m$id)
-    meta_of <- function(i) if (identical(i, "custom")) custom() else PROBLEMS[[i]]
+    # Data the student edited in a problem replace the printed values (kept per problem until reset).
+    edits <- reactiveValues()
+    meta_of <- function(i) {
+      if (identical(i, "custom")) return(custom())
+      p <- PROBLEMS[[i]]; e <- edits[[i]]
+      if (!is.null(e)) { p$data <- e; p$display <- e; p$edited <- TRUE }
+      p
+    }
 
     # ---------- List ----------
     output$cat_blurb <- renderUI({
@@ -165,7 +173,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     card <- function(p, cl, cur_id) {
       tags$a(class = paste("kcard acard ps-card", if (identical(cur_id, p$id)) "on"), href = "#",
              onclick = sprintf("Shiny.setInputValue('%s', '%s', {priority: 'event'}); return false;", ns("pick"), p$id),
-             div(class = "hrow", span(class = "ps-num", paste("Problem", p$id)), if (identical(cur_id, p$id)) div(class = "ml", pill("Selected", "pass", "check"))),
+             div(class = "hrow", span(class = "ps-num", paste("Problem", p$id)), if (identical(cur_id, p$id)) div(class = "ml", pill("Selected", "pass", "check")),
+                 tags$span(class = paste("ps-pdf", if (!identical(cur_id, p$id)) "ml"), title = "Download the worked solution (PDF)",
+                           onclick = sprintf("event.stopPropagation(); Shiny.setInputValue('%s', '%s', {priority: 'event'}); return false;", ns("sol_pick"), p$id),
+                           icon("download", 12), "Solution PDF")),
              div(class = "at", p$title),
              div(class = "ad", sprintf("%s · %d observations", PS_KIND_LABEL[[cl$kind]], sum(!is.na(p$data[[p$roles$response]])))),
              div(class = "meta ps-chips",
@@ -405,6 +416,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       page_head(prob_label(m), if (identical(m$id, "custom")) "Your own problem" else m$title,
                 btn(ns("back"), "All problems", "arrowl", "bs", "bsm"),
                 if (identical(m$id, "custom")) btn(ns("edit_custom"), "Edit problem", "edit", "bs", "bsm"),
+                downloadButton(ns("dl_solution"), label = tagList(icon("download", 15), "Download solution (PDF)"), icon = NULL, class = "btn-k bs bsm"),
                 pin_button(ns))
     })
     output$stepper <- renderUI({
@@ -469,7 +481,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
             div(class = "col", style = "gap:8px",
                 div(class = "hrow", h3(class = "ct", "Data"), div(class = "ml hrow",
                     downloadButton(ns("dl_data"), label = tagList(icon("download", 14), "CSV"), icon = NULL, class = "btn-k bs bsm"),
+                    if (!identical(m$id, "custom")) btn(ns("edit_data"), "Edit data", "edit", "bs", "bsm"),
+                    if (isTRUE(m$edited)) btn(ns("reset_data"), "Reset data", "arrowl", "bs", "bsm"),
                     if (!identical(m$id, "custom")) btn(ns("edit_this"), "Copy to Custom Problem", "copy", "bs", "bsm"))),
+                if (isTRUE(m$edited)) note(kind = "w", ic = "edit", "You are working with edited data: every step uses your values, not the printed ones. Press Reset data to go back to the printed values."),
                 div(class = "tscroll ps-data", html_table(m$display)),
                 p(class = "small", style = "margin:0", sprintf("%d observations, as printed in the problem%s.", sum(!is.na(m$data[[m$roles$response]])),
                                                             if (any(is.na(m$data[[m$roles$response]]))) " (a cell marked missing is estimated in step 5)" else "")))))
@@ -1079,6 +1094,71 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       showNotification(sprintf("Problem %s copied into the editor. Change anything, then press Continue to the steps.", m$id), type = "message")
     })
     observeEvent(input$edit_back, view("list"))
+
+    # ---------- Editable data ----------
+    # A grid of the problem's data (one row per observation, as the process reads it). Apply checks that the
+    # edited data still form the same layout, then restarts the steps on them; Reset restores the printed data.
+    show_ed_msg <- function(txt) output$ed_msg <- renderUI(if (!is.null(txt)) note(kind = "w", ic = "alert", txt))
+    observeEvent(input$edit_data, {
+      m <- cur$meta; req(m); show_ed_msg(NULL)
+      showModal(modalDialog(title = sprintf("Edit the data of Problem %s", m$id), size = "l", easyClose = FALSE,
+        p(class = "small", "Change a value, add a row (right-click) or delete one. Keep the columns as they are. Press Apply to run the steps on your data."),
+        div(class = "gridbox", rhandsontable::rHandsontableOutput(ns("ed_grid"))), uiOutput(ns("ed_msg")),
+        footer = tagList(modalButton("Cancel"), if (isTRUE(m$edited)) actionButton(ns("ed_reset"), "Reset to the printed data", class = "btn-k bs"),
+                         actionButton(ns("ed_apply"), "Apply", class = "btn-k bp"))))
+    })
+    output$ed_grid <- rhandsontable::renderRHandsontable({
+      m <- isolate(cur$meta); req(m); df <- as.data.frame(m$data, check.names = FALSE)
+      rhandsontable::rhandsontable(df, useTypes = FALSE, stretchH = "all", height = min(420, 60 + 30 * max(nrow(df), 6)), rowHeaders = TRUE) |>
+        rhandsontable::hot_context_menu(allowRowEdit = TRUE, allowColEdit = FALSE)
+    })
+    reopen_with <- function(id) {
+      memo[[id]] <- NULL; cur$id <- NULL        # so the old state is not saved back over the new data
+      removeModal(); open_problem(id, step = 1)
+    }
+    observeEvent(input$ed_apply, {
+      m <- cur$meta; req(m, input$ed_grid)
+      df <- tryCatch(as.data.frame(rhandsontable::hot_to_r(input$ed_grid), stringsAsFactors = FALSE, check.names = FALSE), error = function(e) NULL)
+      if (is.null(df)) return(show_ed_msg("The grid could not be read. Try again."))
+      orig <- m$data
+      if (!identical(names(df), names(orig))) return(show_ed_msg("The columns changed. Keep the same columns and edit the values."))
+      for (n in names(df)) {
+        x <- df[[n]]
+        if (is.numeric(orig[[n]])) { x <- suppressWarnings(as.numeric(gsub(",", ".", trimws(as.character(x))))); bad <- is.na(x) & !is.na(df[[n]]) & nzchar(trimws(as.character(df[[n]])))
+          if (any(bad)) return(show_ed_msg(sprintf("Row %d of %s is not a number.", which(bad)[1], n))) }
+        else { x <- as.character(x); x[!is.na(x) & !nzchar(trimws(x))] <- NA }
+        df[[n]] <- x
+      }
+      df <- df[rowSums(!is.na(df)) > 0, , drop = FALSE]; rownames(df) <- NULL
+      st2 <- ps_structure(df, m$roles); k2 <- ps_kind(st2, m)
+      if (is.na(k2)) return(show_ed_msg(paste("These data cannot be analysed:", ps_kind_problem(k2, st2))))
+      if (!identical(k2, cur$kind)) return(show_ed_msg(sprintf("The edit changes the layout (%s instead of %s). Keep the same groups, blocks and factors.", PS_KIND_LABEL[[k2]], PS_KIND_LABEL[[cur$kind]])))
+      id <- m$id; edits[[id]] <- df
+      reopen_with(id); showNotification("Your data are in use. The steps start again from step 1.", type = "message")
+    })
+    observeEvent(c(input$reset_data, input$ed_reset), {
+      m <- cur$meta; req(m, isTRUE(m$edited)); id <- m$id; edits[[id]] <- NULL
+      reopen_with(id); showNotification("The printed data are back. The steps start again from step 1.", type = "message")
+    }, ignoreInit = TRUE)
+
+    # ---------- Worked-solution PDF ----------
+    sol_target <- reactiveVal(NULL)
+    sol_make <- function(m, s, test, ph, file) {
+      tryCatch(ps_solution_pdf(m, file, s = s, test = test, ph = ph), error = function(e) {
+        showNotification(paste("The solution could not be built:", conditionMessage(e)), type = "error", duration = 10)
+        grDevices::cairo_pdf(file); grid::grid.text("The solution could not be built."); grDevices::dev.off() })
+    }
+    output$dl_solution <- downloadHandler(
+      filename = function() sprintf("solution_%s.pdf", gsub("[^A-Za-z0-9]+", "_", cur$meta$id)),
+      content = function(file) sol_make(isolate(cur$meta), isolate(cur$s), isolate(cur$test), isolate(cur$ph), file))
+    observeEvent(input$sol_pick, { sol_target(input$sol_pick); session$sendCustomMessage("click_dl", list(id = ns("dl_sol_any"))) })
+    output$dl_sol_any <- downloadHandler(
+      filename = function() sprintf("solution_%s.pdf", gsub("[^A-Za-z0-9]+", "_", sol_target() %||% "problem")),
+      content = function(file) {
+        id <- sol_target(); req(id); m <- meta_of(id)
+        sv <- if (identical(isolate(cur$id), id)) list(s = isolate(cur$s), test = isolate(cur$test), ph = isolate(cur$ph)) else memo[[id]]
+        sol_make(m, sv$s, sv$test, sv$ph, file)
+      })
     observeEvent(input$c_use_paste, {
       df <- tryCatch(parse_pasted(input$c_paste %||% "", isTRUE(input$c_header)), error = function(e) e)
       if (inherits(df, "error") || is.null(df) || !nrow(df)) { showNotification("Nothing could be read from the pasted text. Put one row per line, with values separated by tabs or commas.", type = "error"); return() }
