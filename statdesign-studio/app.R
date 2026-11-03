@@ -5,6 +5,18 @@ library(bslib)
 
 for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f, local = TRUE)
 
+# A folder that mixes files from different versions fails later with a cryptic "could not find function".
+# Check the files that must go together and say which one is out of date.
+local({
+  need <- c(ps_is_fact = "R/problem_blocks.R", ps_run_block = "R/problem_blocks.R", ps_run_fact = "R/problem_factorial.R",
+            ps_fact_posthoc = "R/problem_factorial.R", ps_type_of = "R/problem_engine.R", ps_classify = "R/problem_engine.R",
+            problems_ui = "R/mod_problems.R", team_ui = "R/mod_team.R")
+  miss <- names(need)[!vapply(names(need), exists, TRUE)]
+  if (length(miss)) stop(sprintf("Your copy of StatDesign Studio mixes old and new files: %s is missing. Replace the whole folder (keep your ai_key.txt) with the latest version, in particular %s.",
+                                 paste0(miss, "()", collapse = ", "), paste(unique(need[miss]), collapse = ", ")), call. = FALSE)
+  if (!file.exists("www/tour.js")) stop("www/tour.js is missing: copy the whole www folder from the latest version.", call. = FALSE)
+})
+
 # Private settings such as the built-in AI key live in .Renviron next to this file (never committed).
 local({
   f <- riaz_load_env(".")
