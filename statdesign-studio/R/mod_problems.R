@@ -51,11 +51,48 @@ ps_alt_choices <- function(kind) {
 ps_value_label <- function(kind) switch(kind, one = "Hypothesised mean μ0", variance = "Hypothesised variance σ0²",
                                         two = "Hypothesised difference Δ0 = μ1 − μ2", paired = "Hypothesised mean difference Δ0", "Value")
 
-problems_ui <- function(id) {
-  ns <- NS(id)
-  tabsetPanel(id = ns("views"), type = "hidden",
+# The analysis pages (One sample, Two samples, k samples, CRD, RCBD, Latin square, Graeco-Latin square and
+# Factorial) run the same step-by-step process as the Problem Sets on the student's own data. Each page says
+# which columns it needs and which layouts it accepts.
+PS_MODES <- list(
+  one = list(title = "One sample", kinds = c("one", "variance"), roles = "response",
+             sub = "Compare the mean, the median or the variance of one sample with a target value, in five steps.",
+             need = "One sample needs a Response column only."),
+  two = list(title = "Two samples", kinds = c("two", "paired"), roles = c("response", "treatment", "block"),
+             labels = list(treatment = "Group (the two samples)", block = "Pair ID (only for paired, dependent samples)"),
+             sub = "Compare two independent samples, or two dependent (paired) samples, in five steps.",
+             need = "Two samples needs a Response and a Group column with exactly two groups. For paired data also choose the Pair ID, with one observation per group in each pair."),
+  k = list(title = "k samples", kinds = "k", roles = c("response", "treatment"), labels = list(treatment = "Group (the samples)"),
+           sub = "Compare three or more independent samples: ANOVA or Welch ANOVA first, then the Kruskal-Wallis test if an assumption fails.",
+           need = "k samples needs a Response and a Group column with three or more groups, and no Block."),
+  crd = list(title = "CRD", kinds = "k", roles = c("response", "treatment"), labels = list(treatment = "Treatment"),
+             sub = "Completely randomized design: CRD ANOVA (or Welch ANOVA) first, then the Kruskal-Wallis test if an assumption fails.",
+             need = "A CRD needs a Response and a Treatment column with three or more treatments, and no Block."),
+  rcbd = list(title = "RCBD", kinds = "rcbd", roles = c("response", "treatment", "block"), labels = list(treatment = "Treatment", block = "Block"),
+              sub = "Randomized complete block design: RCBD ANOVA first, then the Friedman test if an assumption fails.",
+              need = "An RCBD needs a Response, a Treatment and a Block column, with every treatment in every block."),
+  lsd = list(title = "Latin Square", kinds = "latin", roles = c("response", "treatment", "row", "column"),
+             labels = list(treatment = "Treatment (the Latin letters)", row = "Row", column = "Column"),
+             sub = "Latin square design: LSD ANOVA first, then Quade's test if an assumption fails.",
+             need = "A Latin square needs a Response, a Treatment, a Row and a Column column (and no Greek letter)."),
+  glsd = list(title = "Graeco-Latin Square", kinds = "glsd", roles = c("response", "treatment", "row", "column", "greek"),
+              labels = list(treatment = "Treatment (the Latin letters)", row = "Row", column = "Column", greek = "Greek letter (the second blocking factor)"),
+              sub = "Graeco-Latin square design: GLSD ANOVA first, then Quade's test if an assumption fails.",
+              need = "A Graeco-Latin square needs a Response, a Treatment, a Row, a Column and a Greek letter column."),
+  fact = list(title = "Factorial", kinds = c("fact", "factb", "factl", "factg"),
+              roles = c("response", "treatment", "factorB", "factorC", "block", "row", "column", "greek"),
+              labels = list(treatment = "Factor A", factorB = "Factor B", factorC = "Factor C (three-factor designs only)", block = "Block (factorial in blocks, optional)",
+                            row = "Row (Latin square, optional)", column = "Column (Latin square, optional)", greek = "Greek letter (Graeco-Latin, optional)"),
+              sub = "Factorial designs: every factor and every interaction is tested; CRD, RCBD, LSD or GLSD ANOVA first, then the rank test of the layout if an assumption fails.",
+              need = "A factorial design needs a Response and at least Factor A and Factor B, with every combination of levels observed more than once (or in blocks)."))
+
+problems_ui <- function(id, mode = NULL) {
+  ns <- NS(id); md <- if (!is.null(mode)) PS_MODES[[mode]]
+  show_role <- function(k) is.null(md) || k %in% md$roles
+  rlab <- function(k, default) md$labels[[k]] %||% default
+  tabsetPanel(id = ns("views"), type = "hidden", selected = if (is.null(md)) "list" else "edit",
     # ---------- Problem list ----------
-    tabPanelBody("list",
+    tabPanelBody("list", if (is.null(md)) tagList(
       page_head("Problem Sets", "Exercises from the course problem sheets with their complete data, solved with the step-by-step hypothesis-testing process.",
                 btn(ns("new_custom"), "Create custom problem", "plus", "bp", "bsm")),
       uiOutput(ns("resume")),
@@ -69,7 +106,7 @@ problems_ui <- function(id) {
               div(class = "ps-filter", selectInput(ns("f_family"), "Test type", c("Parametric and non-parametric" = "", "Parametric" = "param", "Non-parametric" = "nonpar"), width = "100%")),
               div(class = "ps-filter", selectInput(ns("f_ph"), "Post-hoc", c("All post-hoc types" = ""), width = "100%")),
               div(class = "ps-filter", selectInput(ns("f_group"), "Group by", c("Problem type" = "type", "Test type" = "family", "Post-hoc" = "posthoc", "No grouping" = "none"), width = "100%"))))),
-      uiOutput(ns("cards"))),
+      uiOutput(ns("cards")))),
     # ---------- One problem, step by step ----------
     tabPanelBody("detail",
       uiOutput(ns("detail_head")),
@@ -82,16 +119,20 @@ problems_ui <- function(id) {
                   tabPanelBody("13", uiOutput(ns("s13"))), tabPanelBody("14", uiOutput(ns("s14"))))),
     # ---------- Custom problem editor ----------
     tabPanelBody("edit",
-      page_head("Custom problem", "Write or paste a problem, bring in its data and say what each column is. The steps then work as for the course problems.",
-                btn(ns("edit_back"), "Back to problems", "arrowl", "bs", "bsm")),
+      if (is.null(md)) page_head("Custom problem", "Write or paste a problem, bring in its data and say what each column is. The steps then work as for the course problems.",
+                btn(ns("edit_back"), "Back to problems", "arrowl", "bs", "bsm"))
+      else page_head(md$title, md$sub),
       div(class = "split wide",
           div(class = "col",
-              kcard(div(class = "hrow", div(class = "ps-stepn", "1"), h2(class = "ct", "Problem statement")),
+              kcard(div(class = "hrow", div(class = "ps-stepn", "1"), h2(class = "ct", if (is.null(md)) "Problem statement" else "Your question (optional)")),
                     div(style = "margin-top:12px", textInput(ns("c_title"), "Title", placeholder = "For example: Tensile strength of four mixing techniques")),
-                    div(style = "margin-top:12px", textAreaInput(ns("c_statement"), "Statement and questions", rows = 7, width = "100%",
+                    div(style = "margin-top:12px", textAreaInput(ns("c_statement"), if (is.null(md)) "Statement and questions" else "What you want to find out", rows = if (is.null(md)) 7 else 4, width = "100%",
                                                                  placeholder = "Paste the full problem. Writing α (for example α = 0.01), μ0 = … or σ = … lets the steps fill them in."))),
               kcard(div(class = "hrow", div(class = "ps-stepn", "2"), h2(class = "ct", "Dataset")),
-                    div(style = "margin-top:12px", seg_input(ns("c_src"), c("Paste" = "paste", "Upload a file" = "upload", "Class example" = "example"), "paste")),
+                    div(style = "margin-top:12px", seg_input(ns("c_src"), c(if (!is.null(md)) c("Data Studio" = "ds"), "Paste" = "paste", "Upload a file" = "upload", "Class example" = "example"), if (is.null(md)) "paste" else "ds")),
+                    conditionalPanel("input.c_src == 'ds'", ns = ns, div(class = "hrow", style = "margin-top:12px;align-items:flex-end",
+                      div(style = "flex:1;min-width:220px", selectInput(ns("c_ds"), NULL, character(0), width = "100%")),
+                      btn(ns("c_use_ds"), "Use this dataset", "check", "bs", "bsm"))),
                     conditionalPanel("input.c_src == 'paste'", ns = ns, div(style = "margin-top:12px",
                       textAreaInput(ns("c_paste"), NULL, rows = 6, width = "100%", placeholder = "Paste from Excel or type values separated by tabs or commas.\nFirst row = column names, for example:\nTechnique\tStrength\n1\t3129\n1\t3000\n2\t3200"),
                       div(class = "hrow", style = "margin-top:8px", checkboxInput(ns("c_header"), "First row holds column names", TRUE), div(class = "ml"), btn(ns("c_use_paste"), "Use pasted data", "check", "bs", "bsm")))),
@@ -105,29 +146,36 @@ problems_ui <- function(id) {
                     p(class = "small", style = "margin:8px 0 0", "Edit cells directly. Right-click the grid to add or remove rows."))),
           div(class = "col",
               kcard(div(class = "hrow", div(class = "ps-stepn", "3"), h2(class = "ct", "What each column is")),
-                    p(class = "small", style = "margin:6px 0 12px", "One sample: a Response only. Two or more groups: a Response and a Group (treatment). Paired data or a randomized block design: also the Block or pair ID. A Latin square: a Row and a Column (and a Greek letter for a Graeco-Latin square) instead of the block. A factorial experiment: Factor A, Factor B (and Factor C), each with at least two observations in every combination."),
+                    p(class = "small", style = "margin:6px 0 12px", if (is.null(md)) "One sample: a Response only. Two or more groups: a Response and a Group (treatment). Paired data or a randomized block design: also the Block or pair ID. A Latin square needs Row and Column (and a Greek letter for a Graeco-Latin square). A factorial design needs Factor A and Factor B (and Factor C). The response is always a number." else md$need),
                     div(class = "col", style = "gap:12px",
-                        selectInput(ns("c_response"), "Response (numeric)", NULL), selectInput(ns("c_treatment"), "Group, treatment or Factor A column", NULL),
-                        div(class = "grid g2", style = "gap:12px",
-                            selectInput(ns("c_factorB"), "Factor B (factorial)", NULL), selectInput(ns("c_factorC"), "Factor C (three-factor)", NULL)),
-                        selectInput(ns("c_block"), "Block or pair ID (paired samples, RCBD)", NULL),
-                        div(class = "grid g3", style = "gap:12px",
-                            selectInput(ns("c_row"), "Row (Latin square)", NULL), selectInput(ns("c_column"), "Column (Latin square)", NULL),
-                            selectInput(ns("c_greek"), "Greek letter (Graeco-Latin)", NULL)),
-                        uiOutput(ns("c_control_ui")),
-                        checkboxInput(ns("c_variance"), "The question is about a variance, not a mean (one sample)", FALSE))),
+                        selectInput(ns("c_response"), "Response (numeric)", NULL),
+                        if (show_role("treatment")) selectInput(ns("c_treatment"), rlab("treatment", "Group, treatment or Factor A column"), NULL),
+                        if (show_role("factorB") || show_role("factorC")) div(class = "grid g2", style = "gap:12px",
+                            if (show_role("factorB")) selectInput(ns("c_factorB"), rlab("factorB", "Factor B (factorial)"), NULL),
+                            if (show_role("factorC")) selectInput(ns("c_factorC"), rlab("factorC", "Factor C (three-factor)"), NULL)),
+                        if (show_role("block")) selectInput(ns("c_block"), rlab("block", "Block or pair ID (paired samples, RCBD)"), NULL),
+                        if (show_role("row") || show_role("column") || show_role("greek")) div(class = "grid g3", style = "gap:12px",
+                            if (show_role("row")) selectInput(ns("c_row"), rlab("row", "Row (Latin square)"), NULL),
+                            if (show_role("column")) selectInput(ns("c_column"), rlab("column", "Column (Latin square)"), NULL),
+                            if (show_role("greek")) selectInput(ns("c_greek"), rlab("greek", "Greek letter (Graeco-Latin)"), NULL)),
+                        if (is.null(md) || length(intersect(md$roles, "treatment"))) uiOutput(ns("c_control_ui")),
+                        if (is.null(md) || identical(mode, "one")) checkboxInput(ns("c_variance"), "The question is about a variance, not a mean (one sample)", FALSE))),
               uiOutput(ns("c_check")),
-              btn(ns("c_go"), "Continue to the steps", "arrowr", "bp", "blg"))))
+              btn(ns("c_go"), if (is.null(md)) "Continue to the steps" else "Start the 5 steps", "arrowr", "bp", "blg"))))
   )
 }
 
-problems_server <- function(id, store, show_crumb, open_design = NULL) {
+problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    md <- if (!is.null(mode)) PS_MODES[[mode]]
+    ud <- new.env()   # the seed of the problem in the editor (per page: pages must not share it)
     sel <- reactiveVal(NULL)
     custom <- reactiveVal(NULL)
     memo <- reactiveValues()
     cdata <- reactiveVal(NULL)
+    paired_hint <- reactiveVal(FALSE)
+    method_hint <- reactiveVal(NULL)
     crev <- reactiveVal(0)
     keyn <- reactiveVal(0)
     # The problem being worked on. Inputs carry the problem key in their ids, so a value typed
@@ -140,10 +188,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
 
     view <- function(v, crumb = NULL) {
       updateTabsetPanel(session, "views", selected = v)
-      show_crumb(crumb %||% c("Design of experiments", "Problem Sets"))
+      show_crumb(crumb %||% (if (!is.null(mode)) PAGE_CRUMB[[mode]] else c("Design of experiments", "Problem Sets")))
       session$sendCustomMessage("scroll_top", list())
     }
-    prob_label <- function(m) if (identical(m$id, "custom")) (if (nzchar(m$title %||% "")) m$title else "Custom problem") else sprintf("Problem %s", m$id)
+    prob_label <- function(m) if (identical(m$id, "custom")) (if (nzchar(m$title %||% "")) m$title else if (!is.null(md)) md$title else "Custom problem") else sprintf("Problem %s", m$id)
     # Data the student edited in a problem replace the printed values (kept per problem until reset).
     edits <- reactiveValues()
     meta_of <- function(i) {
@@ -262,10 +310,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       cur$key <- paste0(gsub("[^A-Za-z0-9]", "", i), "k", isolate(keyn()))
       sel(i)
       go(step %||% sv$step %||% 1, scroll = FALSE)
-      view("detail", c("Design of experiments", "Problem Sets", prob_label(m)))
+      view("detail", if (!is.null(mode)) PAGE_CRUMB[[mode]] else c("Design of experiments", "Problem Sets", prob_label(m)))
     }
     observeEvent(input$pick, open_problem(input$pick))
-    observeEvent(input$back, { save_cur(); view("list") })
+    observeEvent(input$back, { save_cur(); view(if (is.null(mode)) "list" else "edit") })
 
     # ---------- Live settings from the step inputs ----------
     observe({
@@ -413,8 +461,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     # ---------- Header and stepper ----------
     output$detail_head <- renderUI({
       m <- cur$meta; req(m)
-      page_head(prob_label(m), if (identical(m$id, "custom")) "Your own problem" else m$title,
-                btn(ns("back"), "All problems", "arrowl", "bs", "bsm"),
+      page_head(prob_label(m), if (!is.null(md)) sprintf("%s · your own data", md$title) else if (identical(m$id, "custom")) "Your own problem" else m$title,
+                btn(ns("back"), if (is.null(md)) "All problems" else "Change data or columns", "arrowl", "bs", "bsm"),
                 if (identical(m$id, "custom")) btn(ns("edit_custom"), "Edit problem", "edit", "bs", "bsm"),
                 downloadButton(ns("dl_solution"), label = tagList(icon("download", 15), "Download solution (PDF)"), icon = NULL, class = "btn-k bs bsm"),
                 pin_button(ns))
@@ -1051,7 +1099,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       }),
       src = reactive({
         r <- cur$res; m <- cur$meta
-        list(key = paste0("problem_", gsub("[^A-Za-z0-9]", "_", m$id)), label = sprintf("%s · %s", prob_label(m), r$t$name),
+        list(key = paste0("problem_", gsub("[^A-Za-z0-9]", "_", m$id), if (!is.null(mode)) paste0("_", mode)), label = sprintf("%s · %s", prob_label(m), r$t$name),
              title = if (identical(m$id, "custom")) prob_label(m) else sprintf("Problem %s: %s", m$id, m$title),
              subtitle = sprintf("%s · α = %s", r$t$name, format(r$alpha)), dataset = prob_label(m), notes = c(m$source %||% "", m$note %||% character(0)), code = "")
       }))
@@ -1063,7 +1111,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     NO_ROLE <- ".none"
     set_roles <- function(df, roles = NULL) {
       ch <- c("(none)" = NO_ROLE, names(df))
-      if (is.null(roles)) roles <- ps_guess_roles(df)
+      if (is.null(roles)) roles <- if (is.null(mode)) ps_guess_roles(df) else ps_guess_roles_mode(df, mode, isTRUE(paired_hint()))
       for (k in names(role_ids)) {
         v <- roles[[k]] %||% ""
         updateSelectInput(session, role_ids[[k]], choices = ch, selected = if (nzchar(v) && v %in% names(df)) v else NO_ROLE)
@@ -1080,12 +1128,12 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
         updateTextInput(session, "c_title", value = seed$title)
         updateTextAreaInput(session, "c_statement", value = seed$statement)
         updateCheckboxInput(session, "c_variance", value = identical(seed$target, "variance"))
-        session$userData$ps_seed <- seed
+        ud$ps_seed <- seed
         load_data(seed$data, seed$roles)
       }
-      view("edit", c("Design of experiments", "Problem Sets", "Custom problem"))
+      view("edit", if (!is.null(mode)) PAGE_CRUMB[[mode]] else c("Design of experiments", "Problem Sets", "Custom problem"))
     }
-    observeEvent(input$new_custom, { if (is.null(custom())) session$userData$ps_seed <- NULL; open_editor() })
+    observeEvent(input$new_custom, { if (is.null(custom())) ud$ps_seed <- NULL; open_editor() })
     observeEvent(input$edit_custom, open_editor())
     observeEvent(input$edit_this, {
       m <- cur$meta; req(m)
@@ -1231,7 +1279,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     })
     cmeta <- reactive({
       df <- cdata(); req(df)
-      txt <- input$c_statement %||% ""; seed <- session$userData$ps_seed
+      txt <- input$c_statement %||% ""; seed <- ud$ps_seed
       s <- modifyList(list(alpha = 0.05, alt = "two.sided"), seed$settings %||% list())
       det <- ps_detect_settings(txt)
       for (k in names(det)) if (is.null(seed$settings[[k]])) s[[k]] <- det[[k]]
@@ -1250,14 +1298,30 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       if (is.null(df) || !nzchar(trt)) return(NULL)
       lv <- unique(trimws(as.character(df[[trt]]))); lv <- lv[!is.na(lv) & nzchar(lv)]
       if (length(lv) < 3) return(NULL)
-      seed <- session$userData$ps_seed$control
+      seed <- ud$ps_seed$control
       selectInput(ns("c_control"), "Control group, if the problem names one (enables Dunnett's test)", c("(no control group)" = NO_ROLE, stats::setNames(lv, lv)),
                   if (!is.null(seed) && seed %in% lv) seed else NO_ROLE, width = "100%")
     })
+    # An analysis page accepts only its own layouts: the message says what the chosen columns form instead.
+    mode_wrong <- function(kind, st) {
+      if (is.null(md) || is.na(kind) || kind %in% md$kinds) return(NULL)
+      extra <- if (identical(mode, "two") && identical(kind, "k")) sprintf(" Your Group column has %d levels: use the k samples or CRD page.", st$ntrt %||% 0)
+               else if (identical(mode, "two") && identical(kind, "rcbd")) " For paired data every pair needs exactly one observation per group."
+               else if (mode %in% c("k", "crd") && identical(kind, "two")) " Two groups are compared on the Two samples page."
+               else if (mode %in% c("k", "crd") && kind %in% c("rcbd", "paired")) " Set Block to (none) for a completely randomized design, or use the RCBD page."
+               else if (mode == "rcbd" && identical(kind, "k")) " Choose the Block column."
+               else if (mode == "lsd" && identical(kind, "glsd")) " Set the Greek letter to (none), or use the Graeco-Latin Square page."
+               else if (mode == "glsd" && identical(kind, "latin")) " Choose the Greek letter column, or use the Latin Square page."
+               else if (mode == "one" && !identical(kind, "one")) " Use the Two samples or k samples page for grouped data."
+               else ""
+      sprintf("This page analyses %s, but the columns you chose form %s. %s%s", tolower(md$title), tolower(PS_KIND_LABEL[[kind]]), md$need, extra)
+    }
     output$c_check <- renderUI({
       df <- cdata()
       if (is.null(df)) return(note(kind = "i", ic = "info", "Bring in a dataset to see the data checks."))
       m <- cmeta(); st <- ps_structure(m$data, m$roles); kind <- ps_kind(st, m)
+      wrong <- mode_wrong(kind, st)
+      if (!is.null(wrong)) return(kcard(h3(class = "ct", "Data checks"), note(kind = "e", ic = "alert", wrong)))
       wide <- !nzchar(m$roles$treatment) && sum(vapply(df, function(x) { v <- x[!is.na(x)]; length(v) > 0 && all(!is.na(suppressWarnings(as.numeric(v)))) }, TRUE)) >= 2
       kcard(h3(class = "ct", "Data checks"),
             if (is.na(kind)) note(kind = "e", ic = "alert", ps_kind_problem(kind, st))
@@ -1274,17 +1338,42 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       if (is.null(df) || !nrow(df)) { showNotification("Add a dataset first: paste it, upload a file or load a class example.", type = "error"); return() }
       m <- cmeta(); st <- ps_structure(m$data, m$roles); kind <- ps_kind(st, m)
       if (is.na(kind)) { showNotification(ps_kind_problem(kind, st), type = "error", duration = 10); return() }
+      wrong <- mode_wrong(kind, st); if (!is.null(wrong)) { showNotification(wrong, type = "error", duration = 12); return() }
       custom(m); memo[["custom"]] <- NULL; if (identical(isolate(cur$id), "custom")) cur$id <- NULL
       open_problem("custom", step = 1)
     })
 
+    # ---------- Datasets from Data Studio (analysis pages) ----------
+    use_ds <- function(id) {
+      ds <- store$datasets[[id]]; req(ds)
+      load_data(drop_empty_rows(ds$data))
+      if (!nzchar(isolate(input$c_title) %||% "")) updateTextInput(session, "c_title", value = ds$name)
+      updateSelectInput(session, "c_ds", selected = id)
+    }
+    if (!is.null(mode)) {
+      observe({
+        dss <- store$datasets; ch <- if (length(dss)) stats::setNames(names(dss), vapply(dss, function(d) d$name, "")) else character(0)
+        updateSelectInput(session, "c_ds", choices = if (length(ch)) ch else c("(no dataset yet: add one in Data Studio)" = ""), selected = isolate(store$active))
+      })
+      observeEvent(input$c_use_ds, { req(nzchar(input$c_ds %||% "")); use_ds(input$c_ds) })
+      # the first time the page opens with a dataset already in Data Studio, use the active one
+      observeEvent(store$active, { if (is.null(isolate(cdata())) && !is.null(store$active)) use_ds(store$active) }, ignoreNULL = TRUE)
+    }
+
     # ---------- For Ask Professor Riaz ----------
-    list(ai = function(full) {
+    c(list(
+      use_dataset = function(id) { use_ds(id); view("edit") },
+      set_paired = function(p) { paired_hint(isTRUE(p)); if (!is.null(cdata())) set_roles(cdata()) },
+      set_method = function(m) method_hint(m),
+      get_state = function() NULL, set_state = function(x) invisible(NULL)),
+      list(ai = function(full) {
       i <- cur$id
+      if (is.null(i) && !is.null(md)) return(list(label = sprintf("the %s page", md$title), kind = "general",
+        text = if (full) sprintf("%s page: the student is choosing the dataset and what each column is. %s", md$title, md$need)))
       if (is.null(i)) return(list(label = "the Problem Sets list", kind = "general", text = if (full) "The student is browsing the Problem Sets list (Chapter 2 one- and two-sample problems, Chapter 3 CRD (one-way ANOVA) problems, Chapter 4 blocked designs: RCBD, Latin square and Graeco-Latin square, and Chapter 5 factorial designs)."))
       m <- cur$meta; n <- cur$step; r <- isolate(cur$res)
       list(label = sprintf("%s, %s", prob_label(m), ps_step_name(n, cur$kind)), kind = "general",
-           text = if (full) paste0("Problem Sets page, hypothesis-testing steps. ", prob_label(m), " (", PS_KIND_LABEL[[cur$kind]], "). The student is on ",
+           text = if (full) paste0(if (!is.null(md)) sprintf("%s page, hypothesis-testing steps on the student's own data. ", md$title) else "Problem Sets page, hypothesis-testing steps. ", prob_label(m), " (", PS_KIND_LABEL[[cur$kind]], "). The student is on ",
                                    ps_step_name(n, cur$kind), ". Statement: ", paste(c(m$statement, m$parts), collapse = " "),
                                    " Data (first rows): ", paste(utils::capture.output(print(utils::head(m$data, 12), row.names = FALSE)), collapse = "\n"),
                                    if (ps_is_fact(isolate(cur$kind))) paste0(" Hypotheses by effect: ", paste(vapply(names(isolate(cur$fh)), function(cd) sprintf("%s: H1 %s", cd, isolate(cur$fh)[[cd]]$h1), ""), collapse = " | "), " alpha = ", format(isolate(cur$s$alpha)), ".")
@@ -1293,7 +1382,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
                                    else if (!is.null(r)) { d <- ps_decision(r, isolate(cur$h1) %||% ""); paste0(" Test: ", r$t$name, ", ", r$t$stat_name, " = ", ps_fmt(r$t$stat, 4), ", ", ps_pe(r$p), ". ", d$conclusion) }
                                    else " The test has not been run yet.",
                                    { rn <- isolate(cur$res_np); if (!is.null(rn)) paste0(" ", rn$t$name, " (after a failed assumption): ", rn$t$stat_name, " = ", ps_fmt(rn$t$stat, 4), ", ", ps_pe(rn$p), ".") else "" }))
-    })
+    }))
   })
 }
 
@@ -1312,6 +1401,30 @@ ps_guess_roles <- function(df) {
   if (!nzchar(trt)) { rest <- setdiff(intersect(cat, pool), blk); if (length(rest)) trt <- rest[1] }
   if (nzchar(blk) && !nzchar(trt)) { trt <- blk; blk <- "" }
   list(response = resp, treatment = trt, block = blk, row = "", column = "", greek = "")
+}
+
+# First guess at the roles for an analysis page, from the columns and what the page needs.
+ps_guess_roles_mode <- function(df, mode, paired = FALSE) {
+  md <- PS_MODES[[mode]]; base <- ps_guess_roles(df)
+  resp <- base$response; pool <- setdiff(names(df), resp)
+  pool <- pool[!grepl("^column \\d+$", tolower(pool)) | length(pool) <= 2]
+  out <- list(response = resp, treatment = "", factorB = "", factorC = "", block = "", row = "", column = "", greek = "")
+  take <- function(pat) { h <- pool[grepl(pat, tolower(pool))]; if (length(h)) { pool <<- setdiff(pool, h[1]); h[1] } else "" }
+  nextcol <- function() if (length(pool)) { x <- pool[1]; pool <<- pool[-1]; x } else ""
+  switch(mode,
+    one = NULL,
+    two = , k = , crd = { out$treatment <- if (nzchar(base$treatment) && base$treatment %in% pool) { pool <- setdiff(pool, base$treatment); base$treatment } else nextcol()
+      if (mode == "two" && paired) out$block <- if (nzchar(base$block) && base$block %in% pool) base$block else nextcol() },
+    rcbd = { out$treatment <- if (nzchar(base$treatment)) base$treatment else nextcol(); pool <- setdiff(pool, out$treatment)
+             out$block <- if (nzchar(base$block) && base$block != out$treatment) base$block else nextcol() },
+    lsd = , glsd = { out$row <- take("^row|^lot|^batch"); out$column <- take("^col|^operator|^day"); out$treatment <- take("treat|letter|latin|method|fertili|formul|catalyst")
+                     if (mode == "glsd") out$greek <- take("greek|^workplace|^catalyst")
+                     for (k in c("row", "column", "treatment", if (mode == "glsd") "greek")) if (!nzchar(out[[k]])) out[[k]] <- nextcol() },
+    fact = { out$treatment <- nextcol(); out$factorB <- nextcol()
+             rest <- pool[!grepl("rep|block", tolower(pool))]
+             if (length(rest) && length(unique(df[[rest[1]]])) <= 5) out$factorC <- ""   # a third factor is left to the student
+             out$block <- take("^block") })
+  out
 }
 
 # Settings that can be read from a typed problem statement.

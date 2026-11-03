@@ -34,48 +34,6 @@ fmt_df <- function(df) {
   out
 }
 
-# What a CRD, RCBD, Latin or Graeco-Latin result can add to the report.
-doe_pin_items <- function(r, ph_m, letter_m) {
-  an <- r$anova; tab <- an$table; ph <- r$posthoc$treatment; asm <- r$assumptions
-  trt <- r$names$treatment
-  it <- list(
-    anova = list(label = "ANOVA table", default = TRUE, build = function() mk_pin("table", "ANOVA table", "table",
-      df = data.frame(Source = c(tab$source, "Residuals", "Total"), df = c(tab$df, an$dfe, an$dft),
-                      `Sum of squares` = fmt_num(c(tab$ss, an$sse, an$sst)), `Mean square` = c(fmt_num(tab$ms), fmt_num(an$mse), ""),
-                      F = c(fmt_g(tab$F), "", ""), `p-value` = c(fmt_p(tab$p), "", ""), check.names = FALSE))),
-    means_plot = list(label = "Mean plot with letters", default = TRUE, build = function()
-      mk_pin("plot", "Mean plot with letters", "bar", plot = plot_means(r, "treatment", letter_m), h = 3.6)),
-    assump = list(label = "Assumption checks", default = TRUE, build = function() {
-      parts <- list(Normality = asm$normal, `Constant variance` = asm$variance, Independence = asm$indep)
-      st <- c(Normality = "normality", `Constant variance` = "variance", Independence = "independence")
-      df <- do.call(rbind, lapply(names(parts), function(k) { x <- parts[[k]]
-        data.frame(Check = c(k, rep("", nrow(x) - 1)), Test = x$test,
-                   Statistic = ifelse(is.na(x$value), "—", sprintf("%s = %s", x$statistic, fmt_g(x$value, 3))), `p-value` = fmt_p(x$p),
-                   Result = c(c(pass = "Pass", borderline = "Borderline", fail = "Fail", na = "Not available")[[asm$status[[st[[k]]]]]], rep("", nrow(x) - 1)),
-                   check.names = FALSE) }))
-      mk_pin("table", "Assumption checks", "scale", df = df) }),
-    posthoc = list(label = sprintf("%s table", POSTHOC_NAMES[[ph_m]]), default = TRUE, build = function() {
-      x <- ph$methods[[ph_m]]
-      mk_pin("table", sprintf("%s table", POSTHOC_NAMES[[ph_m]]), "columns",
-             df = data.frame(Comparison = x$pair, Difference = fmt_g(x$diff), CI = sprintf("[%s, %s]", fmt_g(x$lwr), fmt_g(x$upr)),
-                             `Adjusted p` = fmt_p(x$p), Result = ifelse(x$p < r$alpha, "Different", "Not different"), check.names = FALSE)) }),
-    means = list(label = sprintf("Means by %s with letters", trt), default = FALSE, build = function() {
-      m <- ph$means; lt <- ph$letters[[letter_m]]
-      mk_pin("table", sprintf("Means by %s", trt), "table",
-             df = setNames(data.frame(m$level, m$n, fmt_g(m$mean), fmt_g(m$sd), sprintf("[%s, %s]", fmt_g(m$lwr), fmt_g(m$upr)), unname(lt[as.character(m$level)] %||% "")),
-                           c(trt, "n", "Mean", "SD", sprintf("%g%% CI", 100 * r$conf), "Group"))) }),
-    box = list(label = "Box plot", default = FALSE, build = function() mk_pin("plot", sprintf("Box plot by %s", trt), "bar", plot = plot_box(r, "treatment"), h = 3.4)),
-    qq = list(label = "Normal QQ plot of residuals", default = FALSE, build = function() mk_pin("plot", "Normal QQ plot of residuals", "trend", plot = plot_qq(r), h = 3)),
-    rvf = list(label = "Residuals vs fitted", default = FALSE, build = function() mk_pin("plot", "Residuals vs fitted", "trend", plot = plot_rvf(r), h = 3)))
-  if (!is.null(r$nonpar$main)) it$nonpar <- list(label = sprintf("Non-parametric test (%s)", r$nonpar$main$name), default = r$recommend == "nonpar",
-    build = function() { m <- r$nonpar$main
-      mk_pin("table", "Non-parametric test", "shuffle", df = data.frame(Test = m$name, Statistic = fmt_g(m$stat, 3), df = format(m$df %||% ""), `p-value` = fmt_p(m$p), check.names = FALSE)) })
-  it$interp <- list(label = "Interpretation", default = TRUE, build = function() mk_pin("text", "Interpretation", "file", text = interpretation(r)))
-  it
-}
-
-# ---------- Pin to report: button and modal shared by every analysis ----------
-
 pin_button <- function(ns) btn(ns("pin"), "Pin to report", "pin", size = "bsm")
 
 pin_observers <- function(input, session, store, items, src) {

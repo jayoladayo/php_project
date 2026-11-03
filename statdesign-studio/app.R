@@ -33,7 +33,7 @@ options(shiny.maxRequestSize = 50 * 1024^2)
 # categories and filters open instantly.
 invisible(lapply(PROBLEMS, ps_classify))
 
-PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "planner", "report", "learn", "team")
+PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "fact", "planner", "report", "learn", "team")
 
 JUMP_CHOICES <- c(
   "Home" = "home", "Test Advisor" = "advisor", "Data Studio: upload a file" = "data",
@@ -41,7 +41,7 @@ JUMP_CHOICES <- c(
   "k samples (one-way ANOVA, Kruskal-Wallis)" = "k",
   "Problem Sets: Chapter 2 to 5 exercises, custom problems" = "problems",
   "CRD: Completely Randomized Design" = "crd", "RCBD: Randomized Complete Block Design" = "rcbd",
-  "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd",
+  "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd", "Factorial designs: two- and three-factor, interactions" = "fact",
   "Design Planner: randomised layouts" = "planner", "Report builder" = "report", "Learn: method guides" = "learn",
   "About the team (Group 4), aim and objectives" = "team")
 
@@ -73,14 +73,15 @@ ui <- page(
                 tabPanelBody("advisor", advisor_ui("advisor")),
                 tabPanelBody("data", data_studio_ui("data")),
                 tabPanelBody("desc", desc_ui("desc")),
-                tabPanelBody("one", cmp_ui("one", "one")),
-                tabPanelBody("two", cmp_ui("two", "two")),
-                tabPanelBody("k", cmp_ui("k", "k")),
+                tabPanelBody("one", problems_ui("one", "one")),
+                tabPanelBody("two", problems_ui("two", "two")),
+                tabPanelBody("k", problems_ui("k", "k")),
                 tabPanelBody("problems", problems_ui("problems")),
-                tabPanelBody("crd", doe_ui("crd", DESIGNS$CRD)),
-                tabPanelBody("rcbd", doe_ui("rcbd", DESIGNS$RCBD)),
-                tabPanelBody("lsd", doe_ui("lsd", DESIGNS$LSD)),
-                tabPanelBody("glsd", doe_ui("glsd", DESIGNS$GLSD)),
+                tabPanelBody("crd", problems_ui("crd", "crd")),
+                tabPanelBody("rcbd", problems_ui("rcbd", "rcbd")),
+                tabPanelBody("lsd", problems_ui("lsd", "lsd")),
+                tabPanelBody("glsd", problems_ui("glsd", "glsd")),
+                tabPanelBody("fact", problems_ui("fact", "fact")),
                 tabPanelBody("planner", planner_ui("planner")),
                 tabPanelBody("report", report_ui("report")),
                 tabPanelBody("learn", learn_ui("learn")),
@@ -118,22 +119,17 @@ server <- function(input, output, session) {
       store$datasets[[ds$id]] <- ds; n <- n + 1; last <- ds$id
     }
     if (n) { store$active <- last; store$grid_rev <- store$grid_rev + 1 }
-    for (k in names(doe)) if (!is.null(p$analyses[[k]])) doe[[k]]$set_state(json_state(p$analyses[[k]]))
     showNotification(sprintf("Opened project with %d dataset%s.", n, if (n == 1) "" else "s"), type = "message")
   }
 
   data_studio_server("data", store, goto, open_project)
-  doe <- list(
-    crd = doe_server("crd", DESIGNS$CRD, store, goto),
-    rcbd = doe_server("rcbd", DESIGNS$RCBD, store, goto),
-    lsd = doe_server("lsd", DESIGNS$LSD, store, goto),
-    glsd = doe_server("glsd", DESIGNS$GLSD, store, goto)
-  )
-
-  cmp <- list(one = cmp_server("one", "one", store, goto), two = cmp_server("two", "two", store, goto), k = cmp_server("k", "k", store, goto))
+  # The analysis pages run the same five-step process as the Problem Sets, on the student's own data.
+  crumb <- function(cr) session$sendCustomMessage("crumb", list(crumb = cr))
+  PAGE_MODES <- c("one", "two", "k", "crd", "rcbd", "lsd", "glsd", "fact")
+  pages <- stats::setNames(lapply(PAGE_MODES, function(m) problems_server(m, store, show_crumb = crumb, mode = m)), PAGE_MODES)
 
   desc <- desc_server("desc", store)
-  advisor_server("advisor", goto, function(page, m) cmp[[page]]$set_method(m))
+  advisor_server("advisor", goto, function(page, m) pages[[page]]$set_method(m))
 
   problems <- problems_server("problems", store, show_crumb = function(cr) session$sendCustomMessage("crumb", list(crumb = cr)),
     open_design = function(df, title) {
@@ -159,7 +155,7 @@ server <- function(input, output, session) {
   observe(session$sendCustomMessage("badge", list(id = "report-count", n = length(store$pins))))
 
   # Ask Professor Riaz: each page tells the assistant what it is showing.
-  ai_fns <- c(lapply(doe, `[[`, "ai"), lapply(cmp, `[[`, "ai"),
+  ai_fns <- c(lapply(pages, `[[`, "ai"),
               list(desc = desc$ai, planner = planner$ai, learn = learn$ai, problems = problems$ai,
                    report = function(full) {
                      pins <- store$pins
@@ -171,9 +167,8 @@ server <- function(input, output, session) {
 
   observeEvent(goto(), {
     g <- goto()
-    if (!is.null(g$dataset) && g$page %in% names(doe)) doe[[g$page]]$use_dataset(g$dataset)
-    if (!is.null(g$dataset) && g$page %in% names(cmp)) cmp[[g$page]]$use_dataset(g$dataset)
-    if (!is.null(g$paired) && g$page == "two") cmp$two$set_paired(g$paired)
+    if (!is.null(g$paired) && g$page == "two") pages$two$set_paired(g$paired)
+    if (!is.null(g$dataset) && g$page %in% names(pages)) pages[[g$page]]$use_dataset(g$dataset)
     show_page(g$page)
   })
 
@@ -217,8 +212,7 @@ server <- function(input, output, session) {
         id = d$id, name = d$name, columns = names(d$data), data = unname(as.list(d$data)),
         types = unname(as.list(d$types[names(d$data)])), source = d$source, sheet = d$sheet, file = d$file,
         notes = as.list(d$notes), ignored = as.list(d$ignored)))
-      an <- lapply(doe, function(m) m$get_state())
-      jsonlite::write_json(list(app = "StatDesign Studio", version = 1, saved = format(Sys.time()), datasets = dss, analyses = an),
+      jsonlite::write_json(list(app = "StatDesign Studio", version = 1, saved = format(Sys.time()), datasets = dss, analyses = list()),
                            file, auto_unbox = TRUE, null = "null", na = "null", digits = NA, pretty = TRUE)
     })
 }
