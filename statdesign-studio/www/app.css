@@ -744,3 +744,42 @@ body.touring { overflow-anchor: none; }
 .ps-pdf { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--green); padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; }
 .ps-pdf:hover { background: var(--green); color: #fff; border-color: var(--green); }
 .ps-pdf svg { flex: none; }
+
+/* ---------- Arabic: right-to-left layout ---------- */
+html[dir="rtl"] body, html[dir="rtl"] .app { font-family: 'Cairo', 'Poppins', system-ui, sans-serif; }
+html[dir="rtl"] { --rtl-flip: -1; }
+html[dir="rtl"] .side .ct, html[dir="rtl"] .hrow .ml, html[dir="rtl"] .ps-nav .ml, html[dir="rtl"] .hero .stats { margin-left: 0; margin-right: auto; }
+html[dir="rtl"] table.kt th, html[dir="rtl"] .adv-opt, html[dir="rtl"] .adv-alt, html[dir="rtl"] .pgrid tbody th,
+html[dir="rtl"] .riaz-sug .chip, html[dir="rtl"] .tour-menu button, html[dir="rtl"] .ps-empty.left { text-align: right; }
+html[dir="rtl"] table.kt .n, html[dir="rtl"] .kv-row span:last-child { text-align: left; }
+html[dir="rtl"] .shiny-notification-message, html[dir="rtl"] .shiny-notification-warning, html[dir="rtl"] .shiny-notification-error,
+html[dir="rtl"] .ps-decision.rej, html[dir="rtl"] .ps-decision.keep { border-left: 0; }
+html[dir="rtl"] .shiny-notification-message, html[dir="rtl"] .ps-decision.rej { border-right: 4px solid var(--green); }
+html[dir="rtl"] .shiny-notification-warning { border-right: 4px solid var(--stone); }
+html[dir="rtl"] .shiny-notification-error { border-right: 4px solid var(--fail); }
+html[dir="rtl"] .ps-decision.keep { border-right: 4px solid var(--petrol); }
+html[dir="rtl"] #shiny-notification-panel { right: auto; left: 18px; }
+html[dir="rtl"] .ps-parts, html[dir="rtl"] .ps-process ol, html[dir="rtl"] .tm-obj, html[dir="rtl"] .riaz-msg .bubble ul, html[dir="rtl"] .riaz-msg .bubble ol { padding-left: 0; padding-right: 22px; }
+html[dir="rtl"] .ps-gd { margin-left: 0; margin-right: 24px; }
+html[dir="rtl"] .ps-fold-note { margin-left: 0; margin-right: 4px; }
+html[dir="rtl"] .riaz-fab { right: auto; left: 22px; }
+html[dir="rtl"] .riaz-panel { right: auto; left: 0; }
+html[dir="rtl"] .rz-copy, html[dir="rtl"] .tour-x { right: auto; left: 8px; }
+html[dir="rtl"] .tm-badge { left: auto; right: 12px; }
+/* arrows point the other way */
+html[dir="rtl"] .nav-item svg, html[dir="rtl"] .crumb svg, html[dir="rtl"] .ps-nav .btn-k svg, html[dir="rtl"] .btn-k svg.ic-arrowr, html[dir="rtl"] .btn-k svg.ic-arrowl { }
+html[dir="rtl"] .ps-nav .btn-k svg, html[dir="rtl"] .crumb svg, html[dir="rtl"] .ps-chev { transform: scaleX(-1); }
+/* numbers, formulas, code and the data stay left-to-right */
+html[dir="rtl"] .am-formula, html[dir="rtl"] pre, html[dir="rtl"] code, html[dir="rtl"] .katex, html[dir="rtl"] .formula,
+html[dir="rtl"] textarea, html[dir="rtl"] input[type="text"], html[dir="rtl"] input[type="number"], html[dir="rtl"] .gridbox, html[dir="rtl"] .ps-data table {
+  direction: ltr; text-align: left; }
+html[dir="rtl"] .ps-statement, html[dir="rtl"] .ps-parts { direction: ltr; text-align: left; }
+html[dir="rtl"] .ps-hyp textarea { direction: rtl; text-align: right; }
+html[dir="rtl"] .tscroll table { direction: rtl; }
+html[dir="rtl"] .ps-num { direction: rtl; }
+html[dir="rtl"] .lang-btn { font-family: 'Poppins', 'Cairo', sans-serif; }
+html[dir="rtl"] .tour-card, html[dir="rtl"] .tour-menu, html[dir="rtl"] .tour-nudge { direction: rtl; text-align: right; }
+@media (max-width: 900px) {
+  html[dir="rtl"] .side { left: auto; right: 0; transform: translateX(100%); }
+  html[dir="rtl"] .app.nav-open .side { transform: none; }
+}

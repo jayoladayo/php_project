@@ -54,12 +54,14 @@ ui <- page(
   title = "StatDesign Studio",
   tags$head(
     tags$link(rel = "preconnect", href = "https://fonts.googleapis.com"),
-    tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap"),
+    tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&family=Cairo:wght@400;500;600;700&display=swap"),
     tags$link(rel = "stylesheet", href = "app.css"),
     tags$link(rel = "icon", href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23DAC961'/%3E%3Cpath d='M12 18V10M17 18V6M7 18v-4' stroke='%2300573F' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"),
     tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"),
     tags$script(src = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js", defer = NA),
+    tags$script(HTML(sprintf("window.SDS_I18N = %s;", i18n_json()))),
     tags$script(src = "app.js"),
+    tags$script(src = "i18n.js"),
     tags$script(src = "tour.js")
   ),
   div(class = "app",
