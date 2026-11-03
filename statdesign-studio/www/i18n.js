@@ -103,7 +103,7 @@
     watch();
     var saved = null; try { saved = localStorage.getItem('sds-lang'); } catch (e) { /* ignore */ }
     if (saved === 'ar') setLang('ar', true);
-    else { var b = document.getElementById('lang-btn'); if (b) b.textContent = 'العربية'; }
+    else { document.documentElement.setAttribute('dir', 'ltr'); if (!document.documentElement.getAttribute('lang')) document.documentElement.setAttribute('lang', 'en'); var b = document.getElementById('lang-btn'); if (b) b.textContent = 'العربية'; }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   $(document).on('shiny:connected', function () { if (lang === 'ar' && window.Shiny) Shiny.setInputValue('lang', 'ar', { priority: 'event' }); else if (window.Shiny) Shiny.setInputValue('lang', 'en', { priority: 'event' }); });

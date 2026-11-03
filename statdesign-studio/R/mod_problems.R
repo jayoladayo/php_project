@@ -165,7 +165,7 @@ problems_ui <- function(id, mode = NULL) {
   )
 }
 
-problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NULL) {
+problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NULL, lang = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     md <- if (!is.null(mode)) PS_MODES[[mode]]
@@ -1199,7 +1199,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
 
     # ---------- Worked-solution PDF ----------
     sol_target <- reactiveVal(NULL)
-    ui_lang <- function() { l <- tryCatch(isolate(session$rootScope()$input$lang), error = function(e) NULL); if (identical(l, "ar")) "ar" else "en" }
+    ui_lang <- function() { l <- if (is.function(lang)) isolate(lang()) else NULL; if (identical(l, "ar")) "ar" else "en" }
     sol_make <- function(m, s, test, ph, file) {
       tryCatch(ps_solution_pdf(m, file, s = s, test = test, ph = ph, lang = ui_lang()), error = function(e) {
         showNotification(paste("The solution could not be built:", conditionMessage(e)), type = "error", duration = 10)

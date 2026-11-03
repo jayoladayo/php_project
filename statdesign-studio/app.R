@@ -128,19 +128,19 @@ server <- function(input, output, session) {
   # The analysis pages run the same five-step process as the Problem Sets, on the student's own data.
   crumb <- function(cr) session$sendCustomMessage("crumb", list(crumb = cr))
   PAGE_MODES <- c("one", "two", "k", "crd", "rcbd", "lsd", "glsd", "fact")
-  pages <- stats::setNames(lapply(PAGE_MODES, function(m) problems_server(m, store, show_crumb = crumb, mode = m)), PAGE_MODES)
+  pages <- stats::setNames(lapply(PAGE_MODES, function(m) problems_server(m, store, show_crumb = crumb, mode = m, lang = function() input$lang)), PAGE_MODES)
 
   desc <- desc_server("desc", store)
   advisor_server("advisor", goto, function(page, m) pages[[page]]$set_method(m))
 
-  problems <- problems_server("problems", store, show_crumb = function(cr) session$sendCustomMessage("crumb", list(crumb = cr)),
+  problems <- problems_server("problems", store, show_crumb = function(cr) session$sendCustomMessage("crumb", list(crumb = cr)), lang = function() input$lang,
     open_design = function(df, title) {
       ds <- new_dataset(title, df, source = "Problem Sets")
       store$datasets[[ds$id]] <- ds; store$active <- ds$id; store$grid_rev <- store$grid_rev + 1
       goto(list(page = "rcbd", dataset = ds$id, t = Sys.time()))
     })
   planner <- planner_server("planner")
-  report_server("report", store)
+  report_server("report", store, lang = function() input$lang)
   add_example <- function(ex) {
     ds <- example_dataset(ex); store$datasets[[ds$id]] <- ds; store$active <- ds$id; store$grid_rev <- store$grid_rev + 1; ds$id
   }

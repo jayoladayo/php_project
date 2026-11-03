@@ -392,7 +392,7 @@ report_ui <- function(id) {
         div(class = "rep-stage", uiOutput(ns("preview_body")))))
 }
 
-report_server <- function(id, store) {
+report_server <- function(id, store, lang = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     pins <- reactive(store$pins %||% list())
@@ -466,7 +466,7 @@ report_server <- function(id, store) {
       ps <- pins(); o <- opts()
       if (!length(ps)) ps <- list(mk_pin("note", "Note", text = "Nothing is pinned yet. Run an analysis and press Pin to report."))
       sr <- srcs()
-      if (identical(tryCatch(isolate(session$rootScope()$input$lang), error = function(e) NULL), "ar")) { x <- report_ar(ps, sr, o); ps <- x$pins; sr <- x$srcs; o <- x$o }
+      if (identical(if (is.function(lang)) isolate(lang()) else NULL, "ar")) { x <- report_ar(ps, sr, o); ps <- x$pins; sr <- x$srcs; o <- x$o }
       switch(fmt(),
         docx = report_docx(ps, sr, o, file),
         pdf = report_pdf(ps, sr, o, file),
