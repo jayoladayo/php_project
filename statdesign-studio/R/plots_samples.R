@@ -1,3 +1,12 @@
+LEVEL_COLOURS <- c("#008540", "#003E51", "#AA8A00", "#00573F", "#C9B643", "#6B6F7B", "#A42A1F", "#4B8BBE", "#7A4EAB", "#D9822B")
+
+# Numeric codes sort as numbers; text levels keep the order they first appear in the data.
+level_order <- function(x) {
+  u <- unique(as.character(x[!is.na(x) & trimws(as.character(x)) != ""]))
+  p <- suppressWarnings(as.numeric(u))
+  if (length(u) && all(!is.na(p))) u[order(p)] else u
+}
+
 # Charts for one, two and k sample tests and for Descriptive statistics.
 
 sample_cols <- function(n) LEVEL_COLOURS[(seq_len(n) - 1) %% length(LEVEL_COLOURS) + 1]
