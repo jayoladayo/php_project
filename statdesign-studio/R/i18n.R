@@ -28,11 +28,15 @@ ar_tpl <- function(..., variants = TRUE) {
     ok <- !duplicated(keys); x <- stats::setNames(vals[ok], keys[ok])
   }
   for (i in seq_along(x)) {
-    t <- ar_norm(names(x)[i]); rx <- gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", t)
-    rx <- gsub("%%", "\001", rx, fixed = TRUE)
-    rx <- gsub("%[0-9.]*[gf]", "(-?[0-9.]+(?:e-?[0-9]+)?)", rx)
-    rx <- gsub("%d", "(-?[0-9]+)", rx, fixed = TRUE)
-    rx <- gsub("%s", "(.*?)", rx, fixed = TRUE)
+    t <- ar_norm(names(x)[i])
+    t <- gsub("%%", "\001", t, fixed = TRUE)
+    t <- gsub("%[0-9.]*[gf]", "\002G", t)
+    t <- gsub("%d", "\002D", t, fixed = TRUE)
+    t <- gsub("%s", "\002S", t, fixed = TRUE)
+    rx <- gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", t)
+    rx <- gsub("\002G", "(-?[0-9.]+(?:e-?[0-9]+)?)", rx, fixed = TRUE)
+    rx <- gsub("\002D", "(-?[0-9]+)", rx, fixed = TRUE)
+    rx <- gsub("\002S", "(.*?)", rx, fixed = TRUE)
     rx <- gsub("\001", "%", rx, fixed = TRUE)
     ar_rx(rx, unname(x[i]))
   }
@@ -92,4 +96,19 @@ i18n_tr <- function(lang) if (identical(lang, "ar")) function(x) ar_text(x) else
 i18n_json <- function() {
   ar_init()
   jsonlite::toJSON(list(exact = as.list(AR_EXACT), rx = lapply(ar_rx_all(), function(r) list(r[[1]], r[[2]]))), auto_unbox = TRUE)
+}
+
+# A chart with its words in Arabic: titles, axis labels and the text drawn on it. Numbers, level names and the data stay
+# as they are. The font has the Arabic letters.
+ar_plot <- function(p) {
+  if (!inherits(p, "ggplot")) return(p)
+  tr1 <- function(x) if (is.character(x) && length(x) == 1) ar_text(x) else x
+  p$labels <- lapply(p$labels, tr1)
+  p$layers <- lapply(p$layers, function(l) {
+    if (!is.null(l$aes_params$label)) l$aes_params$label <- ar_text(as.character(l$aes_params$label))
+    if (is.data.frame(l$data) && "label" %in% names(l$data) && is.character(l$data$label)) l$data$label <- ar_text(l$data$label)
+    if (is.list(l$geom_params$label)) NULL
+    l
+  })
+  p + ggplot2::theme(text = ggplot2::element_text(family = "DejaVu Sans"), plot.subtitle = ggplot2::element_text(family = "DejaVu Sans"))
 }

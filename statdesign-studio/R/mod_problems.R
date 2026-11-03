@@ -169,6 +169,11 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     md <- if (!is.null(mode)) PS_MODES[[mode]]
+    # Charts follow the language of the page: the words on them are translated when it is Arabic.
+    renderPlot <- function(expr, ...) {
+      e <- substitute(expr); env <- parent.frame()
+      shiny::renderPlot({ ar <- is.function(lang) && identical(lang(), "ar"); p <- eval(e, env); if (ar) ar_plot(p) else p }, ...)
+    }
     ud <- new.env()   # the seed of the problem in the editor (per page: pages must not share it)
     sel <- reactiveVal(NULL)
     custom <- reactiveVal(NULL)

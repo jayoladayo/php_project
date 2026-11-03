@@ -3,7 +3,7 @@
 ar_part_misc <- function() {
 ar_add(
   "KFUPM · Experimental Design · Worked solution" = "جامعة الملك فهد للبترول والمعادن · التصميم التجريبي · حل مفصَّل",
-  "What" = "ماذا", "Blocks" = "القطاعات",
+  "What" = "ماذا", "Theoretical quantiles" = "الكميات النظرية", "Sample quantiles" = "كميات العيّنة", "Standardised residuals" = "البواقي المعيارية", "Run order" = "ترتيب التشغيل", "Standard normal" = "الطبيعي المعياري", "Value" = "القيمة", "Count" = "العدد", "Density" = "الكثافة", "Blocks" = "القطاعات",
   "Two factors (3 temperatures × 3 pressures), two replicates of every combination, completely randomised (Montgomery, Problem 5.x)." = "عاملان (3 درجات حرارة × 3 ضغوط)، ومكرَّران لكل توليفة، بتوزيع عشوائي كامل (مونتغمري، المسألة 5.x).", "Conclusion" = "الاستنتاج", "Step" = "الخطوة",
   "home" = "الرئيسية", "descriptive statistics" = "الإحصاء الوصفي", "test advisor" = "مرشد الاختبارات", "data studio" = "استوديو البيانات", "design planner" = "مخطط التصميم", "learn" = "تعلّم",
   "pairs" = "أزواج", "treatments" = "معالجات", "comparisons" = "مقارنات", "levels" = "مستويات", "(none)" = "(لا شيء)",
@@ -23,6 +23,9 @@ ar_add(
   "Mean difference" = "فرق المتوسطين"
 )
 ar_tpl(
+  "Difference in means (%g%%)" = "الفرق بين المتوسطات ($1%)", "critical %.2f" = "الحرجة $1", "One line per %s" = "خط لكل $1",
+  "Difference in means%s, %g%% interval" = "الفرق بين المتوسطات$1، فترة $2%", "One line per pair; green where %s is higher" = "خط لكل زوج؛ أخضر حيث يكون $1 أعلى",
+  "Mean %s" = "متوسط $1",
   "1 · Parametric: %s" = "1 · معلمي: $1", "2 · Non-parametric: %s" = "2 · لامعلمي: $1",
   "%s, so the hypotheses are about the population medians η. H1 is “at least one median differs”." = "$1، لذا تتعلق الفرضيات بوسيطات المجتمع η. وH1 هي «يختلف وسيط واحد على الأقل».",
   "%s decision" = "قرار $1", "%s post-hoc" = "الاختبارات البعدية لـ$1", "%s · %d rows" = "$1 · $2 صفوف",
