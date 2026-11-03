@@ -1,5 +1,6 @@
 # Arabic: Problem Sets and the analysis pages, part 3 (non-parametric restart, pins, editor, data checks).
 
+ar_part_steps_c <- function() {
 ar_add(
   "Spread of each treatment" = "تشتت كل معالجة", "Residuals in the order listed" = "البواقي بحسب ترتيب الإدراج",
   "H0: the residuals are independent (no correlation between consecutive observations). The observations are listed replicate by replicate: every combination once, then the next replicate." = "H0: البواقي مستقلة (لا ارتباط بين المشاهدات المتتالية). تُدرَج المشاهدات مكرَّرًا بعد مكرَّر: كل توليفة مرة واحدة ثم المكرَّر التالي.",
@@ -86,3 +87,4 @@ ar_tpl(
   "the %s page" = "صفحة $1", "You chose %s; the information in step 4 suggests %s." = "اخترت $1؛ بينما تقترح معلومات الخطوة 4 $2.",
   "%d levels" = "$1 مستويات"
 )
+}

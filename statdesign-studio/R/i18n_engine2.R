@@ -1,5 +1,6 @@
 # Arabic: blocked and factorial designs, the sample tests, and the older analysis helpers.
 
+ar_part_engine2 <- function() {
 ar_add(
   "factorial CRD" = "عاملي CRD", "factorial RCBD" = "عاملي RCBD", "factorial Latin square" = "عاملي بمربع لاتيني", "factorial Graeco-Latin square" = "عاملي بمربع لاتيني يوناني",
   "one-way (CRD)" = "أحادي الاتجاه (CRD)", "Greek letters" = "الحروف اليونانية", " (with the estimated value)" = " (مع القيمة المقدَّرة)",
@@ -96,3 +97,4 @@ ar_tpl(
   "Uses the known population standard deviation σ = %s." = "يستخدم الانحراف المعياري المعلوم للمجتمع σ = $1.",
   "Uses known population standard deviations σ1 = %s and σ2 = %s." = "يستخدم الانحرافين المعياريين المعلومين للمجتمعين σ1 = $1 وσ2 = $2."
 )
+}

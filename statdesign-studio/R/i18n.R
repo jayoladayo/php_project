@@ -50,10 +50,22 @@ ar_rx_all <- local({
   }
 })
 
+# The dictionary files each define a function ar_part_*(); they are run once, on first use, so the order in which
+# the files are loaded does not matter.
+ar_ready <- FALSE
+ar_init <- function() {
+  if (ar_ready) return(invisible(NULL))
+  env <- environment(ar_init)
+  AR_EXACT <<- character(0); AR_RX <<- list()
+  for (n in sort(ls(envir = env, pattern = "^ar_part_"))) get(n, envir = env)()
+  ar_ready <<- TRUE; invisible(NULL)
+}
+
 ar_norm <- function(x) trimws(gsub("[[:space:]]+", " ", x))
 
 # Translate one text. Returns NA when nothing in the dictionary matches.
 ar_lookup <- function(x) {
+  ar_init()
   t <- ar_norm(x)
   if (!nzchar(t)) return(NA_character_)
   hit <- AR_EXACT[t]
@@ -78,5 +90,6 @@ i18n_tr <- function(lang) if (identical(lang, "ar")) function(x) ar_text(x) else
 
 # The dictionary as JSON for the browser.
 i18n_json <- function() {
+  ar_init()
   jsonlite::toJSON(list(exact = as.list(AR_EXACT), rx = lapply(ar_rx_all(), function(r) list(r[[1]], r[[2]]))), auto_unbox = TRUE)
 }

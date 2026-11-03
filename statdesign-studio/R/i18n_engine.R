@@ -1,5 +1,6 @@
 # Arabic: the statistics engine (test names, tables, hypotheses, decision sentences, information step).
 
+ar_part_engine <- function() {
 ar_add(
   "mean" = "المتوسط", "median" = "الوسيط", "different from" = "يختلف عن", "greater than" = "أكبر من", "less than" = "أقل من",
   "Group or Factor A" = "المجموعة أو العامل A", "Block or pair" = "القطاع أو الزوج", "Greek letter" = "الحرف اليوناني",
@@ -121,3 +122,4 @@ ar_tpl(
   "Warning: the group variances differ (step 4), so the ordinary ANOVA F test is not suitable. The Welch ANOVA, which does not assume equal variances, is suggested." = "تحذير: تباينات المجموعات مختلفة (الخطوة 4)، فاختبار F المعتاد لتحليل التباين غير مناسب. ويُقترح تحليل ويلش الذي لا يفترض تساوي التباينات.",
   "You chose the Welch ANOVA. The group variances look equal, so the ordinary ANOVA is the standard choice; Welch is also valid and loses very little power." = "اخترت تحليل ويلش. تبدو تباينات المجموعات متساوية، فالتحليل المعتاد هو الخيار المعيار؛ وويلش صالح أيضًا ويفقد قوة ضئيلة جدًا."
 )
+}

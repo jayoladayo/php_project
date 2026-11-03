@@ -1,5 +1,6 @@
 # Arabic: the frame of the app (sidebar, top bar, home, Data Studio, Advisor, Planner, Report, team, assistant).
 
+ar_part_ui <- function() {
 ar_add(
   "StatDesign Studio" = "ستات ديزاين ستوديو",
   "Experimental design, no code" = "التصميم التجريبي بلا برمجة",
@@ -149,3 +150,4 @@ ar_add(
   "Also consider" = "فكّر أيضًا في", "Then test" = "ثم اختبر", "Come back to the advisor when you are ready to compare." = "عُد إلى المرشد عندما تكون جاهزًا للمقارنة.", "Your answers" = "إجاباتك", "Goal" = "الهدف", "Tip" = "نصيحة",
   "Bring your data into Data Studio first; the analysis page will ask you to choose the dataset." = "أدخل بياناتك إلى استوديو البيانات أولًا؛ وستطلب منك صفحة التحليل اختيار مجموعة البيانات."
 )
+}

@@ -1,5 +1,6 @@
 # Arabic: Problem Sets and the analysis pages, part 2 (information, test, decision, post-hoc, assumptions).
 
+ar_part_steps_b <- function() {
 ar_add(
   "The problem states the population is normal." = "تنصّ المسألة على أن المجتمع طبيعي.",
   "Independence check (first)" = "فحص الاستقلالية (أولًا)", "Breusch-Godfrey LM statistic (lag 1)" = "إحصائية LM لبروش-غودفري (تأخر 1)",
@@ -90,3 +91,4 @@ ar_tpl(
   "H0: the residuals come from a normal distribution. p ≥ %s means no evidence against normality." = "H0: البواقي مأخوذة من توزيع طبيعي. القيمة p ≥ $1 تعني عدم وجود دليل ضد الطبيعية.",
   "H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on %s). p ≥ %s means the spread can be treated as constant." = "H0: للبواقي تباين ثابت (اختبار بروش-باغان: مربعات البواقي منحدرة على $1). القيمة p ≥ $2 تعني أنه يمكن اعتبار التشتت ثابتًا."
 )
+}

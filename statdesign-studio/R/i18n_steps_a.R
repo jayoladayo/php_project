@@ -1,5 +1,6 @@
 # Arabic: Problem Sets and the analysis pages, part 1 (frame, editor, hypotheses, significance level, information).
 
+ar_part_steps_a <- function() {
 ar_add(
   "Problem & data" = "المسألة والبيانات", "Hypotheses" = "الفرضيات", "Significance level" = "مستوى الدلالة", "Information available" = "المعلومات المتاحة",
   "Test" = "الاختبار", "Decision" = "القرار", "Post-hoc" = "الاختبارات البعدية", "Assumption checks" = "فحص الافتراضات", "Non-parametric hypotheses" = "الفرضيات اللامعلمية",
@@ -131,3 +132,4 @@ ar_tpl(
   "If every assumption holds, the %s result is the answer. If any fails, the process starts again for the non-parametric test: hypotheses about medians (η), α, information, the %s, its decision and post-hoc." =
     "إذا تحققت كل الافتراضات فنتيجة $1 هي الجواب. وإذا فشل أيٌّ منها تبدأ العملية من جديد للاختبار اللامعلمي: فرضيات عن الوسيطات (η)، ثم α، ثم المعلومات، ثم $2، ثم قراره واختباراته البعدية."
 )
+}
