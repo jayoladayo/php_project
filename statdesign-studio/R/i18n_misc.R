@@ -3,7 +3,8 @@
 ar_part_misc <- function() {
 ar_add(
   "KFUPM · Experimental Design · Worked solution" = "جامعة الملك فهد للبترول والمعادن · التصميم التجريبي · حل مفصَّل",
-  "What" = "ماذا", "Conclusion" = "الاستنتاج", "Step" = "الخطوة",
+  "What" = "ماذا", "Blocks" = "القطاعات",
+  "Two factors (3 temperatures × 3 pressures), two replicates of every combination, completely randomised (Montgomery, Problem 5.x)." = "عاملان (3 درجات حرارة × 3 ضغوط)، ومكرَّران لكل توليفة، بتوزيع عشوائي كامل (مونتغمري، المسألة 5.x).", "Conclusion" = "الاستنتاج", "Step" = "الخطوة",
   "home" = "الرئيسية", "descriptive statistics" = "الإحصاء الوصفي", "test advisor" = "مرشد الاختبارات", "data studio" = "استوديو البيانات", "design planner" = "مخطط التصميم", "learn" = "تعلّم",
   "pairs" = "أزواج", "treatments" = "معالجات", "comparisons" = "مقارنات", "levels" = "مستويات", "(none)" = "(لا شيء)",
   "Search analyses, tests, help" = "ابحث في التحليلات والاختبارات والمساعدة", "Close" = "إغلاق", "About StatDesign Studio" = "حول ستات ديزاين ستوديو",
@@ -22,6 +23,9 @@ ar_add(
   "Mean difference" = "فرق المتوسطين"
 )
 ar_tpl(
+  "1 · Parametric: %s" = "1 · معلمي: $1", "2 · Non-parametric: %s" = "2 · لامعلمي: $1",
+  "%s, so the hypotheses are about the population medians η. H1 is “at least one median differs”." = "$1، لذا تتعلق الفرضيات بوسيطات المجتمع η. وH1 هي «يختلف وسيط واحد على الأقل».",
+  "%s decision" = "قرار $1", "%s post-hoc" = "الاختبارات البعدية لـ$1", "%s · %d rows" = "$1 · $2 صفوف",
   "Step %d · %s" = "الخطوة $1 · $2",
   "%s ★ suggested" = "$1 ★ مقترح",
   "Can see: %s" = "يرى: $1", "Can see: Problem %s, %s" = "يرى: المسألة $1، $2", "Can see: %s, %s" = "يرى: $1، $2", "Can see: the %s page" = "يرى: صفحة $1",
