@@ -14,12 +14,11 @@ PS_ROLE_NAMES <- c(response = "Response", treatment = "Group or Factor A", facto
 PS_KIND_LABEL <- c(one = "One sample", variance = "One sample (variance)", two = "Two independent samples",
                    paired = "Two dependent (paired) samples", k = "k independent samples",
                    rcbd = "Randomized complete block design", latin = "Latin square", glsd = "Graeco-Latin square",
-                   bibd = "Balanced incomplete block design",
                    fact = "Factorial design (CRD)", factb = "Factorial design in blocks (RCBD)",
                    factl = "Factorial design in a Latin square", factg = "Factorial design in a Graeco-Latin square")
 # Problem type, as used for the categories and filters of the list.
 PS_TYPE <- c(one = "One sample", variance = "One sample", two = "Two sample · independent", paired = "Two sample · paired",
-             k = "K sample (one-way)", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square", bibd = "BIBD")
+             k = "CRD", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square")
 PS_PH_SHORT <- c(tukey = "Tukey HSD", lsd = "Fisher LSD", bonferroni = "Bonferroni", scheffe = "Scheffé", dunnett = "Dunnett",
                  gh = "Games-Howell", dunn = "Dunn", dunnbonf = "Dunn", nemenyi = "Nemenyi", wilcox = "Wilcoxon", wilcoxrs = "Wilcoxon")
 
@@ -116,7 +115,7 @@ ps_kind <- function(st, meta) {
     if (st$ntrt == 2 && isTRUE(st$one_per_cell)) return("paired")
     if (!is.null(meta$design)) return(meta$design)
     if (isTRUE(st$complete)) return("rcbd")
-    return(if (all(table(st$d$block) >= 2)) "bibd" else NA_character_)
+    return(NA_character_)   # incomplete blocks (BIBD) are not part of the course
   }
   if (any(st$reps < 2)) return(NA_character_)
   if (st$ntrt == 2) "two" else "k"
@@ -125,6 +124,7 @@ ps_kind <- function(st, meta) {
 ps_kind_problem <- function(kind, st) {
   if (length(st$errors)) return(paste(st$errors, collapse = " "))
   if ("factorB" %in% st$facs) return("A factorial design needs every combination of the factor levels to appear, with replicates: at least two observations per combination, or two blocks. Check the Factor A, Factor B (and C) columns, or add replicates.")
+  if ("block" %in% st$facs && !isTRUE(st$complete)) return("Every treatment must appear in every block (a complete block design). Incomplete block designs such as the BIBD are not covered by the course, so this layout is not analysed. Fill in or remove the incomplete blocks.")
   if ("block" %in% st$facs) return("Every block needs at least two observations.")
   "The Group column needs at least two levels, each with at least two observations."
 }
@@ -213,11 +213,31 @@ ps_test_choices <- function(kind, s) {
     two = c(pooled = "Pooled two-sample t-test (equal variances)", welch = "Welch two-sample t-test (unequal variances)",
             if (sig2) c(z = "Two-sample z-test (σ1, σ2 known)"), mw = "Mann-Whitney U test (Wilcoxon rank-sum)"),
     paired = c(paired = "Paired t-test", wsr = "Wilcoxon signed-rank test (paired)", sign = "Sign test (paired)"),
-    k = c(anova = "One-way ANOVA (F test)", welch = "Welch ANOVA (unequal variances)", kw = "Kruskal-Wallis test"),
+    k = c(anova = "CRD ANOVA (F test)", welch = "Welch ANOVA (unequal variances)", kw = "Kruskal-Wallis test"),
     rcbd = c(anova = ps_param_name("rcbd"), friedman = "Friedman test"),
     stats::setNames(c(ps_param_name(kind), ps_np_name(kind)), c("anova", ps_np_test(kind))))
 }
-PS_NONPAR_TESTS <- c("wilcox", "sign", "mw", "wsr", "kw", "friedman", "rankres", "kwf", "friedmanf", "quadef")
+PS_NONPAR_TESTS <- c("wilcox", "sign", "mw", "wsr", "kw", "friedman", "quade", "kwf", "friedmanf", "quadef")
+
+# The note shown under the test selector when the student picks a test other than the suggested one.
+# For the multi-group designs `a` is the assumption check of the suggested parametric model, so the
+# note can say whether a rank test is warranted. Returns NULL when the choice is the suggested test.
+ps_test_advice <- function(kind, test, suggest, ch, a = NULL) {
+  if (is.null(test) || identical(test, suggest) || is.na(ch[test])) return(NULL)
+  nm <- function(x) unname(ch[[x]])
+  if (!ps_multi(kind))
+    return(list(level = "w", text = sprintf("You chose %s; the information in step 4 suggests %s.", nm(test), nm(suggest))))
+  rank <- test %in% PS_NONPAR_TESTS; failed <- if (!is.null(a) && !isTRUE(a$all_ok)) paste(tolower(a$failed), collapse = " and ")
+  if (rank && is.null(failed))
+    return(list(level = "w", text = sprintf("Warning: you chose the %s, but the ANOVA assumptions (normal, constant-variance and independent residuals) are satisfied on these data. The suitable analysis is the %s, which uses the actual values and is more powerful. A rank test is valid but less efficient, and its conclusions are about medians.", nm(test), nm(suggest))))
+  if (rank)
+    return(list(level = "i", text = sprintf("You chose the %s directly. The residual checks of the ANOVA show %s failing, so a rank test is appropriate. The process then runs for the rank test only (the ANOVA and the restart in steps 9 to 14 are skipped).", nm(test), failed)))
+  if (identical(test, "anova") && identical(suggest, "welch"))
+    return(list(level = "w", text = "Warning: the group variances differ (step 4), so the ordinary ANOVA F test is not suitable. The Welch ANOVA, which does not assume equal variances, is suggested."))
+  if (identical(test, "welch"))
+    return(list(level = "i", text = "You chose the Welch ANOVA. The group variances look equal, so the ordinary ANOVA is the standard choice; Welch is also valid and loses very little power."))
+  list(level = "w", text = sprintf("You chose %s; the information in step 4 suggests %s.", nm(test), nm(suggest)))
+}
 
 ps_info <- function(kind, st, meta, s) {
   if (kind %in% PS_BLOCK_KINDS) return(ps_info_block(kind, st, meta, s))
@@ -257,7 +277,7 @@ ps_info <- function(kind, st, meta, s) {
       else "Not stated, and the Shapiro-Wilk test below finds the data are not normal."),
     stringsAsFactors = FALSE)
   fam_reason <- if (kind == "variance") "The question is about a variance; the χ² test assumes a normal population."
-    else if (kind == "k") "A parametric test (one-way ANOVA, or Welch ANOVA when the group variances differ) is always run first. If an assumption check fails afterwards, the Kruskal-Wallis test is used."
+    else if (kind == "k") "A parametric test (CRD ANOVA, or Welch ANOVA when the group variances differ) is always run first. If an assumption check fails afterwards, the Kruskal-Wallis test is used."
     else if (fam != fam_auto) sprintf("You chose a %s test.", if (fam == "param") "parametric" else "non-parametric")
     else if (stated) "The population is stated to be normal, so a parametric test is used."
     else if (normal_ok) "Normality is reasonable, so a parametric test is used."
@@ -282,7 +302,7 @@ ps_info <- function(kind, st, meta, s) {
     mw = "Independent samples that are not normal, so the Mann-Whitney U test is used.",
     paired = "Dependent samples with normal differences, so the paired t-test is used.",
     wsr = "Dependent samples whose differences are not normal, so the Wilcoxon signed-rank test is used.",
-    anova = sprintf("%d independent groups compared on one factor with equal variances (%s), so the one-way ANOVA F test is used.", length(lv),
+    anova = sprintf("%d independent groups compared on one factor with equal variances (%s), so the CRD (one-way) ANOVA F test is used.", length(lv),
                     if (vm == "equal") "assumed" else sprintf("by the %s", ev$basis)),
     kw = "k independent samples that are not normal, so the Kruskal-Wallis test is used.")
   list(facts = facts, normality = norm, independence = ind, equal_var = ev, stated = stated, family_auto = fam_auto, family = fam,
@@ -311,7 +331,7 @@ ps_hypotheses <- function(kind, st, meta, s, family = "param") {
     paired = list(h0 = sprintf("There is no difference in %s %s between %s and %s.", centre, lab, lv[1], lv[2]),
                   h1 = sprintf("The %s %s %s.", centre, lab, word(sprintf("differs between %s and %s", lv[1], lv[2]), sprintf("is greater for %s than for %s", lv[1], lv[2]), sprintf("is less for %s than for %s", lv[1], lv[2]))),
                   h0s = sprintf("H0: %sd = %s", sym, format(v)), h1s = sprintf("H1: %sd %s %s", sym, ps_alt_sym(alt), format(v))),
-    k = , rcbd = , latin = , glsd = , bibd = , fact = , factb = , factl = , factg = list(h0 = sprintf("The %s %s is the same for all %d %s.", centre, lab, length(lv), pl_word(ps_lab(meta, "treatment"))),
+    k = , rcbd = , latin = , glsd = , fact = , factb = , factl = , factg = list(h0 = sprintf("The %s %s is the same for all %d %s.", centre, lab, length(lv), pl_word(ps_lab(meta, "treatment"))),
              h1 = sprintf("At least one %s has a different %s %s.", ps_lab(meta, "treatment"), centre, lab),
              h0s = sprintf("H0: %s", paste(sprintf("%s%d", sym, seq_along(lv)), collapse = " = ")),
              h1s = sprintf("H1: %sᵢ ≠ %sⱼ for at least one pair", sym, sym)))
@@ -477,7 +497,7 @@ ps_decision <- function(res, h1_text) {
       excl <- ph$lwr > 0 | ph$upr < 0
       ci <- list(available = TRUE, reject = any(excl), table = ph,
                  text = sprintf("%g%% %s intervals for every difference of two %s: %d of %d exclude 0. %s", 100 * res$conf, res$ci_name %||% "Tukey",
-                                if (identical(res$kind, "bibd")) "adjusted means" else "means",
+                                "means",
                                 sum(excl), length(excl),
                                 if (any(excl) == rej) { if (rej) "At least one pair of means differs, which agrees with rejecting H0." else "Every interval contains 0, which agrees with not rejecting H0." }
                                 else if (rej) "No single pair is clearly different even though the F test rejects H0; near the boundary the two methods can disagree. The F test decides H0."
@@ -503,9 +523,9 @@ ps_decision <- function(res, h1_text) {
 # Dunnett is offered only when the problem names a control group.
 ps_posthoc_choices <- function(test, kind = "k", control = NULL) switch(test,
   anova = c(tukey = "Tukey HSD", lsd = "Fisher LSD", bonferroni = "Bonferroni", scheffe = "Scheffé",
-            if (!is.null(control) && !identical(kind, "bibd")) c(dunnett = sprintf("Dunnett (each treatment vs the control, %s)", control))),
+            if (!is.null(control)) c(dunnett = sprintf("Dunnett (each treatment vs the control, %s)", control))),
   welch = c(gh = "Games-Howell"), kw = c(dunn = "Dunn test (Holm adjustment)"), friedman = c(nemenyi = "Nemenyi test"),
-  rankres = c(dunn = "Dunn test on the ranked residuals (Holm adjustment)"),
+  quade = c(dunn = "Dunn test on the ranked residuals (Holm adjustment)", wilcoxrs = "Wilcoxon rank-sum test on the ranked residuals (Bonferroni adjustment)"),
   kwf = c(dunn = "Dunn test (Holm adjustment)", dunnbonf = "Dunn test (Bonferroni adjustment)"),
   friedmanf = c(nemenyi = "Nemenyi test", wilcox = "Wilcoxon signed-rank test (Bonferroni adjustment)"),
   quadef = c(dunn = "Dunn test on the ranked residuals (Holm adjustment)", wilcoxrs = "Wilcoxon rank-sum test on the ranked residuals (Bonferroni adjustment)"),
@@ -518,11 +538,11 @@ ps_default_ph <- function(s, choices) {
 }
 
 ps_posthoc <- function(res, method) {
-  a <- res$alpha; rank_based <- res$test %in% c("kw", "friedman", "rankres")
+  a <- res$alpha; rank_based <- res$test %in% c("kw", "friedman", "quade")
   if (res$test == "anova") {
     ph <- res$ph_all
     # Dunnett's simultaneous intervals are simulated, so they are computed only when asked for.
-    if (method == "dunnett" && is.null(ph$methods$dunnett) && !is.null(res$control) && !identical(res$kind, "bibd")) {
+    if (method == "dunnett" && is.null(ph$methods$dunnett) && !is.null(res$control)) {
       an <- res$an %||% res$anova; dd <- res$d %||% data.frame(y = res$r$data$y, treatment = res$r$data$g)
       ph <- posthoc_all(res$fit, dd, "treatment", an$mse, an$dfe, res$alpha, res$conf, control = res$control)
     }
@@ -534,7 +554,7 @@ ps_posthoc <- function(res, method) {
   } else if (res$test == "kw") {
     r <- res$r; tab <- r$posthoc$dunn; lt <- r$letters$dunn; centre <- tapply(rank(r$data$y), r$data$g, mean)
   } else {
-    tab <- res$np_ph; centre <- res$centre
+    tab <- if (identical(method, "wilcoxrs") && !is.null(res$np_ph_w)) res$np_ph_w else res$np_ph; centre <- res$centre
     lt <- cld_letters(names(centre), as.numeric(centre), tab$i[tab$p < a], tab$j[tab$p < a])
   }
   tab$signif <- tab$p < a
@@ -544,8 +564,7 @@ ps_posthoc <- function(res, method) {
                    `Adjusted p` = ps_p(tab$p), Result = ifelse(tab$signif, "Different", "Not different"), check.names = FALSE)
   if (method == "lsd") names(df)[4] <- "p-value"
   if (rank_based) { names(df)[2] <- "Mean rank difference"; df$CI <- NULL } else names(df)[3] <- sprintf("%g%% CI", 100 * res$conf)
-  if (identical(res$kind, "bibd") && res$test == "anova") names(df)[2] <- "Difference (adjusted means)"
-  cn <- if (rank_based) "Mean rank" else if (identical(res$kind, "bibd")) "Adjusted mean" else "Mean"
+  cn <- if (rank_based) "Mean rank" else "Mean"
   groups <- if (method == "dunnett") {
     ctrl <- res$control
     data.frame(Level = ord, Centre = ps_fmt(centre[ord]),
@@ -701,8 +720,8 @@ ps_default_settings <- function(meta, kind) {
 # Problem type shown on the cards and used by the filters.
 ps_type_of <- function(kind, st) {
   if (is.na(kind)) return("Other")
-  if (ps_is_fact(kind)) return(switch(kind, fact = if (length(st$ffacs) >= 3) "Three-factor factorial" else "Two-factor factorial",
-                                      factb = "Factorial in blocks (RCBD)", factl = "Factorial in a Latin square", factg = "Factorial in a Graeco-Latin square"))
+  if (ps_is_fact(kind)) return(switch(kind, fact = if (length(st$ffacs) >= 3) "Three-factor factorial (CRD)" else "Two-factor factorial (CRD)",
+                                      factb = "Factorial in blocks (RCBD)", factl = "Factorial in a Latin square (LSD)", factg = "Factorial in a Graeco-Latin square (GLSD)"))
   unname(PS_TYPE[kind])
 }
 ps_classify <- function(p) {

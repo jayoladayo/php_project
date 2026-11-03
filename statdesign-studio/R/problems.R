@@ -589,24 +589,10 @@ PROBLEMS_CH4 <- list(
        roles = list(response = "Time", treatment = "Method", row = "Order", column = "Operator", greek = "Workplace"),
        labels = list(response = "assembly time", treatment = "assembly method", row = "order of assembly", column = "operator", greek = "workplace"),
        tags = c("Graeco-Latin square")),
-  prob("4.45", 4, "Gasoline additives and mileage (balanced incomplete blocks)",
-       "An engineer is studying the mileage performance characteristics of five types of gasoline additives. In the road test he wishes to use cars as blocks; however, because of a time constraint, he must use an incomplete block design. He runs the balanced design with the five blocks that follow. Analyze the data from this experiment (use α = 0.05) and draw conclusions.",
-       character(0),
-       ps_grid("Additive", "Car", "Mileage", as.character(1:5), as.character(1:5),
-               c(NA, 17, 14, 13, 12,  14, 14, NA, 13, 10,  12, NA, 13, 12, 9,  13, 11, 11, 12, NA,  11, 12, 10, NA, 8)),
-       roles = R_RCBD("Additive", "Car", "Mileage"), labels = list(response = "mileage", treatment = "additive", block = "car"), design = "bibd", tags = c("BIBD")),
-  prob("4.47", 4, "Hardwood concentration and paper strength (balanced incomplete blocks)",
-       "Seven different hardwood concentrations are being studied to determine their effect on the strength of the paper produced. However, the pilot plant can only produce three runs each day. As days may differ, the analyst uses the BIBD that follows. Analyze the data from this experiment (use α = 0.05) and draw conclusions.",
-       character(0),
-       ps_grid("Hardwood (%)", "Day", "Strength", c("2", "4", "6", "8", "10", "12", "14"), as.character(1:7),
-               c(114, NA, NA, NA, 120, NA, 117,  126, 120, NA, NA, NA, 119, NA,  NA, 137, 117, NA, NA, NA, 134,  141, NA, 129, 149, NA, NA, NA,
-                 NA, 145, NA, 150, 143, NA, NA,  NA, NA, 120, NA, 118, 123, NA,  NA, NA, NA, 136, NA, 130, 127)),
-       roles = R_RCBD("Hardwood (%)", "Day", "Strength"), labels = list(response = "paper strength", treatment = "hardwood concentration", block = "day"),
-       design = "bibd", tags = c("BIBD")),
   prob("4.59", 4, "Problem 4.13 analysed as a completely randomized design",
        c("Consider the direct mail marketing experiment in Problem 4.13. Suppose that this experiment had been run as a completely randomized design, ignoring potential regional differences, but that exactly the same data was obtained. Reanalyze the experiment under this new assumption. What difference would ignoring blocking have on the results and conclusions?", ctx("4.13", "p413")),
        character(0), g413(), roles = list(response = "Responses", treatment = "Design"), labels = LAB413,
-       note = "The regions are ignored here, so the problem follows the one-way (Chapter 3) steps. Compare the result with Problem 4.13.", tags = c("one-way ANOVA", "CRD", "blocking"))
+       note = "The regions are ignored here, so the problem follows the CRD (Chapter 3) steps. Compare the result with Problem 4.13.", tags = c("one-way ANOVA", "CRD", "blocking"))
 )
 
 # ---------- Chapter 5 ----------

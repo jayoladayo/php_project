@@ -1,11 +1,11 @@
 # Problem Sets, Chapter 4: designs with blocking factors (randomized complete block,
-# Latin square, Graeco-Latin square and balanced incomplete block designs).
-# The ANOVA comes first and its assumptions are checked on the residuals after the test.
-# When one fails, the course's rank test replaces it: Friedman for an RCBD, and for the
-# squares and the BIBD the class approach (remove the blocking factors, rank what is left).
+# Latin square and Graeco-Latin square). The ANOVA comes first and its assumptions are checked on
+# the residuals after the test. When one fails, the course's rank test replaces it: Friedman for an
+# RCBD, and Quade's test for the squares (remove the blocking factors, rank what is left), followed
+# by Dunn's test (Holm adjustment) or the Wilcoxon rank-sum test (Bonferroni adjustment).
 # Plain R with no Shiny, so it can be tested on its own.
 
-PS_BLOCK_KINDS <- c("rcbd", "latin", "glsd", "bibd")
+PS_BLOCK_KINDS <- c("rcbd", "latin", "glsd")
 # Chapter 5: factorial designs, in a completely randomized layout, in blocks (RCBD), or in a
 # Latin or Graeco-Latin square (R/problem_factorial.R).
 PS_FACT_KINDS <- c("fact", "factb", "factl", "factg")
@@ -14,19 +14,17 @@ ps_multi <- function(kind) length(kind) == 1 && !is.na(kind) && kind %in% PS_MUL
 ps_is_fact <- function(kind) length(kind) == 1 && !is.na(kind) && kind %in% PS_FACT_KINDS
 
 ps_param_name <- function(kind, test = "anova") switch(kind,
-  k = if (identical(test, "welch")) "Welch ANOVA" else "One-way ANOVA (F test)",
-  rcbd = "RCBD ANOVA (F test)", latin = "Latin square ANOVA (F test)", glsd = "Graeco-Latin square ANOVA (F test)",
-  bibd = "BIBD ANOVA, treatments adjusted for blocks (F test)",
-  fact = "Factorial ANOVA (F test)", factb = "Factorial RCBD ANOVA (F test)",
-  factl = "Factorial Latin square ANOVA (F test)", factg = "Factorial Graeco-Latin square ANOVA (F test)")
-ps_model_name <- function(kind) switch(kind, k = "one-way", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square", bibd = "BIBD",
-                                       fact = "factorial", factb = "factorial RCBD", factl = "factorial Latin square", factg = "factorial Graeco-Latin square")
-ps_np_test <- function(kind) switch(kind, k = "kw", rcbd = "friedman", fact = "kwf", factb = "friedmanf", factl = , factg = "quadef", "rankres")
+  k = if (identical(test, "welch")) "Welch ANOVA" else "CRD ANOVA (F test)",
+  rcbd = "RCBD ANOVA (F test)", latin = "LSD ANOVA (F test)", glsd = "GLSD ANOVA (F test)",
+  fact = "CRD ANOVA (F test)", factb = "RCBD ANOVA (F test)", factl = "LSD ANOVA (F test)", factg = "GLSD ANOVA (F test)")
+ps_model_name <- function(kind) switch(kind, k = "one-way (CRD)", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square",
+                                       fact = "factorial CRD", factb = "factorial RCBD", factl = "factorial Latin square", factg = "factorial Graeco-Latin square")
+ps_np_test <- function(kind) switch(kind, k = "kw", rcbd = "friedman", fact = "kwf", factb = "friedmanf", factl = , factg = "quadef", "quade")
 ps_np_name <- function(kind) switch(kind, k = "Kruskal-Wallis test", rcbd = "Friedman test", fact = "Kruskal-Wallis test (factorial)",
-                                    factb = "Friedman test (factorial RCBD)", factl = , factg = "Quade rank test on the residuals", "Rank test on the residuals")
-ps_np_short <- function(kind) switch(kind, k = "Kruskal-Wallis", rcbd = "Friedman", fact = "Kruskal-Wallis", factb = "Friedman", factl = , factg = "Quade", "Rank test")
+                                    factb = "Friedman test (factorial RCBD)", "Quade's test")
+ps_np_short <- function(kind) switch(kind, k = "Kruskal-Wallis", rcbd = "Friedman", fact = "Kruskal-Wallis", factb = "Friedman", "Quade")
 
-ps_block_terms <- function(kind) switch(kind, rcbd = c("treatment", "block"), bibd = c("block", "treatment"),
+ps_block_terms <- function(kind) switch(kind, rcbd = c("treatment", "block"),
   latin = c("treatment", "row", "column"), glsd = c("treatment", "row", "column", "greek"))
 ps_nuisance <- function(kind) setdiff(ps_block_terms(kind), "treatment")
 ps_block_formula <- function(kind) stats::as.formula(paste("y ~", paste(ps_block_terms(kind), collapse = " + ")))
@@ -38,19 +36,11 @@ ps_model_fit <- function(kind, st, d = st$d) {
 }
 
 ps_term_label <- function(kind, term, meta) {
-  role <- switch(term, treatment = if (kind == "bibd") "treatments, adjusted for blocks" else "treatments",
+  role <- switch(term, treatment = "treatments",
                  block = "blocks", row = "rows", column = "columns", greek = "Greek letters")
   sprintf("%s (%s)", ucfirst(ps_lab(meta, term)), role)
 }
 ps_ss_name <- function(term) switch(term, treatment = "SS_Treatments", block = "SS_Blocks", row = "SS_Rows", column = "SS_Columns", greek = "SS_Greek")
-
-# a, b, k, r and λ of an incomplete block design, and whether it is balanced.
-ps_bibd_params <- function(d) {
-  n <- unclass(table(d$treatment, d$block) > 0) * 1
-  lam <- (n %*% t(n))[upper.tri(diag(nrow(n)))]
-  list(a = nrow(n), b = ncol(n), r = unique(rowSums(n)), k = unique(colSums(n)), lambda = unique(lam),
-       balanced = length(unique(rowSums(n))) == 1 && length(unique(colSums(n))) == 1 && length(unique(lam)) == 1, n = n)
-}
 
 # Least squares estimate of missing observations (RCBD and squares): iterate fitted values
 # until they settle, which gives the textbook formula for one missing value.
@@ -111,27 +101,8 @@ ps_block_anova_df <- function(res) {
              F0 = c(ps_fmt(tab$F, 5), "", ""), `P-value` = c(ps_p(tab$p), "", ""), check.names = FALSE)
 }
 
-# Pairwise comparisons from (adjusted) means with one standard error for every difference,
-# in the same form as posthoc_all, for designs whose means need adjusting (BIBD).
-ps_pairwise <- function(lev, means, se_d, dfe, alpha, conf) {
-  k <- length(lev); P <- pair_index(k); m <- length(P$i)
-  diff <- unname(means[P$j] - means[P$i]); se <- rep(se_d, m); tval <- diff / se
-  base <- data.frame(pair = paste(lev[P$j], "−", lev[P$i]), i = lev[P$i], j = lev[P$j], diff = diff, se = se, stringsAsFactors = FALSE)
-  tc <- stats::qt(1 - (1 - conf) / 2, dfe); qc <- stats::qtukey(conf, k, dfe)
-  bc <- stats::qt(1 - (1 - conf) / (2 * m), dfe); sc <- sqrt((k - 1) * stats::qf(conf, k - 1, dfe))
-  q <- abs(diff) / (se / sqrt(2))
-  out <- list(
-    lsd = transform(base, stat = tval, p = 2 * stats::pt(-abs(tval), dfe), lwr = diff - tc * se, upr = diff + tc * se),
-    tukey = transform(base, stat = q, p = stats::ptukey(q, k, dfe, lower.tail = FALSE), lwr = diff - qc / sqrt(2) * se, upr = diff + qc / sqrt(2) * se),
-    bonferroni = transform(base, stat = tval, p = pmin(1, m * 2 * stats::pt(-abs(tval), dfe)), lwr = diff - bc * se, upr = diff + bc * se),
-    scheffe = transform(base, stat = tval^2 / (k - 1), p = stats::pf(tval^2 / (k - 1), k - 1, dfe, lower.tail = FALSE), lwr = diff - sc * se, upr = diff + sc * se))
-  for (mth in names(out)) out[[mth]]$signif <- out[[mth]]$p < alpha
-  letters <- lapply(out, function(t) cld_letters(lev, as.numeric(means), t$i[t$signif], t$j[t$signif]))
-  list(methods = out, letters = letters, means = data.frame(level = lev, mean = as.numeric(means), stringsAsFactors = FALSE))
-}
-
 # How the sums of squares are worked out, with the numbers.
-ps_block_formula_lines <- function(kind, d, an, bp = NULL, fill = NULL) {
+ps_block_formula_lines <- function(kind, d, an, fill = NULL) {
   f <- function(x, k = 7) ps_fmt(x, k); N <- nrow(d); tot <- sum(d$y); cf <- tot^2 / N
   tab <- an$table; row <- function(t) tab[tab$term == t, ]
   tl <- function(t) sprintf("%s = %s on %d df", ps_ss_name(t), f(row(t)$ss), row(t)$df)
@@ -143,15 +114,7 @@ ps_block_formula_lines <- function(kind, d, an, bp = NULL, fill = NULL) {
     latin = c(sprintf("SS_Treatments = Σ y.ⱼ.²/p − y...²/N = %s on p − 1 = %d df", f(row("treatment")$ss), row("treatment")$df),
               sprintf("SS_Rows = Σ yᵢ..²/p − y...²/N = %s,   SS_Columns = Σ y..ₖ²/p − y...²/N = %s (each on %d df)", f(row("row")$ss), f(row("column")$ss), row("row")$df)),
     glsd = c(sprintf("SS_Latin letters (treatments) = %s,   SS_Greek letters = %s", f(row("treatment")$ss), f(row("greek")$ss)),
-             sprintf("SS_Rows = %s,   SS_Columns = %s (each sum of squares: Σ total²/p − y....²/N, on p − 1 = %d df)", f(row("row")$ss), f(row("column")$ss), row("row")$df)),
-    bibd = {
-      bp <- bp %||% ps_bibd_params(d)
-      Q <- tapply(d$y, d$treatment, sum) - as.numeric(bp$n %*% tapply(d$y, d$block, sum)) / bp$k
-      c(sprintf("a = %d treatments, b = %d blocks, k = %s per block, r = %s, λ = %s", bp$a, bp$b, paste(bp$k, collapse = "/"), paste(bp$r, collapse = "/"), paste(bp$lambda, collapse = "/")),
-        sprintf("Adjusted treatment totals Qᵢ = yᵢ. − (1/k) Σⱼ nᵢⱼ y.ⱼ:  %s", paste(sprintf("Q%s = %s", names(Q), f(Q, 5)), collapse = ",  ")),
-        sprintf("SS_Treatments(adjusted) = k Σ Qᵢ² / (λa) = %s on a − 1 = %d df", f(row("treatment")$ss), row("treatment")$df),
-        sprintf("SS_Blocks = Σ y.ⱼ²/k − y..²/N = %s on b − 1 = %d df", f(row("block")$ss), row("block")$df))
-    })
+             sprintf("SS_Rows = %s,   SS_Columns = %s (each sum of squares: Σ total²/p − y....²/N, on p − 1 = %d df)", f(row("row")$ss), f(row("column")$ss), row("row")$df)))
   tr <- row("treatment")
   c(head, body,
     sprintf("SS_E = SS_T − (the other sums of squares) = %s on %d df%s", f(an$sse), an$dfe, if (!is.null(fill)) sprintf(" (%d lost to the estimated value)", fill$n) else ""),
@@ -163,19 +126,15 @@ ps_block_formula_lines <- function(kind, d, an, bp = NULL, fill = NULL) {
 ps_info_block <- function(kind, st, meta, s) {
   d <- st$d; lv <- levels(d$treatment); a <- length(lv); nm <- function(k) ucfirst(ps_lab(meta, k))
   lvl <- function(k) sprintf("%s: %d levels (%s)", nm(k), nlevels(d[[k]]), ps_list(levels(d[[k]]), 8))
-  bp <- if (kind == "bibd") ps_bibd_params(d)
   miss <- st$missing; nmiss <- if (is.null(miss)) 0 else nrow(miss)
   design <- switch(kind,
     rcbd = sprintf("Randomized complete block design: every %s appears once in each of the %d %s.", ps_lab(meta, "treatment"), nlevels(d$block), pl_word(ps_lab(meta, "block"))),
     latin = sprintf("%d × %d Latin square: each %s appears once in every row (%s) and every column (%s).", a, a, ps_lab(meta, "treatment"), ps_lab(meta, "row"), ps_lab(meta, "column")),
     glsd = sprintf("%d × %d Graeco-Latin square: Latin letters (%s) and Greek letters (%s) each appear once in every row and column, and every Latin letter meets every Greek letter once.",
-                   a, a, ps_lab(meta, "treatment"), ps_lab(meta, "greek")),
-    bibd = if (bp$balanced) sprintf("Balanced incomplete block design: a = %d treatments in b = %d blocks of k = %d; each treatment appears r = %d times and every pair of treatments meets λ = %d times.",
-                                    bp$a, bp$b, bp$k, bp$r, bp$lambda)
-           else sprintf("Incomplete block design: %d treatments in %d blocks, not every treatment appears in every block.", bp$a, bp$b))
-  blocks <- switch(kind, rcbd = , bibd = lvl("block"), latin = paste(lvl("row"), lvl("column"), sep = "; "),
+                   a, a, ps_lab(meta, "treatment"), ps_lab(meta, "greek")))
+  blocks <- switch(kind, rcbd = lvl("block"), latin = paste(lvl("row"), lvl("column"), sep = "; "),
                    glsd = paste(lvl("row"), lvl("column"), sep = "; "))
-  model <- switch(kind, rcbd = "yᵢⱼ = μ + τᵢ + βⱼ + εᵢⱼ (treatment i, block j)", bibd = "yᵢⱼ = μ + τᵢ + βⱼ + εᵢⱼ, only for the treatments that appear in block j",
+  model <- switch(kind, rcbd = "yᵢⱼ = μ + τᵢ + βⱼ + εᵢⱼ (treatment i, block j)",
                   latin = "yᵢⱼₖ = μ + αᵢ + τⱼ + βₖ + εᵢⱼₖ (row i, treatment j, column k)", glsd = "yᵢⱼₖₗ = μ + θᵢ + τⱼ + ωₖ + Ψₗ + εᵢⱼₖₗ (row, Latin letter, Greek letter, column)")
   facts <- data.frame(What = c("Design", "Response", if (kind == "glsd") "Latin letters (treatments)" else "Treatments", if (kind == "glsd") "Greek letters" else NULL,
                                if (kind %in% c("latin", "glsd")) "Blocking factors (rows and columns)" else "Blocks", "Observations", "Model", "Population distribution"),
@@ -183,7 +142,7 @@ ps_info_block <- function(kind, st, meta, s) {
                     sprintf("%s (%s%s)", st$roles$response, ps_lab(meta, "response"), if (nzchar(meta$labels$unit %||% "")) paste0(", ", meta$labels$unit) else ""),
                     lvl("treatment"), if (kind == "glsd") lvl("greek") else NULL, blocks,
                     if (nmiss) sprintf("%d observed; %s missing (%s), estimated in step 5.", st$n, plural(nmiss, "value"), ps_missing_txt(miss, meta))
-                    else sprintf("%d (%s)", st$n, if (kind == "bibd") "one in each block for the treatments it contains" else "one in every cell"),
+                    else sprintf("%d (one in every cell)", st$n),
                     model,
                     "Not stated. Normality, constant variance (Breusch-Pagan) and independence of the residuals are checked after the test (assumption checks)."),
     stringsAsFactors = FALSE)
@@ -191,10 +150,18 @@ ps_info_block <- function(kind, st, meta, s) {
   list(facts = facts, normality = NULL, independence = NULL, equal_var = NULL, stated = FALSE, family_auto = "param", family = "param",
        family_reason = sprintf("The parametric test (%s) is always run first. If an assumption check fails afterwards, the %s is used.", ps_param_name(kind), ps_np_name(kind)),
        suggest = "anova", suggest_reason = sprintf("The blocking factors are removed from the error, so the treatments are compared with the %s.", ps_param_name(kind)),
-       sigma_known = FALSE, bibd = bp)
+       sigma_known = FALSE)
 }
 
 # ---------- Tests (step 5 and the non-parametric restart) ----------
+
+# Wilcoxon rank-sum test for every pair of treatments, Bonferroni adjusted (used after Quade's test).
+ps_wilcox_pairs <- function(rr, g, alpha) {
+  w <- pairwise_wilcox(rr, g, FALSE, "bonferroni")
+  m <- tapply(rr, droplevels(as.factor(g)), mean)
+  w$diff <- unname(m[w$j] - m[w$i]); w$stat <- NA_real_; w$signif <- !is.na(w$p) & w$p < alpha
+  w
+}
 
 ps_run_block <- function(kind, test, st, meta, s) {
   a <- s$alpha; conf <- 1 - a; d <- st$d; lv <- levels(d$treatment)
@@ -209,16 +176,9 @@ ps_run_block <- function(kind, test, st, meta, s) {
     t <- mk_test("anova", ps_param_name(kind), "param", "F", tr$F, tr$p, "Partial η²", tr$ss / (tr$ss + an$sse),
                  df = sprintf("%d, %d", tr$df, an$dfe), dist = "F", about = "Treatments compared after removing the blocking factors.")
     t$df1 <- tr$df; t$df2 <- an$dfe
-    bp <- if (kind == "bibd") ps_bibd_params(dd)
-    ph <- if (kind == "bibd") {
-      cf <- stats::coef(stats::lm(y ~ block + treatment, data = dd, contrasts = list(treatment = "contr.sum", block = "contr.sum")))
-      tau <- c(cf[grepl("^treatment", names(cf))], 0); tau[length(tau)] <- -sum(tau[-length(tau)])
-      adj <- stats::setNames(unname(cf["(Intercept)"]) + tau, lv)
-      se_d <- if (bp$balanced) sqrt(2 * bp$k * an$mse / (bp$lambda * bp$a)) else sqrt(2 * an$mse / mean(bp$r))
-      ps_pairwise(lv, adj, se_d, an$dfe, a, conf)
-    } else posthoc_all(fit, dd, "treatment", an$mse, an$dfe, a, conf, control = meta$control, dunnett = FALSE)
-    out <- c(out, list(t = t, fit = fit, d = dd, an = an, ph_all = ph, ci_tab = ph$methods$tukey, ci_name = "Tukey", fill = fill, bibd = bp,
-                       formula = c(if (!is.null(fill)) fill$lines, ps_block_formula_lines(kind, dd, an, bp, fill))))
+    ph <- posthoc_all(fit, dd, "treatment", an$mse, an$dfe, a, conf, control = meta$control, dunnett = FALSE)
+    out <- c(out, list(t = t, fit = fit, d = dd, an = an, ph_all = ph, ci_tab = ph$methods$tukey, ci_name = "Tukey", fill = fill,
+                       formula = c(if (!is.null(fill)) fill$lines, ps_block_formula_lines(kind, dd, an, fill))))
     out$anova_df <- ps_block_anova_df(out)
     if (!is.null(fill) && kind == "rcbd") {
       ex <- stats::anova(stats::lm(y ~ block + treatment, data = d))
@@ -251,25 +211,26 @@ ps_run_block <- function(kind, test, st, meta, s) {
                        rank_table = data.frame(Treatment = levels(m$treatment), Median = ps_fmt(tapply(m$y, m$treatment, stats::median)),
                                                `Rank sum` = ps_fmt(Ri, 6), `Mean rank` = ps_fmt(Ri / b, 4), check.names = FALSE),
                        rank_title = "Ranks within blocks"))
-  } else {
+  } else if (test == "quade") {
     bl <- ps_nuisance(kind)
     bm <- stats::lm(stats::as.formula(paste("y ~", paste(bl, collapse = " + "))), data = d)
     rr <- rank(stats::residuals(bm)); g <- d$treatment
     kw <- stats::kruskal.test(rr ~ g); k <- nlevels(g)
     perm <- tryCatch({ set.seed(1); ot <- coin::oneway_test(rr ~ g, data = data.frame(rr = rr, g = g), distribution = coin::approximate(nresample = 10000)); as.numeric(coin::pvalue(ot)) },
                      error = function(e) NA_real_)
-    t <- mk_test("rankres", "Rank test on the residuals", "nonpar", "H", kw$statistic, kw$p.value, NULL, NA, df = k - 1, dist = "chisq",
+    t <- mk_test("quade", "Quade's test", "nonpar", "H", kw$statistic, kw$p.value, NULL, NA, df = k - 1, dist = "chisq",
                  about = "Removes the blocking factors, ranks the residuals and compares the treatments.")
     t$df1 <- k - 1
     dn <- dunn_test(rr, g, "holm"); dn$signif <- dn$p < a
-    out <- c(out, list(t = t, d = d, centre = stats::setNames(as.numeric(tapply(rr, g, mean)), levels(g)), np_ph = dn, perm_p = perm,
-                       formula = c(sprintf("Fit the blocking factors only (y ~ %s) and rank the N = %d residuals.", paste(vapply(bl, function(x) ps_lab(meta, x), ""), collapse = " + "), length(rr)),
+    wr <- ps_wilcox_pairs(rr, g, a)
+    out <- c(out, list(t = t, d = d, centre = stats::setNames(as.numeric(tapply(rr, g, mean)), levels(g)), np_ph = dn, np_ph_w = wr, perm_p = perm,
+                       formula = c(sprintf("Quade's test: fit the blocking factors only (y ~ %s) and rank the N = %d residuals.", paste(vapply(bl, function(x) ps_lab(meta, x), ""), collapse = " + "), length(rr)),
                                    sprintf("H = 12 / (N(N + 1)) × Σ Rᵢ²/nᵢ − 3(N + 1) on the ranked residuals = %s,   df = k − 1 = %d", ps_fmt(unname(kw$statistic), 5), k - 1),
                                    if (is.finite(perm)) sprintf("Permutation p-value (10,000 resamples, as in the class script): %s", ps_p(perm))),
                        rank_table = data.frame(Treatment = levels(g), Median = ps_fmt(tapply(d$y, g, stats::median)),
                                                `Mean rank of the residuals` = ps_fmt(tapply(rr, g, mean), 4), check.names = FALSE),
                        rank_title = "Ranks of the residuals by treatment"))
-  }
+  } else stop(sprintf("The test '%s' is not available for this design.", test))
   t <- out$t
   out$dist <- t$dist; out$df1 <- t$df1 %||% NA; out$df2 <- t$df2 %||% NA
   out$p <- t$p; out$reject <- !is.na(t$p) && t$p < a
@@ -281,7 +242,7 @@ ps_run_block <- function(kind, test, st, meta, s) {
 # Treatment means against a t distribution scaled by √(MSE/n) (Montgomery, Section 3.5.3).
 ps_plot_scaled_t <- function(res) {
   ph <- res$ph_all; mse <- (res$an %||% res$anova)$mse; dfe <- (res$an %||% res$anova)$dfe
-  n <- if (!is.null(res$bibd)) mean(res$bibd$r) else length(res$d$y %||% res$r$data$y) / length(res$levels)
+  n <- length(res$d$y %||% res$r$data$y) / length(res$levels)
   s <- sqrt(mse / n); m <- stats::setNames(ph$means$mean, ph$means$level); ctr <- mean(m)
   x <- seq(min(m, ctr - 4 * s) - s, max(m, ctr + 4 * s) + s, length.out = 400)
   dens <- data.frame(x = x, y = stats::dt((x - ctr) / s, dfe) / s)

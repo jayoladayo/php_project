@@ -136,7 +136,7 @@ ps_run_fact <- function(kind, test, st, meta, s) {
   eff <- out$effects; best <- eff[which.min(eff$p), ]
   out$p <- best$p; out$reject <- any(eff$p < a)
   out$dist <- if (test == "anova") "F" else "chisq"; out$df1 <- best$df; out$df2 <- if (test == "anova") best$df2 else NA
-  out$summary_msg <- paste0(if (test == "anova") "Factorial ANOVA: " else paste0(ps_np_short(kind), ": "),
+  out$summary_msg <- paste0(if (test == "anova") paste0(ps_param_name(kind), ": ") else paste0(ps_np_short(kind), ": "),
                             paste(sprintf("%s %s", eff$code, ps_pe(eff$p)), collapse = ";  "), ".")
   out
 }
@@ -435,4 +435,49 @@ ps_plot_fact_effect <- function(res, code) {
     if (length(r) >= 3) p <- p + facet_wrap(~ panel)
     p
   }
+}
+
+# ---------- Plots for the information step (before any test is run) ----------
+
+ps_fact_ylab <- function(st, meta) paste0(st$roles$response, if (nzchar(meta$labels$unit %||% "")) paste0(" (", meta$labels$unit, ")") else "")
+ps_fact_flab <- function(st, meta) ps_fact_flabs(st, meta)
+
+# Main-effects plot: the mean response at each level of each factor, one panel per factor,
+# with the grand mean as a dashed line. A steep line means a large main effect.
+ps_plot_fact_main <- function(st, meta) {
+  d <- st$d; f <- st$ffacs; fl <- ps_fact_flab(st, meta); gm <- mean(d$y)
+  dd <- do.call(rbind, lapply(f, function(r) {
+    m <- stats::aggregate(y ~ level, data = data.frame(y = d$y, level = d[[r]]), FUN = mean)
+    data.frame(panel = fl[[r]], level = as.character(m$level), mean = m$y, stringsAsFactors = FALSE)
+  }))
+  dd$panel <- factor(dd$panel, levels = unname(fl)); dd$level <- factor(dd$level, levels = unique(dd$level))
+  ggplot(dd, aes(level, mean, group = panel)) + geom_hline(yintercept = gm, colour = RED, linetype = "dashed") +
+    geom_line(colour = GREEN, linewidth = 1) + geom_point(colour = GREEN, size = 3.4) +
+    facet_wrap(~ panel, scales = "free_x", nrow = 1) +
+    labs(x = "Level", y = paste("Mean", tolower(ps_fact_ylab(st, meta))), subtitle = "Dashed red: grand mean · Green: mean at each level") +
+    theme_sds() + theme(plot.subtitle = element_text(colour = INK, size = 10.5), panel.spacing.x = grid::unit(14, "pt"))
+}
+
+# Interaction plots: for every pair of factors, the cell means against one factor with a line per level of
+# the other. Parallel lines: no interaction. Lines that cross or fan out: an interaction.
+ps_plot_fact_inter <- function(st, meta) {
+  d <- st$d; f <- st$ffacs; fl <- ps_fact_flab(st, meta); pairs <- utils::combn(f, 2, simplify = FALSE)
+  dd <- do.call(rbind, lapply(pairs, function(pr) {
+    m <- stats::aggregate(y ~ x + g, data = data.frame(y = d$y, x = d[[pr[1]]], g = d[[pr[2]]]), FUN = mean)
+    data.frame(panel = sprintf("%s × %s", fl[[pr[1]]], fl[[pr[2]]]), x = as.character(m$x), g = as.character(m$g), mean = m$y, stringsAsFactors = FALSE)
+  }))
+  dd$panel <- factor(dd$panel, levels = unique(dd$panel)); dd$x <- factor(dd$x, levels = unique(dd$x))
+  one <- length(pairs) == 1; ng <- length(unique(dd$g))
+  p <- ggplot(dd, aes(x, mean, colour = g, group = interaction(panel, g))) + geom_line(linewidth = 1) + geom_point(size = 3) +
+    scale_colour_manual(values = sample_cols(ng)[seq_len(ng)], breaks = unique(dd$g), name = if (one) fl[[pairs[[1]][2]]] else "Second factor") +
+    labs(x = if (one) fl[[pairs[[1]][1]]] else "Level of the first factor named in the panel", y = paste("Mean", tolower(ps_fact_ylab(st, meta))),
+         subtitle = if (one) "Parallel lines: no interaction · Crossing or fanning lines: interaction" else "One line per level of the second factor (labelled) · Parallel: no interaction") +
+    theme_sds() + theme(plot.subtitle = element_text(colour = INK, size = 10.5), legend.position = "right")
+  if (!one) {
+    last <- do.call(rbind, lapply(split(dd, list(dd$panel, dd$g), drop = TRUE), function(z) z[nrow(z), ]))
+    p <- p + facet_wrap(~ panel, scales = "free_x", labeller = ggplot2::label_wrap_gen(22)) + theme(legend.position = "none") +
+      geom_text(data = last, aes(label = g), hjust = -0.35, size = 3.3, show.legend = FALSE) +
+      scale_x_discrete(expand = ggplot2::expansion(add = c(.4, .9)))
+  }
+  p
 }
