@@ -11,7 +11,8 @@ local({
   need <- c(ps_is_fact = "R/problem_blocks.R", ps_run_block = "R/problem_blocks.R", ps_run_fact = "R/problem_factorial.R",
             ps_fact_posthoc = "R/problem_factorial.R", ps_type_of = "R/problem_engine.R", ps_classify = "R/problem_engine.R",
             problems_ui = "R/mod_problems.R", team_ui = "R/mod_team.R")
-  miss <- names(need)[!vapply(names(need), exists, TRUE)]
+  here <- environment()   # the app's functions are loaded into the app's environment, not the global one
+  miss <- names(need)[!vapply(names(need), function(n) exists(n, envir = here), TRUE)]
   if (length(miss)) stop(sprintf("Your copy of StatDesign Studio mixes old and new files: %s is missing. Replace the whole folder (keep your ai_key.txt) with the latest version, in particular %s.",
                                  paste0(miss, "()", collapse = ", "), paste(unique(need[miss]), collapse = ", ")), call. = FALSE)
   if (!file.exists("www/tour.js")) stop("www/tour.js is missing: copy the whole www folder from the latest version.", call. = FALSE)
