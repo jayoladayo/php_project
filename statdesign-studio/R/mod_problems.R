@@ -1136,10 +1136,12 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       id <- m$id; edits[[id]] <- df
       reopen_with(id); showNotification("Your data are in use. The steps start again from step 1.", type = "message")
     })
-    observeEvent(c(input$reset_data, input$ed_reset), {
+    reset_edits <- function() {
       m <- cur$meta; req(m, isTRUE(m$edited)); id <- m$id; edits[[id]] <- NULL
       reopen_with(id); showNotification("The printed data are back. The steps start again from step 1.", type = "message")
-    }, ignoreInit = TRUE)
+    }
+    observeEvent(input$reset_data, reset_edits())
+    observeEvent(input$ed_reset, reset_edits())
 
     # ---------- Worked-solution PDF ----------
     sol_target <- reactiveVal(NULL)
@@ -1159,6 +1161,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
         sv <- if (identical(isolate(cur$id), id)) list(s = isolate(cur$s), test = isolate(cur$test), ph = isolate(cur$ph)) else memo[[id]]
         sol_make(m, sv$s, sv$test, sv$ph, file)
       })
+    outputOptions(output, "dl_sol_any", suspendWhenHidden = FALSE)
     observeEvent(input$c_use_paste, {
       df <- tryCatch(parse_pasted(input$c_paste %||% "", isTRUE(input$c_header)), error = function(e) e)
       if (inherits(df, "error") || is.null(df) || !nrow(df)) { showNotification("Nothing could be read from the pasted text. Put one row per line, with values separated by tabs or commas.", type = "error"); return() }
