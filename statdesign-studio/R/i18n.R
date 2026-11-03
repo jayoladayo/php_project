@@ -99,7 +99,7 @@ i18n_json <- function() {
 }
 
 # A chart with its words in Arabic: titles, axis labels and the text drawn on it. Numbers, level names and the data stay
-# as they are. The font has the Arabic letters.
+# as they are.
 ar_plot <- function(p) {
   if (!inherits(p, "ggplot")) return(p)
   tr1 <- function(x) if (is.character(x) && length(x) == 1) ar_text(x) else x
@@ -110,5 +110,5 @@ ar_plot <- function(p) {
     if (is.list(l$geom_params$label)) NULL
     l
   })
-  p + ggplot2::theme(text = ggplot2::element_text(family = "DejaVu Sans"), plot.subtitle = ggplot2::element_text(family = "DejaVu Sans"))
+  p   # (no font family is named: a named font that the null device does not know can crash R; the default sans font has the Arabic letters)
 }

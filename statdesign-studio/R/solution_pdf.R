@@ -265,4 +265,4 @@ ps_solution_pdf <- function(m, file, s = NULL, test = NULL, ph = NULL, lang = "e
 }
 
 # A font that has the Arabic letters when the Arabic interface is on.
-sol_font <- function(lang = "en") if (identical(lang, "ar")) "DejaVu Sans" else "sans"
+sol_font <- function(lang = "en") "sans"

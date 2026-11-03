@@ -258,7 +258,7 @@ report_pdf <- function(pins, srcs, o, file) {
   fam <- if (serif) "serif" else "sans"
   W <- 8.27; H <- 11.69; mg <- 0.85; cw <- W - 2 * mg
   green <- if (serif) "#1F2321" else "#00573F"
-  rtl <- isTRUE(o$rtl); if (rtl) fam <- "DejaVu Sans"
+  rtl <- isTRUE(o$rtl)
   # Open the device first so text is measured with the fonts it will be drawn in.
   grDevices::cairo_pdf(file, width = W, height = H, onefile = TRUE)
   on.exit(grDevices::dev.off())
