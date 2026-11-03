@@ -3,7 +3,8 @@
 # the course:
 #   One and two samples: 1 Problem & data  2 Hypotheses  3 Significance level
 #                        4 Information available  5 Test  6 Decision
-#   k samples (Chapter 3) and blocked designs (Chapter 4): the parametric process runs to
+#   k samples (Chapter 3), blocked designs (Chapter 4) and factorial designs (Chapter 5): the
+#                        parametric process runs to
 #                        the end first: the ANOVA, 7 Post-hoc (only if H0 is rejected) and
 #                        8 Assumption checks. If an assumption fails, the process starts again
 #                        for the non-parametric test (9-14: hypotheses about medians, α,
@@ -32,10 +33,16 @@ PS_TYPE_DESC <- c(
   "Latin square" = "Two blocking factors (rows and columns), each treatment once in every row and column.",
   "Graeco-Latin square" = "Three blocking or treatment factors laid over a square.",
   "BIBD" = "Balanced incomplete blocks: not every treatment fits in every block.",
+  "Two-factor factorial" = "Two crossed factors: the main effect of each and their interaction. Kruskal-Wallis for each effect if an assumption fails.",
+  "Three-factor factorial" = "Three crossed factors: three main effects and the AB, AC, BC and ABC interactions.",
+  "Factorial in blocks (RCBD)" = "A factorial experiment with each replicate run as a block. Friedman if an assumption fails.",
+  "Factorial in a Latin square" = "A factorial experiment with row and column blocking. Quade's rank test if an assumption fails.",
+  "Factorial in a Graeco-Latin square" = "A factorial experiment with row, column and Greek-letter blocking.",
   "Parametric" = "The parametric test is the answer: its assumptions hold.",
   "Non-parametric" = "A rank test is the answer: normality or another assumption fails.")
-PS_TYPE_ORDER <- c("One sample", "Two sample · independent", "Two sample · paired", "K sample (one-way)", "RCBD", "Latin square", "Graeco-Latin square", "BIBD")
-PS_PH_ORDER <- c("Tukey HSD", "Fisher LSD", "Bonferroni", "Scheffé", "Dunnett", "Games-Howell", "Dunn", "Nemenyi", "None", "Not applicable")
+PS_TYPE_ORDER <- c("One sample", "Two sample · independent", "Two sample · paired", "K sample (one-way)", "RCBD", "Latin square", "Graeco-Latin square", "BIBD",
+                   "Two-factor factorial", "Three-factor factorial", "Factorial in blocks (RCBD)", "Factorial in a Latin square", "Factorial in a Graeco-Latin square")
+PS_PH_ORDER <- c("Tukey HSD", "Fisher LSD", "Bonferroni", "Scheffé", "Dunnett", "Games-Howell", "Dunn", "Nemenyi", "Wilcoxon", "None", "Not applicable")
 
 ps_alt_choices <- function(kind) {
   sym <- switch(kind, one = "μ", variance = "σ²", two = "μ1 − μ2", paired = "μd", "μ")
@@ -54,7 +61,7 @@ problems_ui <- function(id) {
                 btn(ns("new_custom"), "Create custom problem", "plus", "bp", "bsm")),
       uiOutput(ns("resume")),
       kcard(div(class = "hrow", style = "align-items:flex-end",
-                div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Custom Problem" = "custom"), "ch2")),
+                div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Custom Problem" = "custom"), "ch2")),
                 div(class = "ml ps-search", textInput(ns("q"), NULL, placeholder = "Search by number, topic or test"))),
             uiOutput(ns("cat_blurb")),
             conditionalPanel("input.cat != 'custom'", ns = ns, div(class = "ps-filters",
@@ -98,9 +105,11 @@ problems_ui <- function(id) {
                     p(class = "small", style = "margin:8px 0 0", "Edit cells directly. Right-click the grid to add or remove rows."))),
           div(class = "col",
               kcard(div(class = "hrow", div(class = "ps-stepn", "3"), h2(class = "ct", "What each column is")),
-                    p(class = "small", style = "margin:6px 0 12px", "One sample: a Response only. Two or more groups: a Response and a Group (treatment). Paired data or a randomized block design: also the Block or pair ID. A Latin square: a Row and a Column (and a Greek letter for a Graeco-Latin square) instead of the block."),
+                    p(class = "small", style = "margin:6px 0 12px", "One sample: a Response only. Two or more groups: a Response and a Group (treatment). Paired data or a randomized block design: also the Block or pair ID. A Latin square: a Row and a Column (and a Greek letter for a Graeco-Latin square) instead of the block. A factorial experiment: Factor A, Factor B (and Factor C), each with at least two observations in every combination."),
                     div(class = "col", style = "gap:12px",
-                        selectInput(ns("c_response"), "Response (numeric)", NULL), selectInput(ns("c_treatment"), "Group or treatment column", NULL),
+                        selectInput(ns("c_response"), "Response (numeric)", NULL), selectInput(ns("c_treatment"), "Group, treatment or Factor A column", NULL),
+                        div(class = "grid g2", style = "gap:12px",
+                            selectInput(ns("c_factorB"), "Factor B (factorial)", NULL), selectInput(ns("c_factorC"), "Factor C (three-factor)", NULL)),
                         selectInput(ns("c_block"), "Block or pair ID (paired samples, RCBD, BIBD)", NULL),
                         div(class = "grid g3", style = "gap:12px",
                             selectInput(ns("c_row"), "Row (Latin square)", NULL), selectInput(ns("c_column"), "Column (Latin square)", NULL),
@@ -124,7 +133,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     # The problem being worked on. Inputs carry the problem key in their ids, so a value typed
     # for one problem can never be read for another while the browser catches up.
     cur <- reactiveValues(id = NULL, key = NULL, meta = NULL, st = NULL, kind = NULL, s = NULL, h0 = NULL, h1 = NULL, hs0 = NULL, hs1 = NULL,
-                          h0n = NULL, h1n = NULL, hs0n = NULL, hs1n = NULL, test = NULL, test_user = FALSE, ph = NULL, res = NULL, res_np = NULL, step = 1, seen = 1)
+                          h0n = NULL, h1n = NULL, hs0n = NULL, hs1n = NULL, test = NULL, test_user = FALSE, ph = NULL, res = NULL, res_np = NULL, step = 1, seen = 1,
+                          fh = NULL, fhn = NULL)   # factorial designs: hypotheses of every effect, by effect code
     kid <- function(n) paste0(n, "_", isolate(cur$key))
     kin <- function(n) input[[paste0(n, "_", cur$key)]]
 
@@ -217,7 +227,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     # ---------- Opening a problem ----------
     save_cur <- function() {
       i <- isolate(cur$id); if (is.null(i)) return()
-      memo[[i]] <- isolate(list(s = cur$s, h0 = cur$h0, h1 = cur$h1, hs0 = cur$hs0, hs1 = cur$hs1, h0n = cur$h0n, h1n = cur$h1n, hs0n = cur$hs0n, hs1n = cur$hs1n,
+      memo[[i]] <- isolate(list(s = cur$s, h0 = cur$h0, h1 = cur$h1, hs0 = cur$hs0, hs1 = cur$hs1, h0n = cur$h0n, h1n = cur$h1n, hs0n = cur$hs0n, hs1n = cur$hs1n, fh = cur$fh, fhn = cur$fhn,
                                 test = cur$test, test_user = cur$test_user, ph = cur$ph, res = cur$res, res_np = cur$res_np, step = cur$step, seen = cur$seen))
     }
     open_problem <- function(i, step = NULL) {
@@ -234,6 +244,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       cur$h0n <- sv$h0n %||% hn$h0; cur$h1n <- sv$h1n %||% hn$h1; cur$hs0n <- sv$hs0n %||% hn$h0; cur$hs1n <- sv$hs1n %||% hn$h1
       cur$test <- sv$test %||% info$suggest; cur$test_user <- isTRUE(sv$test_user)
       cur$ph <- sv$ph %||% s$posthoc
+      if (ps_is_fact(kind)) {
+        fhx <- function(fam) lapply(ps_fact_hypotheses(st, m, fam), function(e) list(h0 = e$h0, h1 = e$h1))
+        cur$fh <- sv$fh %||% fhx("param"); cur$fhn <- sv$fhn %||% fhx("nonpar")
+      } else { cur$fh <- NULL; cur$fhn <- NULL }
       cur$res <- sv$res; cur$res_np <- sv$res_np; cur$seen <- sv$seen %||% 1
       cur$key <- paste0(gsub("[^A-Za-z0-9]", "", i), "k", isolate(keyn()))
       sel(i)
@@ -249,6 +263,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       g <- function(n) input[[paste0(n, "_", k)]]
       v <- list(alt = g("alt"), value = g("value"), alpha = g("alpha"), family = g("family"), var_mode = g("var_mode"), var_test = g("var_test"),
                 sigma = g("sigma"), sigma2 = g("sigma2"), test = g("test"), ph = g("ph"), h0 = g("h0"), h1 = g("h1"), h0n = g("h0n"), h1n = g("h1n"))
+      # The hypotheses of every effect of a factorial design are read here, outside isolate(), so typing re-runs this.
+      fin <- list()
+      if (ps_is_fact(isolate(cur$kind))) for (slot in c("fh", "fhn")) for (cd in names(isolate(cur[[slot]]))) for (w in c("h0", "h1"))
+        fin[[paste(slot, w, cd, sep = "_")]] <- g(paste(slot, w, cd, sep = "_"))
       isolate({
         s <- cur$s
         if (!is.null(v$alt)) s$alt <- v$alt
@@ -264,6 +282,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
         if (!is.null(v$test) && !identical(v$test, cur$test)) { cur$test <- v$test; cur$test_user <- TRUE }
         if (!is.null(v$ph)) cur$ph <- v$ph
         for (n in c("h0", "h1", "h0n", "h1n")) if (!is.null(v[[n]])) cur[[n]] <- v[[n]]
+        if (ps_is_fact(cur$kind)) for (slot in c("fh", "fhn")) {
+          cur_l <- cur[[slot]]; ch <- FALSE
+          for (cd in names(cur_l)) for (w in c("h0", "h1")) {
+            x <- fin[[paste(slot, w, cd, sep = "_")]]
+            if (!is.null(x) && !identical(x, cur_l[[cd]][[w]])) { cur_l[[cd]][[w]] <- x; ch <- TRUE }
+          }
+          if (ch) cur[[slot]] <- cur_l
+        }
       })
     })
     is_multi <- reactive(ps_multi(cur$kind))
@@ -297,6 +323,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       })
     })
     reset_h <- function(sets) for (x in sets) { cur[[x[1]]] <- x[3]; cur[[x[2]]] <- x[3]; updateTextAreaInput(session, kid(x[1]), value = x[3]) }
+    observeEvent(input[[paste0("fh_reset_", cur$key)]], {
+      cur$fh <- lapply(ps_fact_hypotheses(cur$st, cur$meta, "param"), function(e) list(h0 = e$h0, h1 = e$h1))
+      for (cd in names(cur$fh)) for (w in c("h0", "h1")) updateTextAreaInput(session, kid(paste0("fh_", w, "_", cd)), value = cur$fh[[cd]][[w]])
+    }, ignoreInit = TRUE)
+    observeEvent(input[[paste0("fhn_reset_", cur$key)]], {
+      cur$fhn <- lapply(ps_fact_hypotheses(cur$st, cur$meta, "nonpar"), function(e) list(h0 = e$h0, h1 = e$h1))
+      for (cd in names(cur$fhn)) for (w in c("h0", "h1")) updateTextAreaInput(session, kid(paste0("fhn_", w, "_", cd)), value = cur$fhn[[cd]][[w]])
+    }, ignoreInit = TRUE)
     observeEvent(input[[paste0("h_reset_", cur$key)]], {
       h <- ps_hypotheses(cur$kind, cur$st, cur$meta, cur$s, if (is_multi()) "param" else info()$family)
       reset_h(list(c("h0", "hs0", h$h0), c("h1", "hs1", h$h1)))
@@ -313,14 +347,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       res <- tryCatch(ps_run_test(cur$kind, cur$test, cur$st, cur$meta, cur$s), error = function(e) e)
       if (inherits(res, "error")) { showNotification(paste("The test could not be run:", conditionMessage(res)), type = "error", duration = 10); return(FALSE) }
       res$sig <- list(cur$test, cur$s); cur$res <- res
-      if (!quiet_ok) showNotification(sprintf("%s: %s = %s, %s.", res$t$name, res$t$stat_name, ps_fmt(res$t$stat, 4), ps_pe(res$p)), type = "message")
+      if (!quiet_ok) showNotification(res$summary_msg %||% sprintf("%s: %s = %s, %s.", res$t$name, res$t$stat_name, ps_fmt(res$t$stat, 4), ps_pe(res$p)), type = "message")
       TRUE
     }
     run_np <- function(quiet_ok = FALSE) {
       res <- tryCatch(ps_run_test(cur$kind, ps_np_test(cur$kind), cur$st, cur$meta, cur$s), error = function(e) e)
       if (inherits(res, "error")) { showNotification(sprintf("The %s could not be run: %s", ps_np_name(cur$kind), conditionMessage(res)), type = "error", duration = 10); return(FALSE) }
       res$sig <- cur$s; cur$res_np <- res
-      if (!quiet_ok) showNotification(sprintf("%s: %s = %s, %s.", res$t$name, res$t$stat_name, ps_fmt(res$t$stat, 4), ps_pe(res$p)), type = "message")
+      if (!quiet_ok) showNotification(res$summary_msg %||% sprintf("%s: %s = %s, %s.", res$t$name, res$t$stat_name, ps_fmt(res$t$stat, 4), ps_pe(res$p)), type = "message")
       TRUE
     }
 
@@ -436,8 +470,24 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     hyp_inputs <- function(id0, id1, v0, v1) div(class = "ps-hyp",
       div(class = "ps-hlab", "H0"), textAreaInput(ns(kid(id0)), NULL, v0, rows = 2, width = "100%", resize = "vertical"),
       div(class = "ps-hlab alt", "H1"), textAreaInput(ns(kid(id1)), NULL, v1, rows = 2, width = "100%", resize = "vertical"))
+    # A factorial design has a pair of hypotheses for every main effect and every interaction.
+    fact_hyp_block <- function(slot, fam) {
+      hs <- ps_fact_hypotheses(isolate(cur$st), isolate(cur$meta), fam); vals <- isolate(cur[[slot]])
+      div(class = "col", style = "gap:12px", lapply(names(hs), function(cd) {
+        e <- hs[[cd]]; ef <- isolate(ps_fact_effects(cur$st, cur$meta))[[cd]]; np <- identical(fam, "nonpar")
+        div(class = paste("ps-hblock", if (np) "np"),
+            div(class = "ps-hhead", span(class = paste("pill", if (ef$main) "inf" else "warn"), if (ef$main) "Main effect" else "Interaction"), span(sprintf("%s (%s)", ef$label, cd))),
+            div(class = "ps-sym", span(class = "chip", e$h0s), span(class = "chip", e$h1s)),
+            hyp_inputs(paste0(slot, "_h0_", cd), paste0(slot, "_h1_", cd), vals[[cd]]$h0, vals[[cd]]$h1))
+      }))
+    }
     output$s2 <- renderUI({
       req(cur$key); kind <- isolate(cur$kind); s <- isolate(cur$s); multi <- ps_multi(kind)
+      if (ps_is_fact(kind)) return(step_card(2, sprintf("State H0 and H1 for the %s, for each factor (its main effect) and for each interaction, about the population means. The system suggests them; edit them if needed.", pname(kind, isolate(cur$test))),
+        fact_hyp_block("fh", "param"),
+        note(kind = "i", ic = "info", if (isTRUE(isolate(cur$st$unrep))) "There is one observation per combination, so only the main effects are tested; the interaction is checked with Tukey's test for nonadditivity (step 5)."
+                                      else "If an interaction is significant, the main effects of the factors in it cannot be read alone: the post-hoc step compares the levels within each level of the other factor (simple effects)."),
+        div(class = "hrow", actionLink(ns(kid("fh_reset")), tagList(icon("wand", 14), " Restore the suggested wording"), class = "small ps-link"))))
       step_card(2, if (multi) sprintf("State H0 and H1 for the parametric test (%s), about the population means μ. The system suggests both; edit them if needed.", pname(kind, isolate(cur$test)))
                    else "State the null hypothesis H0 (no effect, no difference) and the alternative H1 (what the question wants to show). The system suggests both; edit them if needed.",
         if (!multi) div(class = "grid g2", style = "gap:12px 20px",
@@ -517,7 +567,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     output$info_body <- renderUI({
       inf <- info(); a <- cur$s$alpha; kind <- cur$kind; m <- cur$meta
       facts <- div(h3(class = "ct", "What we know"), div(style = "margin-top:6px", lapply(seq_len(nrow(inf$facts)), function(i) div(class = "kv-row ps-fact", span(inf$facts$What[i]), span(inf$facts$Information[i])))))
-      if (kind %in% PS_BLOCK_KINDS) return(tagList(facts, data_block(m, "The data"), plan_ui(kind, cur$test)))
+      if (kind %in% PS_BLOCK_KINDS || ps_is_fact(kind)) return(tagList(facts, data_block(m, "The data"), plan_ui(kind, cur$test)))
       norm_card <- if (!is.null(inf$normality)) div(class = "kcard soft ps-card-s", h3(class = "ct", "Normality"),
         tbl(transform(inf$normality, W = ps_fmt(W, 4), p = ps_p(p))),
         p(class = "small", style = "margin:8px 0 0", if (inf$stated) "The problem states the population is normal." else sprintf("Shapiro-Wilk at α = %s: p ≥ α means no evidence against normality.", format(a))))
@@ -573,7 +623,49 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       latin = "Rows and columns are blocking factors: their F ratios are shown for information. The test of interest is the treatments (Latin letters).",
       glsd = sprintf("Rows and columns are blocking factors. The Latin letters are the treatments being tested; the Greek letters (%s) have their own F test in the table.", r$term_labels[["greek"]]),
       bibd = "Not every treatment appears in every block, so the treatment sum of squares is adjusted for blocks (intrablock analysis).", NULL)
+    # ---- factorial designs: helpers shared by the steps ----
+    # The effect shown in a step: the student's pick, else `pick` (default the first of `pool`).
+    fsel <- function(id, res, pool = res$effects$code, pick = NULL) {
+      x <- input[[paste0(id, "_", cur$key)]]
+      if (!is.null(x) && x %in% pool) x else (pick %||% pool[1])
+    }
+    eff_choices <- function(res, codes = res$effects$code) stats::setNames(codes, vapply(codes, function(cd) { e <- res$effects[res$effects$code == cd, ]
+      sprintf("%s · %s%s", cd, e$label, if (e$p < res$alpha) "  (significant)" else "") }, ""))
+    # The significant effects, interactions of the highest order first.
+    sig_effects <- function(res) { sg <- res$effects$code[res$effects$p < res$alpha]; sg[order(-nchar(sg), match(sg, res$effects$code))] }
+    fact_conclusions <- function(res, slot) vapply(res$effects$code, function(cd) ps_decision(ps_fact_effect_res(res, cd), cur[[slot]][[cd]]$h1 %||% "")$conclusion, "")
+    eff_picker <- function(id, res, codes = res$effects$code, label = "Effect shown below", pick = NULL) {
+      ch <- eff_choices(res, codes)
+      div(style = "max-width:520px", selectInput(ns(kid(id)), label, ch, selected = pick %||% codes[1], width = "100%"))
+    }
+    result_fact_ui <- function(r, stale_flag, choice_note = NULL) {
+      m <- cur$meta; vc <- if (isTRUE(m$random_blocks)) r$varcomp; anova_t <- identical(r$test, "anova"); eff <- r$effects; sg <- eff$code[eff$p < r$alpha]
+      tile <- function(label, value, sub = NULL) div(class = "ps-tile", div(class = "ps-tl", label), div(class = "ps-tv", value), if (!is.null(sub)) div(class = "ps-ts", sub))
+      tagList(choice_note,
+        if (stale_flag) note(kind = "i", ic = "info", "The settings changed after this result was computed. Press Run test to update it."),
+        div(class = "grid g4", style = "margin-top:4px",
+            tile("Test", r$t$name), tile("Effects tested", as.character(nrow(eff)), paste(eff$code, collapse = ", ")),
+            tile("Significant effects", if (length(sg)) paste(sg, collapse = ", ") else "None", sprintf("at α = %s", format(r$alpha))),
+            tile(if (anova_t) "Error df" else "Statistic", if (anova_t) as.character(r$an$dfe) else sprintf("%s per effect", r$stat_name), if (anova_t) sprintf("MS_E = %s", ps_fmt(r$an$mse, 5)) else "χ² distribution")),
+        div(class = "col", style = "gap:6px;margin-top:6px", h3(class = "ct", "How the statistics are computed"), div(class = "am-formula", lapply(r$formula, div))),
+        if (!is.null(r$anova_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "ANOVA table"), tbl(r$anova_df),
+            p(class = "small", style = "margin:0", if (isTRUE(r$unrep)) "There is one observation per combination, so there is no pure error: the error line is the interaction, and the interaction itself is tested below with Tukey's test for nonadditivity."
+                                                  else if (identical(r$kind, "factb")) "Each replicate is a block: the block effect is removed from the error. The test of interest is each factor and each interaction."
+                                                  else "Every factor and every interaction is tested against the error mean square.")),
+        if (!is.null(r$nonadd_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "Test for nonadditivity (Tukey, 1 df)"), tbl(r$nonadd_df),
+            p(class = "small", style = "margin:0", "H0: the effects of the two factors add (no interaction). The interaction sum of squares has one degree of freedom and is tested against the remainder.")),
+        if (!is.null(vc)) div(class = "kcard soft ps-card-s", h3(class = "ct", "Blocks: variance component and usefulness of blocking"),
+            div(class = "kv-row", span("F test for blocks"), span(sprintf("F = %s, %s", ps_fmt(vc$F, 4), ps_pe(vc$p)))),
+            div(class = "kv-row", span("σ̂²β = (MS_Blocks − MS_E) / (number of combinations)"), span(sprintf("(%s − %s) / %d = %s", ps_fmt(vc$msb, 6), ps_fmt(vc$mse, 6), vc$ncell, ps_fmt(vc$raw, 6)))),
+            div(class = "kv-row", span("Relative efficiency of blocking against a CRD"), span(ps_fmt(vc$re, 4))),
+            p(class = "small", style = "margin:8px 0 0", if (vc$raw < 0) "The estimate is negative, so it is set to 0: there is no evidence of variation between blocks."
+                                                         else sprintf("Blocking %s: a relative efficiency %s 1 means the blocked design is more precise than a completely randomized one.", if (vc$re > 1.1) "was useful" else "did little", if (vc$re > 1) "above" else "at or below"))),
+        div(class = "col", style = "gap:6px", h3(class = "ct", if (anova_t) "Each effect: F test" else sprintf("Each effect: %s", r$t$name)), tbl(ps_test_table(r))),
+        if (!is.null(r$rank_tables)) div(class = "col", style = "gap:10px", lapply(names(r$rank_tables), function(cd) div(class = "col", style = "gap:6px",
+            h3(class = "ct", sprintf("Ranks of the levels of %s", r$ef[[cd]]$label)), tbl(r$rank_tables[[cd]])))))
+    }
     result_ui <- function(r, stale_flag, choice_note = NULL) {
+      if (ps_is_fact(r$kind)) return(result_fact_ui(r, stale_flag, choice_note))
       t <- r$t; m <- cur$meta
       tile <- function(label, value, sub = NULL) div(class = "ps-tile", div(class = "ps-tl", label), div(class = "ps-tv", value), if (!is.null(sub)) div(class = "ps-ts", sub))
       dfx <- if (is.character(t$df)) t$df else if (!is.na(t$df %||% NA)) ps_fmt(t$df, 4) else "—"
@@ -623,11 +715,28 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
             method(3, "P-value", d$pv$reject, d$pv$text, ids[3])),
         div(class = "ps-hyprecap", span(class = "small", tags$b("H0: "), h0), span(class = "small", tags$b("H1: "), h1)))
     }
-    decision <- reactive({ r <- cur$res; req(r); ps_decision(r, cur$h1 %||% "") })
-    output$s6 <- renderUI({ req(cur$key); step_card(6, "Decide whether to reject H0 with three methods: the rejection region, the confidence interval and the p-value. With a 1 − α interval they normally lead to the same decision.",
-                                                    uiOutput(ns("dec_body"))) })
+    dec_res <- reactive({ r <- cur$res; req(r); if (ps_is_fact(r$kind)) ps_fact_effect_res(r, fsel("eff6", r)) else r })
+    decision <- reactive({ r <- cur$res; req(r)
+      if (ps_is_fact(r$kind)) { cd <- fsel("eff6", r); return(ps_decision(dec_res(), cur$fh[[cd]]$h1 %||% "")) }
+      ps_decision(r, cur$h1 %||% "") })
+    output$s6 <- renderUI({ req(cur$key); fct <- ps_is_fact(isolate(cur$kind))
+      step_card(6, if (fct) "Decide each effect on its own with three methods: the rejection region, the confidence interval and the p-value. The table lists every effect; choose one below to see its decision, plots and effect plot."
+                   else "Decide whether to reject H0 with three methods: the rejection region, the confidence interval and the p-value. With a 1 − α interval they normally lead to the same decision.",
+                if (fct) uiOutput(ns("dec_summary")), if (fct) uiOutput(ns("eff_pick6")),
+                uiOutput(ns("dec_body"))) })
+    output$dec_summary <- renderUI({ r <- cur$res; req(r, ps_is_fact(r$kind))
+      div(class = "col", style = "gap:6px", h3(class = "ct", "All the effects"), tbl(ps_test_table(r)),
+          p(class = "small", style = "margin:0", sprintf("Significant at α = %s: %s.", format(r$alpha), if (any(r$effects$p < r$alpha)) paste(r$effects$code[r$effects$p < r$alpha], collapse = ", ") else "none"))) })
+    output$eff_pick6 <- renderUI({ r <- cur$res; req(r, ps_is_fact(r$kind)); sg <- sig_effects(r); eff_picker("eff6", r, pick = if (length(sg)) sg[1] else NULL) })
     output$dec_body <- renderUI({
       d <- decision(); r <- cur$res; m <- cur$meta
+      if (ps_is_fact(r$kind)) { cd <- fsel("eff6", r); er <- dec_res()
+        return(tagList(decision_ui(d, er, cur$fh[[cd]]$h0, cur$fh[[cd]]$h1, c("pl_rr", "pl_ci", "pl_pv")),
+          div(class = "kcard ps-method", div(class = "hrow", h3(class = "ct", sprintf("Effect plot: %s", r$ef[[cd]]$label))), plotOutput(ns("pl_eff"), height = 260),
+              p(class = "small", style = "margin:8px 0 0", if (r$ef[[cd]]$main) "The line joins the mean of each level; the dots are the observations." else "Parallel lines mean no interaction; lines that cross or fan out mean the effect of one factor depends on the level of the other.")),
+          if (any(r$effects$p[!r$effects$main] < r$alpha) && r$ef[[cd]]$main) note(kind = "w", ic = "alert", "An interaction is significant, so the main effects of the factors in it cannot be read alone: the post-hoc step compares levels within each level of the other factor (simple effects)."),
+          note(kind = "i", ic = "info", if (any(r$effects$p < r$alpha)) "At least one effect is significant, so the next step finds which levels differ (post-hoc). The assumptions are checked after that."
+                                         else "No effect is significant, so no post-hoc analysis is needed. The next step checks the ANOVA assumptions."))) }
       tagList(decision_ui(d, r, cur$h0, cur$h1, c("pl_rr", "pl_ci", "pl_pv")),
               if (isTRUE(m$scaled_t) && !is.null(r$ph_all)) div(class = "kcard ps-method",
                   div(class = "hrow", h3(class = "ct", "Treatment means against a scaled t distribution")),
@@ -639,7 +748,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     output$pl_rr <- renderPlot({ d <- decision(); ps_plot_rr(d$ref, cur$res$alpha) }, bg = "transparent", res = 88)
     output$pl_ci <- renderPlot({ d <- decision(); r <- cur$res; req(isTRUE(d$ci$available))
       if (ps_multi(r$kind)) ps_plot_ci_k(d$ci$table, r$conf) else plot_ci_one(r$t, ref_value(r), r$conf, cur$meta$labels$unit %||% "") }, bg = "transparent", res = 88)
-    output$pl_pv <- renderPlot({ d <- decision(); ps_plot_pvalue(d$ref, cur$res$p, cur$res$alpha) }, bg = "transparent", res = 88)
+    output$pl_pv <- renderPlot({ d <- decision(); er <- dec_res(); ps_plot_pvalue(d$ref, er$p, er$alpha) }, bg = "transparent", res = 88)
+    output$pl_eff <- renderPlot({ r <- cur$res; req(r, ps_is_fact(r$kind)); ps_plot_fact_effect(r, fsel("eff6", r)) }, bg = "transparent", res = 88)
     output$pl_st <- renderPlot({ r <- cur$res; req(r, r$ph_all); ps_plot_scaled_t(r) }, bg = "transparent", res = 88)
 
     # ---------- Step 7 and 14: post-hoc ----------
@@ -653,23 +763,44 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
             div(class = "col", style = "gap:14px", div(class = "col", style = "gap:6px", h3(class = "ct", if (dun) "Compared with the control" else "Grouping"), tbl(ph$groups)),
                 if (!is.null(ph$raw$lwr)) plot_box(if (identical(r, cur$res_np)) "pl_ph_np" else "pl_ph", "Simultaneous intervals for the differences", 230))))
     }
+    # One effect's comparisons: the levels of its factor (main effect) or of each factor within the levels of the others (interaction).
+    fact_ph_ui <- function(r, cd, method, fam = "param") {
+      ph <- ps_fact_posthoc(r, cd, method); e <- r$ef[[cd]]
+      nsig <- function(b) sum(b$raw$signif, na.rm = TRUE)
+      tagList(
+        if (!e$main) note(kind = "w", ic = "alert", sprintf("%s is significant, so its main effects cannot be read alone. Each factor is compared within every level of the other factor (simple effects).", e$label))
+        else note(kind = "i", ic = "info", sprintf("The levels of %s are compared two by two; levels that share a letter are not significantly different.", tolower(e$label))),
+        lapply(ph$blocks, function(b) {
+          pairs <- function(tb, gp) div(class = "grid g2", style = "align-items:start", div(class = "col", style = "gap:6px", h3(class = "ct", "Comparisons"), tbl(tb)), div(class = "col", style = "gap:6px", h3(class = "ct", "Grouping"), tbl(gp)))
+          within <- "Within" %in% names(b$table)
+          div(class = "kcard soft ps-card-s", h3(class = "ct", b$title),
+            p(class = "small", style = "margin:4px 0 8px", sprintf("%d of %d comparisons differ at α = %s.%s", nsig(b), nrow(b$raw), format(r$alpha), if (isTRUE(b$fallback)) " Dunnett's test needs a control, so Tukey HSD is used here." else "")),
+            if (!within) pairs(b$table, b$groups)
+            else div(class = "col", style = "gap:12px", lapply(unique(b$table$Within), function(w)
+              div(class = "ps-simple", div(class = "ps-simple-t", w), pairs(b$table[b$table$Within == w, names(b$table) != "Within", drop = FALSE], b$groups[b$groups$Within == w, names(b$groups) != "Within", drop = FALSE])))))
+        }))
+    }
     output$s7 <- renderUI({
       req(cur$key); r <- cur$res
       ch <- if (!is.null(r)) ps_posthoc_choices(r$test, r$kind, r$control) else character(0); sg <- ps_default_ph(isolate(cur$s), ch)
-      step_card(7, "H0 was rejected, so find which pairs of treatments differ.",
-        if (length(ch) && isTRUE(r$reject)) div(style = "width:340px;max-width:100%", selectInput(ns(kid("ph")), "Method", stats::setNames(names(ch), ifelse(names(ch) == sg, paste0(ch, "  ★ suggested"), ch)),
-                                                                                    if (isolate(cur$ph) %in% names(ch)) isolate(cur$ph) else sg, width = "100%")),
+      step_card(7, if (!is.null(r) && ps_is_fact(r$kind)) "At least one effect is significant, so find which levels differ: the levels of a factor for a significant main effect, and the simple effects for a significant interaction." else "H0 was rejected, so find which pairs of treatments differ.",
+        if (length(ch) && isTRUE(r$reject)) div(class = "hrow", style = "gap:14px;align-items:flex-end;flex-wrap:wrap",
+          if (ps_is_fact(r$kind)) { sge <- sig_effects(r); eff_picker("eff7", r, sge, "Significant effect", sge[1]) },
+          div(style = "width:340px;max-width:100%", selectInput(ns(kid("ph")), "Method", stats::setNames(names(ch), ifelse(names(ch) == sg, paste0(ch, "  ★ suggested"), ch)),
+                                                                                    if (isolate(cur$ph) %in% names(ch)) isolate(cur$ph) else sg, width = "100%"))),
         if (isTRUE(r$reject) && "dunnett" %in% names(ch)) note(kind = "i", ic = "info", sprintf("The problem names a control group (%s), so Dunnett's test, which compares every treatment with the control, is offered and suggested.", r$control)),
         uiOutput(ns("ph_body")))
     })
     posthoc <- reactive({
-      r <- cur$res; req(r, ps_multi(r$kind), r$reject)
+      r <- cur$res; req(r, ps_multi(r$kind), !ps_is_fact(r$kind), r$reject)
       ch <- ps_posthoc_choices(r$test, r$kind, r$control); m <- if (isTRUE(cur$ph %in% names(ch))) cur$ph else ps_default_ph(cur$s, ch)
       c(ps_posthoc(r, m), list(method = m, name = ch[[m]]))
     })
     output$ph_body <- renderUI({
       r <- cur$res; req(r)
-      if (!r$reject) return(div(class = "ps-empty left", icon("info", 18), p(class = "sub", style = "margin:0", sprintf("H0 was not rejected (%s ≥ α = %s), so no post-hoc analysis is carried out.", ps_pe(r$p), format(r$alpha)))))
+      if (!r$reject) return(div(class = "ps-empty left", icon("info", 18), p(class = "sub", style = "margin:0", if (ps_is_fact(r$kind)) sprintf("No effect is significant at α = %s, so no post-hoc analysis is carried out.", format(r$alpha)) else sprintf("H0 was not rejected (%s ≥ α = %s), so no post-hoc analysis is carried out.", ps_pe(r$p), format(r$alpha)))))
+      if (ps_is_fact(r$kind)) { ch <- ps_posthoc_choices(r$test, r$kind, r$control); m <- if (isTRUE(cur$ph %in% names(ch))) cur$ph else ps_default_ph(cur$s, ch)
+        return(fact_ph_ui(r, fsel("eff7", r, sig_effects(r)), m)) }
       posthoc_ui(posthoc(), r)
     })
     output$pl_ph <- renderPlot({ ph <- posthoc(); req(!is.null(ph$raw$lwr)); ps_plot_ci_k(ph$raw, cur$res$conf) }, bg = "transparent", res = 88)
@@ -677,13 +808,17 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     # ---------- Step 8: assumption checks ----------
     np_about <- function(kind) switch(kind, k = "compares the groups through the ranks of all the observations",
                                       rcbd = "ranks the responses within each block, so differences between blocks cannot affect it",
+                                      fact = "ranks all the observations together and tests each factor and each interaction on the ranks",
+                                      factb = "ranks the treatment combinations within each block and tests each factor and each interaction on the rank sums",
+                                      factl = , factg = "removes the blocking factors, ranks the residuals and tests each factor and each interaction on the ranks (Quade)",
                                       "removes the blocking factors and compares the treatments through the ranks of the residuals (the class approach)")
     output$s8 <- renderUI({ req(cur$key); step_card(8, "Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.", uiOutput(ns("asm_body"))) })
     output$asm_body <- renderUI({
       a <- asm(); al <- cur$s$alpha; r <- cur$res; kind <- cur$kind
       status <- function(ok) if (is.na(ok)) pill(if (isTRUE(a$welch)) "Not required" else "Not available", "neu") else if (ok) pill("Satisfied", "pass", "check") else pill("Not satisfied", "fail", "x")
       sec <- function(title, ok, ...) div(class = "kcard ps-asm", div(class = "hrow", h3(class = "ct", title), div(class = "ml", status(ok))), ...)
-      d <- if (!is.null(r)) ps_decision(r, cur$h1 %||% "")
+      d <- if (!is.null(r) && !ps_is_fact(kind)) ps_decision(r, cur$h1 %||% "")
+      concl <- if (ps_is_fact(kind)) paste(fact_conclusions(r, "fh"), collapse = " ") else if (!is.null(d)) d$conclusion else ""
       pn <- ps_param_name(kind, cur$test)
       tagList(
         sec("Normality", a$normal_ok, tbl(a$normality),
@@ -691,13 +826,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
             div(class = "grid g2", plot_box("pl_qq", "Normal QQ plot of the residuals"), plot_box("pl_hist", "Histogram of the residuals"))),
         sec("Constant variance of the residuals", a$var_ok,
             if (isTRUE(a$welch)) note(kind = "i", ic = "info", "Not required: the Welch ANOVA does not assume equal variances, so this check does not apply. The plots are shown for reference.")
-            else tagList(tbl(a$variance), p(class = "small", sprintf("H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the model terms). p ≥ %s means the spread can be treated as constant.", format(al)))),
+            else tagList(tbl(a$variance), p(class = "small", sprintf("H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on %s). p ≥ %s means the spread can be treated as constant.",
+                                                                    if (ps_is_fact(kind)) "the fitted values; with a term for every combination and two replicates, the usual version would reject whatever the data" else "the model terms", format(al)))),
             div(class = "grid g2", plot_box("pl_rvf", "Residuals versus fitted values"), plot_box("pl_box", "Spread of each treatment"))),
         sec("Independence", a$indep_ok, tbl(a$independence),
-            p(class = "small", "H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed)."),
+            p(class = "small", if (ps_is_fact(kind)) "H0: the residuals are independent (no correlation between consecutive observations). The observations are listed replicate by replicate: every combination once, then the next replicate." else "H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed)."),
             plot_box("pl_ord", "Residuals in the order listed", 210)),
         if (a$all_ok) final_card("All assumptions hold: the analysis stops here",
-                                 paste(sprintf("The %s result stands.", pn), if (!is.null(d)) d$conclusion else ""), if (isTRUE(r$reject)) "rej" else "keep")
+                                 paste(sprintf("The %s result stands.", pn), concl), if (isTRUE(r$reject)) "rej" else "keep")
         else div(class = "ps-switch", div(class = "ps-final-t", icon("alert", 15), sprintf("%s failed: start again with the non-parametric test", paste(a$failed, collapse = " and "))),
                  p(sprintf("The %s assumes %s, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the %s, which %s: new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.",
                            pn, paste(tolower(a$failed), collapse = " and "), ps_np_name(kind), np_about(kind)))))
@@ -711,6 +847,9 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     # ---------- Steps 9-11: the non-parametric restart ----------
     output$s9 <- renderUI({
       req(cur$key)
+      if (ps_is_fact(isolate(cur$kind))) return(step_card(9, "An ANOVA assumption failed, so the process starts again for the non-parametric test. State H0 and H1 about the population medians η, for each factor and each interaction. The system suggests them; edit them if needed.",
+        uiOutput(ns("np_why")), fact_hyp_block("fhn", "nonpar"),
+        div(class = "hrow", actionLink(ns(kid("fhn_reset")), tagList(icon("wand", 14), " Restore the suggested wording"), class = "small ps-link"))))
       step_card(9, "An ANOVA assumption failed, so the process starts again for the non-parametric test. State H0 and H1 about the population medians η. The system suggests both; edit them if needed.",
         uiOutput(ns("np_why")),
         uiOutput(ns("h_sym_np")), hyp_inputs("h0n", "h1n", isolate(cur$h0n), isolate(cur$h1n)),
@@ -751,6 +890,12 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
               "It needs only independent random samples with distributions of similar shape, and compares the groups through the ranks of all the observations."),
         rcbd = c("A randomized complete block design and an ANOVA assumption fails, so the Friedman test is used.",
                  "It ranks the responses within each block, so block-to-block differences cannot affect the result, and it needs no normality."),
+        fact = c("A factorial experiment in a completely randomized layout and an ANOVA assumption fails, so the Kruskal-Wallis test is used for each factor and each interaction.",
+                 "All the observations are ranked together; the rank sum of each level (or combination) gives the H statistic of that effect, compared with the χ² distribution."),
+        factb = c("A factorial experiment in blocks and an ANOVA assumption fails, so the Friedman test is used for each factor and each interaction.",
+                  "The treatment combinations are ranked within each block, so block-to-block differences cannot affect the result, and the rank sums give the statistic of each effect."),
+        factl = , factg = c(sprintf("A %s and an ANOVA assumption fails, so Quade's rank test on the residuals is used for each factor and each interaction.", tolower(PS_KIND_LABEL[[kind]])),
+                            "The row and column (and Greek-letter) effects are removed, the residuals are ranked, and each effect is tested on the ranks with a χ² statistic (permutation p-values are shown as well)."),
         c(sprintf("A %s and an ANOVA assumption fails, so the rank test on the residuals is used.", tolower(PS_KIND_LABEL[[kind]])),
           "As in the class script: fit the blocking factors only, rank the residuals, and compare the treatments through these ranks (the Kruskal-Wallis statistic, with the permutation p-value shown as well)."))
       tagList(
@@ -772,31 +917,54 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
         uiOutput(ns("np_body")))
     })
     output$np_hrecap <- renderUI({
+      if (ps_is_fact(cur$kind)) return(div(class = "ps-hyprecap", lapply(names(cur$fhn), function(cd) span(class = "small", tags$b(sprintf("%s: ", cd)), cur$fhn[[cd]]$h1)), span(class = "small", sprintf("α = %s", format(cur$s$alpha)))))
       div(class = "ps-hyprecap", span(class = "small", tags$b("H0: "), cur$h0n), span(class = "small", tags$b("H1: "), cur$h1n),
           span(class = "small", sprintf("α = %s", format(cur$s$alpha))))
     })
     output$np_body <- renderUI({
       r <- cur$res_np
       if (is.null(r)) return(div(class = "ps-empty", icon("play", 20), p(class = "sub", sprintf("Press Run test to compute the %s statistic.", ps_np_name(cur$kind)))))
-      tagList(result_ui(r, stale_np()), if (!is.null(r$rank_table)) div(class = "col", style = "gap:6px", h3(class = "ct", r$rank_title), tbl(r$rank_table)))
+      tagList(result_ui(r, stale_np()), if (!is.null(r[["rank_table"]])) div(class = "col", style = "gap:6px", h3(class = "ct", r[["rank_title"]]), tbl(r[["rank_table"]])))
     })
-    decision_np <- reactive({ r <- cur$res_np; req(r); ps_decision(r, cur$h1n %||% "") })
-    output$s13 <- renderUI({ req(cur$key); step_card(13, sprintf("Decide whether to reject H0 for the %s. The rank test has no confidence interval, so the rejection region and the p-value decide.", ps_np_name(isolate(cur$kind))), uiOutput(ns("dec_np_body"))) })
+    decres_np <- reactive({ r <- cur$res_np; req(r); if (ps_is_fact(r$kind)) ps_fact_effect_res(r, fsel("eff13", r)) else r })
+    decision_np <- reactive({ r <- cur$res_np; req(r)
+      if (ps_is_fact(r$kind)) { cd <- fsel("eff13", r); return(ps_decision(decres_np(), cur$fhn[[cd]]$h1 %||% "")) }
+      ps_decision(r, cur$h1n %||% "") })
+    output$s13 <- renderUI({ req(cur$key); fct <- ps_is_fact(isolate(cur$kind))
+      step_card(13, sprintf("Decide whether to reject H0 for the %s%s. The rank test has no confidence interval, so the rejection region and the p-value decide.", ps_np_name(isolate(cur$kind)), if (fct) ", effect by effect" else ""),
+                if (fct) uiOutput(ns("dec_np_summary")), if (fct) uiOutput(ns("eff_pick13")), uiOutput(ns("dec_np_body"))) })
+    output$dec_np_summary <- renderUI({ r <- cur$res_np; req(r, ps_is_fact(r$kind))
+      div(class = "col", style = "gap:6px", h3(class = "ct", "All the effects"), tbl(ps_test_table(r))) })
+    output$eff_pick13 <- renderUI({ r <- cur$res_np; req(r, ps_is_fact(r$kind)); sg <- sig_effects(r); eff_picker("eff13", r, pick = if (length(sg)) sg[1] else NULL) })
     np_ph_name <- function(kind) { ch <- ps_posthoc_choices(ps_np_test(kind), kind); ch[[1]] }
     set_aside <- function() sprintf("The %s was set aside because %s failed.", ps_param_name(cur$kind, cur$test), paste(tolower(asm()$failed), collapse = " and "))
     output$dec_np_body <- renderUI({
       d <- decision_np(); r <- cur$res_np; kind <- cur$kind
+      if (ps_is_fact(kind)) { cd <- fsel("eff13", r)
+        return(tagList(decision_ui(d, decres_np(), cur$fhn[[cd]]$h0, cur$fhn[[cd]]$h1, c("pl_rr_np", "pl_ci_np", "pl_pv_np")),
+          div(class = "kcard ps-method", div(class = "hrow", h3(class = "ct", sprintf("Effect plot: %s", r$ef[[cd]]$label))), plotOutput(ns("pl_eff_np"), height = 260)),
+          if (!r$reject) final_card(sprintf("Final conclusion (%s)", ps_np_short(kind)), paste(paste(fact_conclusions(r, "fhn"), collapse = " "), set_aside()), "keep")
+          else note(kind = "i", ic = "info", sprintf("At least one effect is significant, so the next step finds which levels differ with the %s.", np_ph_name(kind))))) }
       tagList(decision_ui(d, r, cur$h0n, cur$h1n, c("pl_rr_np", "pl_ci_np", "pl_pv_np")),
               if (!d$reject) final_card(sprintf("Final conclusion (%s)", ps_np_short(kind)), paste(d$conclusion, set_aside()), "keep")
               else note(kind = "i", ic = "info", sprintf("H0 is rejected, so the next step finds which treatments differ with the %s.", np_ph_name(kind))))
     })
     output$pl_rr_np <- renderPlot({ d <- decision_np(); ps_plot_rr(d$ref, cur$res_np$alpha) }, bg = "transparent", res = 88)
-    output$pl_pv_np <- renderPlot({ d <- decision_np(); ps_plot_pvalue(d$ref, cur$res_np$p, cur$res_np$alpha) }, bg = "transparent", res = 88)
+    output$pl_pv_np <- renderPlot({ d <- decision_np(); er <- decres_np(); ps_plot_pvalue(d$ref, er$p, er$alpha) }, bg = "transparent", res = 88)
+    output$pl_eff_np <- renderPlot({ r <- cur$res_np; req(r, ps_is_fact(r$kind)); ps_plot_fact_effect(r, fsel("eff13", r)) }, bg = "transparent", res = 88)
     posthoc_np <- reactive({ r <- cur$res_np; req(r, r$reject); ch <- ps_posthoc_choices(r$test, r$kind); c(ps_posthoc(r, names(ch)[1]), list(method = names(ch)[1], name = ch[[1]])) })
-    output$s14 <- renderUI({ req(cur$key); kind <- isolate(cur$kind); step_card(14, sprintf("The %s rejected H0, so the %s finds which pairs of treatments differ.", ps_np_name(kind), np_ph_name(kind)), uiOutput(ns("ph_np_body"))) })
+    output$s14 <- renderUI({ req(cur$key); kind <- isolate(cur$kind); r <- cur$res_np; fct <- ps_is_fact(kind)
+      step_card(14, sprintf("The %s rejected H0, so the %s finds which %s differ.", ps_np_name(kind), np_ph_name(kind), if (fct) "levels" else "pairs of treatments"),
+        if (fct && !is.null(r) && isTRUE(r$reject)) div(class = "hrow", style = "gap:14px;align-items:flex-end;flex-wrap:wrap",
+          { sge <- sig_effects(r); eff_picker("eff14", r, sge, "Significant effect", sge[1]) },
+          { ch <- ps_posthoc_choices(r$test, r$kind); div(style = "width:380px;max-width:100%", selectInput(ns(kid("phn")), "Method", stats::setNames(names(ch), ch), names(ch)[1], width = "100%")) }),
+        uiOutput(ns("ph_np_body"))) })
     output$ph_np_body <- renderUI({
       r <- cur$res_np; req(r)
       if (!r$reject) return(div(class = "ps-empty left", icon("info", 18), p(class = "sub", style = "margin:0", sprintf("The %s did not reject H0, so no post-hoc analysis is needed.", r$t$name))))
+      if (ps_is_fact(r$kind)) { ch <- ps_posthoc_choices(r$test, r$kind); m <- fsel("phn", r, names(ch), names(ch)[1])
+        return(tagList(fact_ph_ui(r, fsel("eff14", r, sig_effects(r)), m, "nonpar"),
+                       final_card(sprintf("Final conclusion (%s)", ps_np_short(cur$kind)), paste(paste(fact_conclusions(r, "fhn"), collapse = " "), set_aside()), "keep"))) }
       ph <- posthoc_np(); d <- decision_np()
       tagList(posthoc_ui(ph, r),
               final_card(sprintf("Final conclusion (%s)", ps_np_short(cur$kind)), paste(d$conclusion, sprintf("The %s finds %d of %d pairs different.", ph$name, sum(ph$raw$signif), nrow(ph$raw)), set_aside())))
@@ -805,7 +973,22 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     # ---------- Pin to report ----------
     pin_observers(input, session, store,
       items = reactive({
-        r <- cur$res; req(r); d <- ps_decision(r, cur$h1 %||% "")
+        r <- cur$res; req(r)
+        if (ps_is_fact(r$kind)) {
+          hyp_txt <- paste(vapply(r$effects$code, function(cd) sprintf("%s (%s)\n  H0: %s\n  H1: %s", cd, r$ef[[cd]]$label, cur$fh[[cd]]$h0, cur$fh[[cd]]$h1), ""), collapse = "\n")
+          it <- list(
+            hyp = list(label = "Hypotheses and significance level", default = TRUE, build = function() mk_pin("text", "Hypotheses", "file", text = sprintf("%s\nSignificance level α = %s.", hyp_txt, format(r$alpha)))),
+            test = list(label = "Effects tested", default = TRUE, build = function() mk_pin("table", r$t$name, "table", df = ps_test_table(r))),
+            decision = list(label = "Decision for each effect", default = TRUE, build = function() mk_pin("text", "Decision", "check", text = paste(fact_conclusions(r, "fh"), collapse = "\n"))))
+          if (!is.null(r$anova_df)) it$anova <- list(label = "ANOVA table", default = TRUE, build = function() mk_pin("table", "ANOVA table", "table", df = r$anova_df))
+          if (r$reject) it$posthoc <- list(label = "Post-hoc comparisons (first significant effect)", default = TRUE, build = function() {
+            cd <- sig_effects(r)[1]; ch <- ps_posthoc_choices(r$test, r$kind, r$control); ph <- ps_fact_posthoc(r, cd, ps_default_ph(cur$s, ch)); mk_pin("table", sprintf("Post-hoc: %s", r$ef[[cd]]$label), "columns", df = ph$blocks[[1]]$table) })
+          it$asm <- list(label = "Assumption checks", default = TRUE, build = function() mk_pin("table", "Assumption checks", "scale", df = ps_asm_summary(asm())))
+          rn <- cur$res_np
+          if (!is.null(rn)) it$np <- list(label = sprintf("%s and decisions", rn$t$name), default = TRUE, build = function() mk_pin("table", rn$t$name, "shuffle", df = ps_test_table(rn)))
+          return(it)
+        }
+        d <- ps_decision(r, cur$h1 %||% "")
         it <- list(
           hyp = list(label = "Hypotheses and significance level", default = TRUE, build = function() mk_pin("text", "Hypotheses", "file",
                      text = sprintf("H0: %s\nH1: %s\nSignificance level α = %s.", cur$h0, cur$h1, format(r$alpha)))),
@@ -831,7 +1014,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
       }))
 
     # ---------- Custom problem editor ----------
-    role_ids <- c(response = "c_response", treatment = "c_treatment", block = "c_block", row = "c_row", column = "c_column", greek = "c_greek")
+    role_ids <- c(response = "c_response", treatment = "c_treatment", factorB = "c_factorB", factorC = "c_factorC", block = "c_block", row = "c_row", column = "c_column", greek = "c_greek")
     # "(none)" needs a real value: the dropdown cannot send an empty one, so an emptied role
     # would otherwise keep pointing at a column from the previous dataset.
     NO_ROLE <- ".none"
@@ -982,14 +1165,16 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     # ---------- For Ask Professor Riaz ----------
     list(ai = function(full) {
       i <- cur$id
-      if (is.null(i)) return(list(label = "the Problem Sets list", kind = "general", text = if (full) "The student is browsing the Problem Sets list (Chapter 2 one- and two-sample problems, Chapter 3 one-way ANOVA problems and Chapter 4 blocked designs: RCBD, Latin square, Graeco-Latin square and BIBD)."))
+      if (is.null(i)) return(list(label = "the Problem Sets list", kind = "general", text = if (full) "The student is browsing the Problem Sets list (Chapter 2 one- and two-sample problems, Chapter 3 one-way ANOVA problems, Chapter 4 blocked designs: RCBD, Latin square, Graeco-Latin square and BIBD, and Chapter 5 factorial designs)."))
       m <- cur$meta; n <- cur$step; r <- isolate(cur$res)
       list(label = sprintf("%s, %s", prob_label(m), ps_step_name(n, cur$kind)), kind = "general",
            text = if (full) paste0("Problem Sets page, hypothesis-testing steps. ", prob_label(m), " (", PS_KIND_LABEL[[cur$kind]], "). The student is on ",
                                    ps_step_name(n, cur$kind), ". Statement: ", paste(c(m$statement, m$parts), collapse = " "),
                                    " Data (first rows): ", paste(utils::capture.output(print(utils::head(m$data, 12), row.names = FALSE)), collapse = "\n"),
-                                   " H0: ", isolate(cur$h0), " H1: ", isolate(cur$h1), " alpha = ", format(isolate(cur$s$alpha)), ".",
-                                   if (!is.null(r)) { d <- ps_decision(r, isolate(cur$h1) %||% ""); paste0(" Test: ", r$t$name, ", ", r$t$stat_name, " = ", ps_fmt(r$t$stat, 4), ", ", ps_pe(r$p), ". ", d$conclusion) }
+                                   if (ps_is_fact(isolate(cur$kind))) paste0(" Hypotheses by effect: ", paste(vapply(names(isolate(cur$fh)), function(cd) sprintf("%s: H1 %s", cd, isolate(cur$fh)[[cd]]$h1), ""), collapse = " | "), " alpha = ", format(isolate(cur$s$alpha)), ".")
+                                   else paste0(" H0: ", isolate(cur$h0), " H1: ", isolate(cur$h1), " alpha = ", format(isolate(cur$s$alpha)), "."),
+                                   if (!is.null(r) && ps_is_fact(r$kind)) paste0(" ", r$t$name, " per effect: ", paste(sprintf("%s stat = %s, %s", r$effects$code, ps_fmt(r$effects$stat, 4), ps_pe(r$effects$p)), collapse = "; "), ".")
+                                   else if (!is.null(r)) { d <- ps_decision(r, isolate(cur$h1) %||% ""); paste0(" Test: ", r$t$name, ", ", r$t$stat_name, " = ", ps_fmt(r$t$stat, 4), ", ", ps_pe(r$p), ". ", d$conclusion) }
                                    else " The test has not been run yet.",
                                    { rn <- isolate(cur$res_np); if (!is.null(rn)) paste0(" ", rn$t$name, " (after a failed assumption): ", rn$t$stat_name, " = ", ps_fmt(rn$t$stat, 4), ", ", ps_pe(rn$p), ".") else "" }))
     })

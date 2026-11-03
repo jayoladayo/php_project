@@ -101,6 +101,17 @@ The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experim
 - **Dunnett's test** is suggested only when the problem names a control group.
 - **Home page**: the KFUPM logo, the aim and objectives, and the project team. Clicking a name opens **About the team** (also in the sidebar), with every member's photo, department and role. To change a photo, replace the file in `www/team/` (or set `photo` in `R/mod_team.R`); a member without a photo shows initials.
 
+## What is in stage 8
+
+- **Chapter 5 in Problem Sets (34 problems with their data)**: the factorial exercises of Montgomery's Chapter 5 that come with data: 5.8 to 5.18 (including 5.10, 5.16 and 5.17, which reuse the data of 5.8 and 5.9), 5.20, 5.21, 5.23, 5.24, 5.26 to 5.36, 5.38 and the "replicates as blocks" re-analyses 5.39 to 5.45. Exercises that only give an ANOVA table or ask for a derivation (5.1 to 5.7, 5.19, 5.22, 5.25, 5.46 to 5.52) have no raw data and are not included.
+- **The same five-step process, for every effect.** Following the lecturer's Topic 6 notes: a pair of hypotheses for each factor and each interaction (step 2); the factorial ANOVA with an F test for each effect, in a completely randomized layout or in blocks (step 5); a decision for each effect, chosen from a list, with the three methods and an effect plot (step 6); post-hoc comparisons for the significant effects (step 7): Tukey HSD, Fisher LSD, Bonferroni and Scheffé for the levels of a main effect, and **simple effects** (each factor compared within every level of the other) for a significant interaction; then the assumption checks on the residuals (step 8).
+- **If an assumption fails**, the process starts again with the rank test of the design, for each effect: **Kruskal-Wallis** (completely randomized layout, with Dunn's test with Holm or Bonferroni adjustment), **Friedman** (blocks, with Nemenyi or Wilcoxon signed-rank with Bonferroni) and **Quade's** rank test on the residuals (Latin and Graeco-Latin squares, with Dunn or Wilcoxon rank-sum).
+- **One observation per combination (5.20, 5.21)**: only the main effects are tested, and the interaction is checked with **Tukey's one-degree-of-freedom test for nonadditivity**.
+- **Blocks (5.26 to 5.45)**: the block effect is tested; for the re-analyses that ask for it, the block variance component and the efficiency of blocking against a completely randomized design are shown.
+- **Assumption checks for factorial data.** The observations are listed replicate by replicate (every combination once, then the next replicate), which is the natural run order for the independence check. With two replicates in a model that has a term for every combination, the two residuals of a cell are equal and opposite, so the usual Breusch-Pagan test would reject whatever the data; for factorial designs it is run on the fitted values.
+- **Custom problems** can be factorial: choose Factor A, Factor B (and Factor C) in the editor.
+- **Guided tour (Guided tour button, top of every page).** A box is drawn around each part of the screen, one at a time, with Back and Next (or the arrow keys; Esc closes). It offers a **tour of the page you are on**, a **hands-on walk-through** that does the steps for you (Problem 3.11 on Problem Sets; the class example on the one, two, k sample and design pages) and an **overview of the whole app**. It knows where you are: the stage of an analysis (Data, Map variables, Context & settings, Results) or the step of a Problem Sets problem, and on Problem Sets it explains exactly the step on screen. A first-time visitor sees a small invitation to take the tour.
+
 ## Ask Professor Riaz (AI assistant)
 
 The **Ask Professor Riaz** button at the bottom right opens a chat with an AI course assistant. It can see the page you are on: your dataset, your column mapping, and on a results page the ANOVA or test tables, assumption checks, post-hoc tables, the interpretation and the generated R code. Ask it to explain results, check assumptions, walk through the R code line by line, or show you how to use the app. Untick **Let Professor Riaz see my current data and results** in its settings to keep your data private.
@@ -138,6 +149,8 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 ## Files
 
 - `R/problems.R`: the Problem Sets exercises and their data (Chapters 2, 3 and 4). `R/problem_engine.R`: the step-by-step process (information available, hypotheses, tests, decision, post-hoc, assumption checks, classification for the filters). `R/problem_blocks.R`: the Chapter 4 designs (RCBD, Latin, Graeco-Latin, BIBD, missing values, Friedman and the rank test on residuals). `R/mod_problems.R`: the Problem Sets page, its categories and filters, its steps and the custom problem editor.
+
+- `R/problem_factorial.R`: the Chapter 5 factorial designs (hypotheses for each effect, factorial ANOVA, nonadditivity, rank tests, simple effects, effect plots). `www/tour.js`: the guided tour.
 
 - `R/mod_team.R`: the team, aim and objectives (home page and About the team). `www/team/`: team photos. `www/kfupm_logo.svg`: the KFUPM logo.
 

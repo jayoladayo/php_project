@@ -6,18 +6,22 @@
 # the blocked designs of Chapter 4 are in R/problem_blocks.R.
 # Plain R with no Shiny, so it can be tested on its own.
 
-PS_ROLE_KEYS <- c("treatment", "block", "row", "column", "greek")
-PS_ROLE_NAMES <- c(response = "Response", treatment = "Group", block = "Block or pair", row = "Row", column = "Column", greek = "Greek letter")
+# treatment is the group (or Factor A); factorB and factorC make a factorial design.
+PS_ROLE_KEYS <- c("treatment", "factorB", "factorC", "block", "row", "column", "greek")
+PS_ROLE_NAMES <- c(response = "Response", treatment = "Group or Factor A", factorB = "Factor B", factorC = "Factor C", block = "Block or pair",
+                   row = "Row", column = "Column", greek = "Greek letter")
 
 PS_KIND_LABEL <- c(one = "One sample", variance = "One sample (variance)", two = "Two independent samples",
                    paired = "Two dependent (paired) samples", k = "k independent samples",
                    rcbd = "Randomized complete block design", latin = "Latin square", glsd = "Graeco-Latin square",
-                   bibd = "Balanced incomplete block design")
+                   bibd = "Balanced incomplete block design",
+                   fact = "Factorial design (CRD)", factb = "Factorial design in blocks (RCBD)",
+                   factl = "Factorial design in a Latin square", factg = "Factorial design in a Graeco-Latin square")
 # Problem type, as used for the categories and filters of the list.
 PS_TYPE <- c(one = "One sample", variance = "One sample", two = "Two sample · independent", paired = "Two sample · paired",
              k = "K sample (one-way)", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square", bibd = "BIBD")
 PS_PH_SHORT <- c(tukey = "Tukey HSD", lsd = "Fisher LSD", bonferroni = "Bonferroni", scheffe = "Scheffé", dunnett = "Dunnett",
-                 gh = "Games-Howell", dunn = "Dunn", nemenyi = "Nemenyi")
+                 gh = "Games-Howell", dunn = "Dunn", dunnbonf = "Dunn", nemenyi = "Nemenyi", wilcox = "Wilcoxon", wilcoxrs = "Wilcoxon")
 
 # ---------- Formatting ----------
 
@@ -86,6 +90,12 @@ ps_structure <- function(df, roles) {
   st$d <- d; st$n <- nrow(d)
   if (st$n < 2) st$errors <- c(st$errors, "At least 2 observations are needed.")
   if ("treatment" %in% st$facs) { st$ntrt <- nlevels(d$treatment); st$reps <- table(d$treatment) }
+  # Factorial layouts: the replicates in each combination of the factor levels.
+  if (all(c("treatment", "factorB") %in% st$facs)) {
+    st$ffacs <- intersect(c("treatment", "factorB", "factorC"), st$facs)
+    st$cellreps <- as.vector(table(d[st$ffacs]))
+    st$unrep <- length(st$ffacs) == 2 && all(st$cellreps == 1) && !any(c("block", "row", "column", "greek") %in% st$facs)
+  }
   if (all(c("treatment", "block") %in% st$facs)) {
     tab <- table(d$treatment, d$block); st$nblk <- nlevels(d$block)
     st$complete <- all(tab >= 1); st$one_per_cell <- all(tab == 1)
@@ -97,8 +107,10 @@ ps_structure <- function(df, roles) {
 ps_kind <- function(st, meta) {
   if (length(st$errors)) return(NA_character_)
   has <- function(k) k %in% st$facs
+  if ((has("factorC") && !has("factorB")) || (has("factorB") && !has("treatment"))) return(NA_character_)
   if (!has("treatment")) return(if (identical(meta$target, "variance")) "variance" else "one")
   if (st$ntrt < 2) return(NA_character_)
+  if (has("factorB")) return(ps_fact_kind(st))
   if (has("row") && has("column")) return(if (has("greek")) "glsd" else "latin")
   if (has("block")) {
     if (st$ntrt == 2 && isTRUE(st$one_per_cell)) return("paired")
@@ -112,6 +124,7 @@ ps_kind <- function(st, meta) {
 
 ps_kind_problem <- function(kind, st) {
   if (length(st$errors)) return(paste(st$errors, collapse = " "))
+  if ("factorB" %in% st$facs) return("A factorial design needs every combination of the factor levels to appear, with replicates: at least two observations per combination, or two blocks. Check the Factor A, Factor B (and C) columns, or add replicates.")
   if ("block" %in% st$facs) return("Every block needs at least two observations.")
   "The Group column needs at least two levels, each with at least two observations."
 }
@@ -202,12 +215,13 @@ ps_test_choices <- function(kind, s) {
     paired = c(paired = "Paired t-test", wsr = "Wilcoxon signed-rank test (paired)", sign = "Sign test (paired)"),
     k = c(anova = "One-way ANOVA (F test)", welch = "Welch ANOVA (unequal variances)", kw = "Kruskal-Wallis test"),
     rcbd = c(anova = ps_param_name("rcbd"), friedman = "Friedman test"),
-    stats::setNames(c(ps_param_name(kind), ps_np_name(kind)), c("anova", "rankres")))
+    stats::setNames(c(ps_param_name(kind), ps_np_name(kind)), c("anova", ps_np_test(kind))))
 }
-PS_NONPAR_TESTS <- c("wilcox", "sign", "mw", "wsr", "kw", "friedman", "rankres")
+PS_NONPAR_TESTS <- c("wilcox", "sign", "mw", "wsr", "kw", "friedman", "rankres", "kwf", "friedmanf", "quadef")
 
 ps_info <- function(kind, st, meta, s) {
   if (kind %in% PS_BLOCK_KINDS) return(ps_info_block(kind, st, meta, s))
+  if (ps_is_fact(kind)) return(ps_info_fact(kind, st, meta, s))
   a <- s$alpha; d <- st$d
   lab <- ps_lab(meta, "response"); u <- ps_unit(meta)
   lv <- if ("treatment" %in% st$facs) levels(d$treatment) else character(0)
@@ -297,7 +311,7 @@ ps_hypotheses <- function(kind, st, meta, s, family = "param") {
     paired = list(h0 = sprintf("There is no difference in %s %s between %s and %s.", centre, lab, lv[1], lv[2]),
                   h1 = sprintf("The %s %s %s.", centre, lab, word(sprintf("differs between %s and %s", lv[1], lv[2]), sprintf("is greater for %s than for %s", lv[1], lv[2]), sprintf("is less for %s than for %s", lv[1], lv[2]))),
                   h0s = sprintf("H0: %sd = %s", sym, format(v)), h1s = sprintf("H1: %sd %s %s", sym, ps_alt_sym(alt), format(v))),
-    k = , rcbd = , latin = , glsd = , bibd = list(h0 = sprintf("The %s %s is the same for all %d %s.", centre, lab, length(lv), pl_word(ps_lab(meta, "treatment"))),
+    k = , rcbd = , latin = , glsd = , bibd = , fact = , factb = , factl = , factg = list(h0 = sprintf("The %s %s is the same for all %d %s.", centre, lab, length(lv), pl_word(ps_lab(meta, "treatment"))),
              h1 = sprintf("At least one %s has a different %s %s.", ps_lab(meta, "treatment"), centre, lab),
              h0s = sprintf("H0: %s", paste(sprintf("%s%d", sym, seq_along(lv)), collapse = " = ")),
              h1s = sprintf("H1: %sᵢ ≠ %sⱼ for at least one pair", sym, sym)))
@@ -307,6 +321,7 @@ ps_hypotheses <- function(kind, st, meta, s, family = "param") {
 
 ps_run_test <- function(kind, test, st, meta, s) {
   if (kind %in% PS_BLOCK_KINDS) return(ps_run_block(kind, test, st, meta, s))
+  if (ps_is_fact(kind)) return(ps_run_fact(kind, test, st, meta, s))
   a <- s$alpha; conf <- 1 - a; alt <- if (kind == "k") "two.sided" else s$alt %||% "two.sided"; v <- s$value %||% 0
   smp <- ps_samples(kind, st); lv <- if ("treatment" %in% st$facs) levels(st$d$treatment) else "Sample"
   base <- list(mu = v, alt = alt, conf = conf, alpha = a, names = lv, var_mode = s$var_mode %||% "auto", method = "auto")
@@ -393,6 +408,7 @@ ps_formula <- function(kind, test, r, smp, s) {
 }
 
 ps_test_table <- function(res) {
+  if (!is.null(res$effects_df)) return(res$effects_df)
   t <- res$t
   dfx <- if (is.character(t$df)) t$df else if (is.na(t$df %||% NA)) "—" else ps_fmt(t$df, 4)
   ci <- if (is.finite(t$lwr %||% NA) || is.finite(t$upr %||% NA)) sprintf("[%s, %s]", ps_fmt(t$lwr), ps_fmt(t$upr)) else "—"
@@ -489,7 +505,11 @@ ps_posthoc_choices <- function(test, kind = "k", control = NULL) switch(test,
   anova = c(tukey = "Tukey HSD", lsd = "Fisher LSD", bonferroni = "Bonferroni", scheffe = "Scheffé",
             if (!is.null(control) && !identical(kind, "bibd")) c(dunnett = sprintf("Dunnett (each treatment vs the control, %s)", control))),
   welch = c(gh = "Games-Howell"), kw = c(dunn = "Dunn test (Holm adjustment)"), friedman = c(nemenyi = "Nemenyi test"),
-  rankres = c(dunn = "Dunn test on the ranked residuals (Holm adjustment)"), character(0))
+  rankres = c(dunn = "Dunn test on the ranked residuals (Holm adjustment)"),
+  kwf = c(dunn = "Dunn test (Holm adjustment)", dunnbonf = "Dunn test (Bonferroni adjustment)"),
+  friedmanf = c(nemenyi = "Nemenyi test", wilcox = "Wilcoxon signed-rank test (Bonferroni adjustment)"),
+  quadef = c(dunn = "Dunn test on the ranked residuals (Holm adjustment)", wilcoxrs = "Wilcoxon rank-sum test on the ranked residuals (Bonferroni adjustment)"),
+  character(0))
 
 # The method suggested first: the one the problem asks for, Dunnett when it names a control, else Tukey.
 ps_default_ph <- function(s, choices) {
@@ -552,9 +572,12 @@ ps_assumptions <- function(kind, st, s, test = "anova") {
                      df = if (is.null(bg)) "—" else format(unname(bg$parameter)), `p-value` = ps_p(bg_p),
                      Result = if (is.na(bg_p)) "Not available" else if (bg_p < a) "Dependent" else "Independent", check.names = FALSE)
   welch <- identical(kind, "k") && identical(test, "welch")
-  bp <- if (!welch) tryCatch(lmtest::bptest(fit), error = function(e) NULL)
+  # Factorial models have a term for every combination: with two replicates the two residuals of a
+  # cell are equal and opposite, so Breusch-Pagan on all the terms rejects whatever the data. It is
+  # run on the fitted values instead (one df), the usual form of the test for such models.
+  bp <- if (!welch) tryCatch(if (ps_is_fact(kind)) lmtest::bptest(fit, ~ fv, data = data.frame(fv = stats::fitted(fit))) else lmtest::bptest(fit), error = function(e) NULL)
   bp_p <- if (is.null(bp)) NA else bp$p.value
-  vtab <- if (!welch) data.frame(Test = "Breusch-Pagan", Statistic = sprintf("BP = %s", if (is.null(bp)) "—" else ps_fmt(unname(bp$statistic), 4)),
+  vtab <- if (!welch) data.frame(Test = if (ps_is_fact(kind)) "Breusch-Pagan (on the fitted values)" else "Breusch-Pagan", Statistic = sprintf("BP = %s", if (is.null(bp)) "—" else ps_fmt(unname(bp$statistic), 4)),
                                  df = if (is.null(bp)) "—" else format(unname(bp$parameter)), `p-value` = ps_p(bp_p),
                                  Result = if (is.na(bp_p)) "Not available" else if (bp_p < a) "Not constant" else "Constant", check.names = FALSE)
   var_ok <- if (welch || is.na(bp_p)) NA else bp_p >= a
@@ -643,6 +666,10 @@ ps_plot_data <- function(kind, st, meta) {
              labs(x = NULL, y = ylab, subtitle = "Grey: one line per pair · Green: means") + theme_sds() + theme(plot.subtitle = element_text(colour = INK, size = 10.5)))
   }
   if (!"treatment" %in% st$facs) return(plot_box_by(d$y, factor(rep("Sample", nrow(d))), ylab))
+  if (ps_is_fact(kind)) {
+    cells <- interaction(d[st$ffacs], sep = " · ", lex.order = TRUE, drop = TRUE)
+    return(plot_box_by(d$y, cells, ylab) + theme(axis.text.x = element_text(angle = if (nlevels(cells) > 6) 40 else 0, hjust = if (nlevels(cells) > 6) 1 else .5)))
+  }
   plot_box_by(d$y, d$treatment, ylab)
 }
 
@@ -671,10 +698,17 @@ ps_default_settings <- function(meta, kind) {
 # Problem type, test type, test and post-hoc of a problem as the steps would solve it, cached
 # per problem: used for the categories and filters of the list.
 .ps_class_cache <- new.env()
+# Problem type shown on the cards and used by the filters.
+ps_type_of <- function(kind, st) {
+  if (is.na(kind)) return("Other")
+  if (ps_is_fact(kind)) return(switch(kind, fact = if (length(st$ffacs) >= 3) "Three-factor factorial" else "Two-factor factorial",
+                                      factb = "Factorial in blocks (RCBD)", factl = "Factorial in a Latin square", factg = "Factorial in a Graeco-Latin square"))
+  unname(PS_TYPE[kind])
+}
 ps_classify <- function(p) {
   if (!is.null(.ps_class_cache[[p$id]])) return(.ps_class_cache[[p$id]])
   st <- ps_structure(p$data, p$roles); kind <- ps_kind(st, p)
-  out <- list(kind = kind, type = if (is.na(kind)) "Other" else unname(PS_TYPE[kind]), family = "param", test = "", posthoc = "Not applicable")
+  out <- list(kind = kind, type = ps_type_of(kind, st), family = "param", test = "", posthoc = "Not applicable")
   if (is.na(kind)) return(out)
   s <- ps_default_settings(p, kind)
   info <- tryCatch(ps_info(kind, st, p, s), error = function(e) NULL)
@@ -686,6 +720,7 @@ ps_classify <- function(p) {
     res <- tryCatch(ps_run_test(kind, test, st, p, s), error = function(e) NULL)
     asm <- tryCatch(ps_assumptions(kind, st, s, test), error = function(e) NULL)
     pname <- sub(" \\(F test\\)$", "", ps_param_name(kind, test))
+    if (ps_is_fact(kind)) pname <- if (length(st$ffacs) >= 3) "Three-factor ANOVA" else "Two-factor ANOVA"
     if (!is.null(asm) && !asm$all_ok) {
       npt <- ps_np_test(kind); rn <- tryCatch(ps_run_test(kind, npt, st, p, s), error = function(e) NULL)
       out$family <- "nonpar"; out$test <- sprintf("%s, then %s", pname, ps_np_short(kind))

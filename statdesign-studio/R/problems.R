@@ -1,5 +1,5 @@
 # Problem Sets: exercises copied from the course problem sheets (Montgomery,
-# Design and Analysis of Experiments, Sections 2.7, 3.12 and 4.5).
+# Design and Analysis of Experiments, Sections 2.7, 3.12, 4.5 and 5.7).
 # Each problem keeps its full statement and its complete dataset. Data are stored
 # in long format (one row per observation) for analysis, with the textbook layout
 # kept for display.
@@ -13,7 +13,10 @@ PS_CHAPTERS <- list(
              blurb = "Single-factor completely randomized designs: one-way ANOVA and the Kruskal-Wallis test."),
   ch4 = list(key = "ch4", num = 4, label = "Chapter 4 problems", icon = "grid",
              title = "Chapter 4: Randomized Blocks, Latin Squares, and Related Designs",
-             blurb = "Randomized complete block, Latin square, Graeco-Latin square and balanced incomplete block designs.")
+             blurb = "Randomized complete block, Latin square, Graeco-Latin square and balanced incomplete block designs."),
+  ch5 = list(key = "ch5", num = 5, label = "Chapter 5 problems", icon = "grid4",
+             title = "Chapter 5: Introduction to Factorial Designs",
+             blurb = "Two- and three-factor factorial experiments: main effects and interactions, in a completely randomized layout or in blocks.")
 )
 
 # ---------- Builders for the three textbook layouts ----------
@@ -606,7 +609,280 @@ PROBLEMS_CH4 <- list(
        note = "The regions are ignored here, so the problem follows the one-way (Chapter 3) steps. Compare the result with Problem 4.13.", tags = c("one-way ANOVA", "CRD", "blocking"))
 )
 
-PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3, PROBLEMS_CH4)
+# ---------- Chapter 5 ----------
+
+# A factorial table from the textbook. `levels` names each factor's levels; `values` lists the
+# observations in the order printed, and `order` says which index changes slowest to fastest
+# ("A", "B", "C" for the factors, "rep" for the replicate). With `blocks`, the replicate is a
+# block (the first observation of each cell is block 1, and so on).
+ps_ftable <- function(fn, levels, resp, values, order, rows = "A", cols = "B", blocks = FALSE, block_name = "Block", rep_name = "Replicate") {
+  nrep <- length(values) / prod(lengths(levels)); stopifnot(nrep == round(nrep))
+  lv <- c(levels, list(rep = as.character(seq_len(nrep))))
+  if (!"rep" %in% order) order <- c(order, "rep")
+  # expand.grid varies its first argument fastest, so list the factors fastest-first.
+  g <- expand.grid(rev(lv[order]), KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)[, order, drop = FALSE]
+  g$y <- values
+  # Listed replicate by replicate (every combination once, then the next replicate): the natural run
+  # order, and it keeps the residuals of one cell apart for the order-based independence check.
+  ord <- do.call(base::order, lapply(c("rep", intersect(c("A", "B", "C"), names(lv))), function(k) match(g[[k]], lv[[k]])))
+  long <- data.frame(g[["A"]], stringsAsFactors = FALSE); names(long) <- fn[["A"]]
+  for (k in setdiff(intersect(c("A", "B", "C"), names(lv)), "A")) long[[fn[[k]]]] <- g[[k]]
+  long[[if (blocks) block_name else rep_name]] <- g$rep
+  long[[resp]] <- g$y
+  long <- long[ord, , drop = FALSE]; rownames(long) <- NULL
+  key <- function(ks) do.call(paste, c(lapply(ks, function(k) g[[k]]), sep = "\r"))
+  lab <- function(ks) { u <- unique(g[, ks, drop = FALSE]); u <- u[do.call(base::order, lapply(ks, function(k) match(u[[k]], lv[[k]]))), , drop = FALSE]; do.call(paste, c(lapply(ks, function(k) u[[k]]), sep = "\r")) }
+  rl <- lab(rows); cl <- lab(cols); rk <- key(rows); ck <- key(cols)
+  txt <- vapply(cl, function(c) vapply(rl, function(r) paste(format(g$y[rk == r & ck == c]), collapse = ", "), ""), rep("", length(rl)))
+  wide <- as.data.frame(matrix(txt, nrow = length(rl), dimnames = NULL), stringsAsFactors = FALSE); names(wide) <- gsub("\r", " · ", cl)
+  wide <- cbind(stats::setNames(data.frame(gsub("\r", " · ", rl), stringsAsFactors = FALSE), paste(fn[rows], collapse = " · ")), wide)
+  list(long = long, wide = wide)
+}
+
+CH5_FN2 <- function(a, b, r = "Y") c(A = a, B = b, resp = r)
+
+R5 <- function(a, b, resp, c = NULL, block = FALSE) {
+  r <- list(response = resp, treatment = a, factorB = b)
+  if (!is.null(c)) r$factorC <- c
+  if (isTRUE(block)) r$block <- "Block" else if (is.character(block)) r$block <- block
+  r
+}
+L5 <- function(resp, a, b, unit = "", c = NULL, block = FALSE) {
+  l <- list(response = resp, unit = unit, treatment = a, factorB = b)
+  if (!is.null(c)) l$factorC <- c
+  if (isTRUE(block)) l$block <- "replicate" else if (is.character(block)) l$block <- block
+  l
+}
+BLK <- "The experiment is analysed as a factorial experiment in blocks: each replicate is a block, and the observations in each cell are taken in order (the first observation in each cell comes from the first replicate, and so on). The block effect is also tested and the block variance component is estimated."
+BLK2 <- "Each replicate is a block, so the block effect is removed from the error."
+
+# ---- 5.8 and the problems that reuse its data ----
+D58 <- function(blocks = FALSE) ps_ftable(c(A = "Temperature (°C)", B = "Pressure (psig)"), list(A = c("150", "160", "170"), B = c("200", "215", "230")), "Yield",
+  c(90.4, 90.7, 90.2,  90.2, 90.6, 90.4,  90.1, 90.5, 89.9,  90.3, 90.6, 90.1,  90.5, 90.8, 90.4,  90.7, 90.9, 90.1), c("A", "rep", "B"), blocks = blocks)
+T58 <- "The yield of a chemical process is being studied. The two most important variables are thought to be pressure and temperature. Three levels of each factor are selected, and a factorial experiment with two replicates is performed. The yield data are as follows:"
+R58 <- R5("Temperature (°C)", "Pressure (psig)", "Yield"); LB58 <- L5("yield", "temperature", "pressure", "%")
+
+# ---- 5.9 ----
+D59 <- function(blocks = FALSE) ps_ftable(c(A = "Feed rate (in/min)", B = "Depth of cut (in)"), list(A = c("0.20", "0.25", "0.30"), B = c("0.15", "0.18", "0.20", "0.25")), "Surface finish",
+  c(74, 79, 82, 99,  64, 68, 88, 104,  60, 73, 92, 96,   92, 98, 99, 104,  86, 104, 108, 110,  88, 88, 95, 99,   99, 104, 108, 114,  98, 99, 110, 111,  102, 95, 99, 107),
+  c("A", "rep", "B"), blocks = blocks)
+T59 <- "An engineer suspects that the surface finish of a metal part is influenced by the feed rate and the depth of cut. He selects three feed rates and four depths of cut. He then conducts a factorial experiment and obtains the following data:"
+R59 <- R5("Feed rate (in/min)", "Depth of cut (in)", "Surface finish"); LB59 <- L5("surface finish", "feed rate", "depth of cut")
+
+# ---- 5.11 ----
+D511 <- function(blocks = FALSE) ps_ftable(c(A = "Glass type", B = "Phosphor type"), list(A = c("1", "2"), B = c("1", "2", "3")), "Current",
+  c(280, 300, 290,  290, 310, 285,  285, 295, 290,  230, 260, 220,  235, 240, 225,  240, 235, 230), c("A", "rep", "B"), blocks = blocks)
+T511 <- "An article in Industrial Quality Control (1956, pp. 5–8) describes an experiment to investigate the effect of the type of glass and the type of phosphor on the brightness of a television tube. The response variable is the current necessary (in microamps) to obtain a specified brightness level. The data are as follows:"
+R511 <- R5("Glass type", "Phosphor type", "Current"); LB511 <- L5("current needed for the brightness level", "glass type", "phosphor type", "microamps")
+
+# ---- 5.12 ----
+D512 <- function(blocks = FALSE) ps_ftable(c(A = "Temperature (°C)", B = "Copper content (%)"), list(A = c("50", "75", "100", "125"), B = c("40", "60", "80", "100")), "Warping",
+  c(17, 20, 16, 21, 24, 22, 28, 27,  12, 9, 18, 13, 17, 12, 27, 31,  16, 12, 18, 21, 25, 23, 30, 23,  21, 17, 23, 21, 23, 22, 29, 31), c("A", "B", "rep"), blocks = blocks)
+T512 <- "Johnson and Leone (Statistics and Experimental Design in Engineering and the Physical Sciences, Wiley, 1977) describe an experiment to investigate warping of copper plates. The two factors studied were the temperature and the copper content of the plates. The response variable was a measure of the amount of warping. The data are as follows:"
+R512 <- R5("Temperature (°C)", "Copper content (%)", "Warping"); LB512 <- L5("warping", "temperature", "copper content")
+
+# ---- 5.13 ----
+D513 <- function(blocks = FALSE) ps_ftable(c(A = "Operator", B = "Machine"), list(A = c("1", "2", "3"), B = c("1", "2", "3", "4")), "Breaking strength",
+  c(109, 110, 108, 110,  110, 115, 109, 108,  110, 110, 111, 114,  112, 111, 109, 112,  116, 112, 114, 120,  114, 115, 119, 117), c("A", "rep", "B"), blocks = blocks)
+T513 <- "The factors that influence the breaking strength of a synthetic fiber are being studied. Four production machines and three operators are chosen and a factorial experiment is run using fiber from the same production batch. The results are as follows:"
+R513 <- R5("Operator", "Machine", "Breaking strength"); LB513 <- L5("breaking strength", "operator", "machine")
+
+# ---- 5.14 ----
+D514 <- ps_ftable(c(A = "Drill speed", B = "Feed rate"), list(A = c("125", "200"), B = c("0.015", "0.030", "0.045", "0.060")), "Thrust force",
+  c(2.70, 2.45, 2.60, 2.75,  2.78, 2.49, 2.72, 2.86,  2.83, 2.85, 2.86, 2.94,  2.86, 2.80, 2.87, 2.88), c("A", "rep", "B"))
+
+# ---- 5.15 ----
+D515 <- ps_ftable(c(A = "Glass type", B = "Temperature"), list(A = c("1", "2", "3"), B = c("100", "125", "150")), "Light output",
+  c(580, 1090, 1392,  568, 1087, 1380,  570, 1085, 1386,  550, 1070, 1328,  530, 1035, 1312,  579, 1000, 1299,  546, 1045, 867,  575, 1053, 904,  599, 1066, 889), c("A", "rep", "B"))
+
+# ---- 5.18 ----
+D518 <- ps_ftable(c(A = "Position", B = "Temperature (°C)"), list(A = c("1", "2"), B = c("800", "825", "850")), "Baked density",
+  c(570, 1063, 565,  565, 1080, 510,  583, 1043, 590,  528, 988, 526,  547, 1026, 538,  521, 1004, 532), c("A", "rep", "B"))
+
+# ---- 5.20 and 5.21: one observation per cell ----
+D520 <- ps_ftable(c(A = "Row factor", B = "Column factor"), list(A = c("1", "2", "3"), B = c("1", "2", "3", "4")), "Response",
+  c(36, 39, 36, 32,  18, 20, 22, 20,  30, 37, 33, 34), c("A", "B"))
+D521 <- ps_ftable(c(A = "Pressure (lb/in²)", B = "Temperature (°F)"), list(A = c("120", "130", "140", "150"), B = c("250", "260", "270")), "Shear strength",
+  c(9.60, 11.28, 9.00,  9.69, 10.10, 9.57,  8.43, 11.01, 9.03,  9.98, 10.44, 9.80), c("A", "B"))
+
+# ---- 5.23: three factors ----
+D523 <- function(blocks = FALSE) ps_ftable(c(A = "Hardwood (%)", B = "Pressure", C = "Cooking time (h)"),
+  list(A = c("2", "4", "8"), B = c("400", "500", "650"), C = c("3.0", "4.0")), "Strength",
+  c(196.6, 197.7, 199.8,  196.0, 196.0, 199.4,  198.5, 196.0, 198.4,  197.2, 196.9, 197.6,  197.5, 195.6, 197.4,  196.6, 196.2, 198.1,
+    198.4, 199.6, 200.6,  198.6, 200.4, 200.9,  197.5, 198.7, 199.6,  198.1, 198.0, 199.0,  197.6, 197.0, 198.5,  198.4, 197.8, 199.8),
+  c("C", "A", "rep", "B"), rows = c("C", "A"), cols = "B", blocks = blocks)
+
+# ---- 5.24: three factors ----
+D524 <- function(blocks = FALSE) ps_ftable(c(A = "Cycle time", B = "Temperature (°C)", C = "Operator"),
+  list(A = c("40", "50", "60"), B = c("300", "350"), C = c("1", "2", "3")), "Score",
+  c(23, 27, 31, 24, 38, 34,  24, 28, 32, 23, 36, 36,  25, 26, 29, 28, 35, 39,
+    36, 34, 33, 37, 34, 34,  35, 38, 34, 39, 38, 36,  36, 39, 35, 35, 36, 31,
+    28, 35, 26, 26, 36, 28,  24, 35, 27, 29, 37, 26,  27, 34, 25, 25, 34, 24),
+  c("A", "rep", "B", "C"), rows = "A", cols = c("B", "C"), blocks = blocks)
+
+# ---- 5.26 ----
+D526 <- ps_ftable(c(A = "Temperature", B = "Pressure"), list(A = c("Low", "Medium", "High"), B = c("250", "260", "270")), "Yield",
+  c(86.3, 84.0, 85.8,  86.1, 85.2, 87.3,  88.5, 87.3, 89.0,  89.4, 89.9, 90.3,  89.1, 90.2, 91.3,  91.7, 93.2, 93.7), c("A", "rep", "B"), blocks = TRUE, block_name = "Day")
+
+# ---- 5.29 ----
+D529 <- ps_ftable(c(A = "Frequency", B = "Environment"), list(A = c("10", "1", "0.1"), B = c("Air", "H2O", "Salt H2O")), "Crack growth rate",
+  c(2.29, 2.06, 1.90,  2.47, 2.05, 1.93,  2.48, 2.23, 1.75,  2.12, 2.03, 2.06,
+    2.65, 3.20, 3.10,  2.68, 3.18, 3.24,  2.06, 3.96, 3.98,  2.38, 3.64, 3.24,
+    2.24, 11.00, 9.96,  2.71, 11.00, 10.01,  2.81, 9.06, 9.36,  2.08, 11.30, 10.40), c("A", "rep", "B"))
+
+# ---- 5.30 ----
+D530 <- ps_ftable(c(A = "Polysilicon doping (ions)", B = "Anneal temperature (°C)"), list(A = c("1 × 10^20", "2 × 10^20"), B = c("900", "950", "1000")), "Base current",
+  c(4.60, 10.15, 11.01,  4.40, 10.20, 10.58,  3.20, 9.38, 10.81,  3.50, 10.02, 10.60), c("A", "rep", "B"))
+
+# ---- 5.31 ----
+D531 <- ps_ftable(c(A = "Brand of battery", B = "Device"), list(A = c("A", "B"), B = c("Radio", "Camera", "DVD player")), "Battery life",
+  c(8.6, 7.9, 5.4,  8.2, 8.4, 5.7,  9.4, 8.5, 5.8,  8.8, 8.9, 5.9), c("A", "rep", "B"))
+
+# ---- 5.32 ----
+D532 <- ps_ftable(c(A = "Clubs", B = "Course"), list(A = c("Old", "New"), B = c("Ahwatukee", "Karsten", "Foothills")), "Score",
+  c(90, 91, 88,  87, 93, 86,  86, 90, 90,  88, 90, 86,  87, 91, 85,  85, 88, 88), c("A", "rep", "B"))
+
+# ---- 5.33 ----
+D533 <- ps_ftable(c(A = "Formulation", B = "Number of washings", C = "Detergent booster"), list(A = c("New", "Original"), B = c("1", "2"), C = c("Yes", "No")), "Stain shade",
+  c(6, 5, 6, 5, 3, 2, 4, 1,  10, 9, 11, 11, 10, 9, 9, 10), c("A", "B", "C", "rep"), rows = "A", cols = c("B", "C"))
+
+# ---- 5.34 ----
+D534 <- function(blocks = FALSE) ps_ftable(c(A = "Anchor type", B = "Foam density"), list(A = c("A", "B", "C"), B = c("Low", "High")), "Pullout force",
+  c(190, 200, 241, 255,  185, 190, 230, 237,  210, 205, 256, 260), c("A", "B", "rep"), blocks = blocks)
+
+# ---- 5.35 ----
+D535 <- function(blocks = FALSE) ps_ftable(c(A = "Key size", B = "Keyboard feel"), list(A = c("Small", "Medium", "Large"), B = c("Mushy", "Crisp")), "Typing speed",
+  c(31, 33, 35, 36, 40, 41,  36, 35, 33, 40, 41, 42,  37, 34, 33, 38, 36, 39), c("A", "B", "rep"), blocks = blocks)
+
+# ---- 5.36 ----
+D536 <- ps_ftable(c(A = "Ammonium (%)", B = "Stir rate (RPM)", C = "Temperature (°C)"), list(A = c("2", "30"), B = c("100", "150"), C = c("8", "40")), "Density",
+  c(14.68, 15.18, 15.12, 17.48, 7.54, 6.66, 12.46, 12.62, 10.95, 17.68, 12.65, 15.96, 8.03, 8.84, 14.96, 14.96), c("C", "B", "A", "rep"), rows = c("A", "C"), cols = "B")
+
+# ---- 5.38 ----
+D538 <- ps_ftable(c(A = "PEG concentration (A)", B = "Na2SO4 concentration (B)"), list(A = c("13", "15"), B = c("11", "13")), "Extraction",
+  c(62.9, 65.4, 76.1, 72.3, 87.5, 84.2, 102.3, 105.6), c("B", "A", "rep"))
+
+PROBLEMS_CH5 <- list(
+  prob("5.8", 5, "Chemical yield: temperature and pressure", T58,
+       c("(a) Analyze the data and draw conclusions. Use α = 0.05.", "(b) Prepare appropriate residual plots and comment on the model’s adequacy.", "(c) Under what conditions would you operate this process?"),
+       D58(), roles = R58, labels = LB58, tags = c("factorial", "CRD")),
+  prob("5.9", 5, "Surface finish: feed rate and depth of cut", T59,
+       c("(a) Analyze the data and draw conclusions. Use α = 0.05.", "(b) Prepare appropriate residual plots and comment on the model’s adequacy.", "(c) Obtain point estimates of the mean surface finish at each feed rate.", "(d) Find the P-values for the tests in part (a)."),
+       D59(), roles = R59, labels = LB59, tags = c("factorial", "CRD")),
+  prob("5.10", 5, "Surface finish: feed rates 0.20 and 0.25 compared",
+       c("For the data in Problem 5.9, compute a 95 percent confidence interval estimate of the mean difference in response for feed rates of 0.20 and 0.25 in/min.", paste("Problem 5.9:", T59)),
+       character(0), D59(), roles = R59, labels = LB59, settings = list(posthoc = "lsd"),
+       note = "The data are those of Problem 5.9. The 95% interval for the difference of two feed rates is in the Post-hoc step (Fisher LSD or Tukey), under the feed-rate comparisons.", tags = c("factorial", "CRD", "Fisher LSD")),
+  prob("5.11", 5, "Television tube brightness: glass and phosphor", T511,
+       c("(a) Is there any indication that either factor influences brightness? Use α = 0.05.", "(b) Do the two factors interact? Use α = 0.05.", "(c) Analyze the residuals from this experiment."),
+       D511(), roles = R511, labels = LB511, tags = c("factorial", "CRD")),
+  prob("5.12", 5, "Warping of copper plates", T512,
+       c("(a) Is there any indication that either factor affects the amount of warping? Is there any interaction between the factors? Use α = 0.05.", "(b) Analyze the residuals from this experiment.",
+         "(c) Plot the average warping at each level of copper content and compare them to an appropriately scaled t distribution. Describe the differences in the effects of the different levels of copper content on warping. If low warping is desirable, what level of copper content would you specify?",
+         "(d) Suppose that temperature cannot be easily controlled in the environment in which the copper plates are to be used. Does this change your answer for part (c)?"),
+       D512(), roles = R512, labels = LB512, tags = c("factorial", "CRD")),
+  prob("5.13", 5, "Breaking strength: machines and operators", T513,
+       c("(a) Analyze the data and draw conclusions. Use α = 0.05.", "(b) Prepare appropriate residual plots and comment on the model’s adequacy."),
+       D513(), roles = R513, labels = LB513, tags = c("factorial", "CRD")),
+  prob("5.14", 5, "Drill press thrust force: speed and feed rate",
+       "A mechanical engineer is studying the thrust force developed by a drill press. He suspects that the drilling speed and the feed rate of the material are the most important factors. He selects four feed rates and uses a high and low drill speed chosen to represent the extreme operating conditions. He obtains the following results. Analyze the data and draw conclusions. Use α = 0.05.",
+       character(0), D514, roles = R5("Drill speed", "Feed rate", "Thrust force"), labels = L5("thrust force", "drill speed", "feed rate"), tags = c("factorial", "CRD")),
+  prob("5.15", 5, "Oscilloscope tube light output: glass and temperature",
+       "An experiment is conducted to study the influence of operating temperature and three types of faceplate glass in the light output of an oscilloscope tube. The following data are collected:",
+       c("(a) Use α = 0.05 in the analysis. Is there a significant interaction effect? Does glass type or temperature affect the response? What conclusions can you draw?", "(b) Fit an appropriate model relating light output to glass type and temperature.", "(c) Analyze the residuals from this experiment. Comment on the adequacy of the models you have considered."),
+       D515, roles = R5("Glass type", "Temperature", "Light output"), labels = L5("light output", "glass type", "operating temperature"), tags = c("factorial", "CRD")),
+  prob("5.16", 5, "Chemical yield: a model for operating conditions",
+       c("Consider the experiment in Problem 5.8. Fit an appropriate model to the response data. Use this model to provide guidance concerning operating conditions for the process.", paste("Problem 5.8:", T58)),
+       character(0), D58(), roles = R58, labels = LB58, note = "The data are those of Problem 5.8. The model is the factorial ANOVA model of step 5; the level means in the Post-hoc step guide the operating conditions.", tags = c("factorial", "CRD")),
+  prob("5.17", 5, "Chemical yield: Tukey's test on pressure",
+       c("Use Tukey’s test to determine which levels of the pressure factor are significantly different for the data in Problem 5.8.", paste("Problem 5.8:", T58)),
+       character(0), D58(), roles = R58, labels = LB58, settings = list(posthoc = "tukey"),
+       note = "The data are those of Problem 5.8. Choose Tukey HSD in the Post-hoc step and read the comparisons of the pressure levels.", tags = c("factorial", "CRD", "Tukey HSD")),
+  prob("5.18", 5, "Carbon anode density: firing temperature and furnace position",
+       "An experiment was conducted to determine whether either firing temperature or furnace position affects the baked density of a carbon anode. The data are shown below:",
+       "Suppose we assume that no interaction exists. Write down the statistical model. Conduct the ANOVA and test hypotheses on the main effects. What conclusions can be drawn? Comment on the model’s adequacy.",
+       D518, roles = R5("Position", "Temperature (°C)", "Baked density"), labels = L5("baked density", "furnace position", "firing temperature", "°C"),
+       note = "The data have three replicates in every cell, so the interaction can be tested; the steps test it as well as the two main effects.", tags = c("factorial", "CRD")),
+  prob("5.20", 5, "Two-factor data with one observation per cell",
+       "Consider the following data from a two-factor factorial experiment. Analyze the data and draw conclusions. Perform a test for nonadditivity. Use α = 0.05.",
+       character(0), D520, roles = R5("Row factor", "Column factor", "Response"), labels = L5("response", "row factor", "column factor"),
+       note = "There is one observation per cell, so the interaction cannot be separated from error: the test of the interaction is Tukey's one-degree-of-freedom test for nonadditivity.", tags = c("factorial", "no replicate", "nonadditivity")),
+  prob("5.21", 5, "Adhesive shear strength: pressure and temperature",
+       "The shear strength of an adhesive is thought to be affected by the application pressure and temperature. A factorial experiment is performed in which both factors are assumed to be fixed. Analyze the data and draw conclusions. Perform a test for nonadditivity.",
+       character(0), D521, roles = R5("Pressure (lb/in²)", "Temperature (°F)", "Shear strength"), labels = L5("shear strength", "application pressure", "application temperature"),
+       note = "There is one observation per cell, so the interaction is tested with Tukey's one-degree-of-freedom test for nonadditivity.", tags = c("factorial", "no replicate", "nonadditivity")),
+  prob("5.23", 5, "Paper strength: hardwood, pressure and cooking time",
+       "The percentage of hardwood concentration in raw pulp, the vat pressure, and the cooking time of the pulp are being investigated for their effects on the strength of paper. Three levels of hardwood concentration, three levels of pressure, and two cooking times are selected. A factorial experiment with two replicates is conducted, and the following data are obtained:",
+       c("(a) Analyze the data and draw conclusions. Use α = 0.05.", "(b) Prepare appropriate residual plots and comment on the model’s adequacy.", "(c) Under what set of conditions would you operate this process? Why?"),
+       D523(), roles = R5("Hardwood (%)", "Pressure", "Strength", c = "Cooking time (h)"), labels = L5("paper strength", "hardwood concentration", "vat pressure", c = "cooking time"), tags = c("factorial", "three factors")),
+  prob("5.24", 5, "Dyeing of cotton-synthetic cloth: operator, cycle time and temperature",
+       "The quality control department of a fabric finishing plant is studying the effect of several factors on the dyeing of cotton–synthetic cloth used to manufacture men’s shirts. Three operators, three cycle times, and two temperatures were selected, and three small specimens of cloth were dyed under each set of conditions. The finished cloth was compared to a standard, and a numerical score was assigned. The results are as follows. Analyze the data and draw conclusions. Comment on the model’s adequacy.",
+       character(0), D524(), roles = R5("Cycle time", "Temperature (°C)", "Score", c = "Operator"), labels = L5("score", "cycle time", "temperature", c = "operator"), tags = c("factorial", "three factors")),
+  prob("5.26", 5, "Chemical yield with days as blocks",
+       "The yield of a chemical process is being studied. The two factors of interest are temperature and pressure. Three levels of each factor are selected; however, only nine runs can be made in one day. The experimenter runs a complete replicate of the design on each day. The data are shown in the following table. Analyze the data, assuming that the days are blocks.",
+       character(0), D526, roles = R5("Temperature", "Pressure", "Yield", block = "Day"), labels = L5("yield", "temperature", "pressure", block = "day"),
+       note = "Day is the block: every temperature-pressure combination appears once on each day.", tags = c("factorial", "RCBD")),
+  prob("5.27", 5, "Warping of copper plates, replicates as blocks", c("Consider the data in Problem 5.12. Analyze the data, assuming that replicates are blocks.", paste("Problem 5.12:", T512)),
+       character(0), D512(TRUE), roles = R5("Temperature (°C)", "Copper content (%)", "Warping", block = TRUE), labels = L5("warping", "temperature", "copper content", block = TRUE), note = BLK2, tags = c("factorial", "RCBD")),
+  prob("5.28", 5, "Breaking strength, replicates as blocks", c("Consider the data in Problem 5.13. Analyze the data, assuming that replicates are blocks.", paste("Problem 5.13:", T513)),
+       character(0), D513(TRUE), roles = R5("Operator", "Machine", "Breaking strength", block = TRUE), labels = L5("breaking strength", "operator", "machine", block = TRUE), note = BLK2, tags = c("factorial", "RCBD")),
+  prob("5.29", 5, "Fatigue crack growth: frequency and environment",
+       "An article in the Journal of Testing and Evaluation (Vol. 16, no. 2, pp. 508–515) investigated the effects of cyclic loading and environmental conditions on fatigue crack growth at a constant 22 MPa stress for a particular material. The data from this experiment are shown below (the response is crack growth rate):",
+       c("(a) Analyze the data from this experiment (use α = 0.05).", "(b) Analyze the residuals.", "(c) Repeat the analyses from parts (a) and (b) using ln(y) as the response. Comment on the results."),
+       D529, roles = R5("Frequency", "Environment", "Crack growth rate"), labels = L5("crack growth rate", "frequency", "environment"),
+       note = "For part (c), use Copy to Custom Problem and replace the response by its natural logarithm.", tags = c("factorial", "CRD", "transformation")),
+  prob("5.30", 5, "Polysilicon doping and anneal temperature",
+       "An article in the IEEE Transactions on Electron Devices (Nov. 1986, pp. 1754) describes a study on polysilicon doping. The experiment shown below is a variation of their study. The response variable is base current.",
+       c("(a) Is there evidence (with α = 0.05) indicating that either polysilicon doping level or anneal temperature affects base current?", "(b) Prepare graphical displays to assist in interpreting this experiment.", "(c) Analyze the residuals and comment on model adequacy.",
+         "(d) Is the model y = β0 + β1x1 + β2x2 + β22x2² + β12x1x2 + ε supported by this experiment (x1 = doping level, x2 = temperature)? Estimate the parameters in this model and plot the response surface."),
+       D530, roles = R5("Polysilicon doping (ions)", "Anneal temperature (°C)", "Base current"), labels = L5("base current", "polysilicon doping level", "anneal temperature"), tags = c("factorial", "CRD")),
+  prob("5.31", 5, "Battery life: brand and device",
+       "An experiment was conducted to study the life (in hours) of two different brands of batteries in three different devices (radio, camera, and portable DVD player). A completely randomized two-factor factorial experiment was conducted and the following data resulted.",
+       c("(a) Analyze the data and draw conclusions, using α = 0.05.", "(b) Investigate model adequacy by plotting the residuals.", "(c) Which brand of batteries would you recommend?"),
+       D531, roles = R5("Brand of battery", "Device", "Battery life"), labels = L5("battery life", "brand of battery", "device", "hours"), tags = c("factorial", "CRD")),
+  prob("5.32", 5, "Golf scores: clubs and course",
+       "I have recently purchased new golf clubs, which I believe will significantly improve my game. Below are the scores of three rounds of golf played at three different golf courses with the old and the new clubs.",
+       c("(a) Conduct an analysis of variance. Using α = 0.05, what conclusions can you draw?", "(b) Investigate model adequacy by plotting the residuals."),
+       D532, roles = R5("Clubs", "Course", "Score"), labels = L5("golf score", "clubs", "course"), tags = c("factorial", "CRD")),
+  prob("5.33", 5, "Stain remover: formulation, washings and booster",
+       "A manufacturer of laundry products is investigating the performance of a newly formulated stain remover. The new formulation is compared to the original formulation with respect to its ability to remove a standard tomato-like stain in a test article of cotton cloth using a factorial experiment. The other factors in the experiment are the number of times the test article is washed (1 or 2) and whether or not a detergent booster is used. The response variable is the stain shade after washing (12 is the darkest, 0 is the lightest). The data are shown in the following table.",
+       c("(a) Conduct an analysis of variance. Using α = 0.05, what conclusions can you draw?", "(b) Investigate model adequacy by plotting the residuals."),
+       D533, roles = R5("Formulation", "Number of washings", "Stain shade", c = "Detergent booster"), labels = L5("stain shade", "formulation", "number of washings", c = "detergent booster"), tags = c("factorial", "three factors")),
+  prob("5.34", 5, "Bone anchors: anchor type and foam density",
+       "Bone anchors are used by orthopedic surgeons in repairing torn rotator cuffs (a common shoulder tendon injury among baseball players). The bone anchor is a threaded insert that is screwed into a hole that has been drilled into the shoulder bone near the site of the torn tendon. The torn tendon is then sutured to the anchor. In a successful operation, the tendon is stabilized and reattaches itself to the bone. However, bone anchors can pull out if they are subjected to high loads. An experiment was performed to study the force required to pull out the anchor for three anchor types and two different foam densities (the foam simulates the natural variability found in real bone). Two replicates of the experiment were performed. The experimental design and the pullout force response data are as follows.",
+       c("(a) Analyze the data from this experiment.", "(b) Investigate model adequacy by constructing appropriate residual plots.", "(c) What conclusions can you draw?"),
+       D534(), roles = R5("Anchor type", "Foam density", "Pullout force"), labels = L5("pullout force", "anchor type", "foam density"), tags = c("factorial", "CRD")),
+  prob("5.35", 5, "Keyboard feel and key size: typing speed",
+       "An experiment was performed to investigate the keyboard feel on a computer (crisp or mushy) and the size of the keys (small, medium, or large). The response variable is typing speed. Three replicates of the experiment were performed. The experimental design and the data are as follow.",
+       c("(a) Analyze the data from this experiment.", "(b) Investigate model adequacy by constructing appropriate residual plots.", "(c) What conclusions can you draw?"),
+       D535(), roles = R5("Key size", "Keyboard feel", "Typing speed"), labels = L5("typing speed", "key size", "keyboard feel"), tags = c("factorial", "CRD")),
+  prob("5.36", 5, "Silver powder density: ammonium, stir rate and temperature",
+       "An article in Quality Progress (May 2011, pp. 42–48) describes the use of factorial experiments to improve a silver powder production process. This product is used in conductive pastes to manufacture a wide variety of products ranging from silicon wafers to elastic membrane switches. Powder density (g/cm²) and surface area (cm²/g) are the two critical characteristics of this product. The experiments involved three factors—reaction temperature, ammonium percent, and stirring rate. Each of these factors had two levels and the design was replicated twice. The design is shown below.",
+       c("(a) Analyze the density response. Are any interactions significant? Draw appropriate conclusions about the effects of the significant factors on the response.", "(b) Prepare appropriate residual plots and comment on model adequacy.", "(c) Construct contour plots to aid in practical interpretation of the density response.",
+         "(d) Analyze the surface area response. Are any interactions significant? Draw appropriate conclusions about the effects of the significant factors on the response.", "(e) Prepare appropriate residual plots and comment on model adequacy.", "(f) Construct contour plots to aid in practical interpretation of the surface area response."),
+       D536, roles = R5("Ammonium (%)", "Stir rate (RPM)", "Density", c = "Temperature (°C)"), labels = L5("powder density", "ammonium percent", "stirring rate", "g/cm²", c = "reaction temperature"),
+       note = "The steps analyse the density, parts (a) and (b). For the surface area, use Copy to Custom Problem and choose the surface-area values as the response.", tags = c("factorial", "three factors", "2^3")),
+  prob("5.38", 5, "Nisin extraction: PEG and sodium sulfate",
+       "An article in Biotechnology Progress (2001, Vol. 17, pp. 366–368) described an experiment to investigate nisin extraction in aqueous two-phase solutions. A two-factor factorial experiment was conducted using factors A = concentration of PEG and B = concentration of Na2SO4. Data similar to that reported in the paper are shown below.",
+       c("(a) Analyze the extraction response. Draw appropriate conclusions about the effects of the significant factors on the response.", "(b) Prepare appropriate residual plots and comment on model adequacy.", "(c) Construct contour plots to aid in practical interpretation of the density response."),
+       D538, roles = R5("PEG concentration (A)", "Na2SO4 concentration (B)", "Extraction"), labels = L5("extraction", "PEG concentration", "Na2SO4 concentration", "%"), tags = c("factorial", "CRD", "2^2")),
+  prob("5.39", 5, "Surface finish with replicates as blocks", c(paste("Reconsider the experiment in Problem 5.9. Suppose that this experiment had been conducted in three blocks, with each replicate a block. Assume that the observations in the data table are given in order, that is, the first observation in each cell comes from the first replicate, and so on. Reanalyze the data as a factorial experiment in blocks and estimate the variance component for blocks. Does it appear that blocking was useful in this experiment?"), paste("Problem 5.9:", T59)),
+       character(0), D59(TRUE), roles = R5("Feed rate (in/min)", "Depth of cut (in)", "Surface finish", block = TRUE), labels = L5("surface finish", "feed rate", "depth of cut", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "RCBD", "random blocks")),
+  prob("5.40", 5, "Television tube brightness with replicates as blocks", c("Reconsider the experiment in Problem 5.11. Suppose that this experiment had been conducted in three blocks, with each replicate a block. Assume that the observations in the data table are given in order, that is, the first observation in each cell comes from the first replicate, and so on. Reanalyze the data as a factorial experiment in blocks and estimate the variance component for blocks. Does it appear that blocking was useful in this experiment?", paste("Problem 5.11:", T511)),
+       character(0), D511(TRUE), roles = R5("Glass type", "Phosphor type", "Current", block = TRUE), labels = L5("current needed for the brightness level", "glass type", "phosphor type", "microamps", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "RCBD", "random blocks")),
+  prob("5.41", 5, "Breaking strength in two blocks", c("Reconsider the experiment in Problem 5.13. Suppose that this experiment had been conducted in two blocks, with each replicate a block. Assume that the observations in the data table are given in order, that is, the first observation in each cell comes from the first replicate, and so on. Reanalyze the data as a factorial experiment in blocks and estimate the variance component for blocks. Does it appear that blocking was useful in this experiment?", paste("Problem 5.13:", T513)),
+       character(0), D513(TRUE), roles = R5("Operator", "Machine", "Breaking strength", block = TRUE), labels = L5("breaking strength", "operator", "machine", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "RCBD", "random blocks")),
+  prob("5.42", 5, "Paper strength in two blocks", c("Reconsider the three-factor factorial experiment in Problem 5.23. Suppose that this experiment had been conducted in two blocks, with each replicate a block. Assume that the observations in the data table are given in order, that is, the first observation in each cell comes from the first replicate, and so on. Reanalyze the data as a factorial experiment in blocks and estimate the variance component for blocks. Does it appear that blocking was useful in this experiment?", paste("Problem 5.23:", "The percentage of hardwood concentration in raw pulp, the vat pressure, and the cooking time of the pulp are being investigated for their effects on the strength of paper. Three levels of hardwood concentration, three levels of pressure, and two cooking times are selected. A factorial experiment with two replicates is conducted.")),
+       character(0), D523(TRUE), roles = R5("Hardwood (%)", "Pressure", "Strength", c = "Cooking time (h)", block = TRUE), labels = L5("paper strength", "hardwood concentration", "vat pressure", c = "cooking time", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "three factors", "RCBD", "random blocks")),
+  prob("5.43", 5, "Dyeing of cloth in three blocks", c("Reconsider the three-factor factorial experiment in Problem 5.24. Suppose that this experiment had been conducted in three blocks, with each replicate a block. Assume that the observations in the data table are given in order, that is, the first observation in each cell comes from the first replicate, and so on. Reanalyze the data as a factorial experiment in blocks and estimate the variance component for blocks. Does it appear that blocking was useful in this experiment?", "Problem 5.24: The quality control department of a fabric finishing plant is studying the effect of several factors on the dyeing of cotton–synthetic cloth used to manufacture men’s shirts. Three operators, three cycle times, and two temperatures were selected, and three small specimens of cloth were dyed under each set of conditions."),
+       character(0), D524(TRUE), roles = R5("Cycle time", "Temperature (°C)", "Score", c = "Operator", block = TRUE), labels = L5("score", "cycle time", "temperature", c = "operator", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "three factors", "RCBD", "random blocks")),
+  prob("5.44", 5, "Bone anchors in two blocks", c("Reconsider the bone anchor experiment in Problem 5.34. Suppose that this experiment had been conducted in two blocks, with each replicate a block. Assume that the observations in the data table are given in order, that is, the first observation in each cell comes from the first replicate, and so on. Reanalyze the data as a factorial experiment in blocks and estimate the variance component for blocks. Does it appear that blocking was useful in this experiment?", "Problem 5.34: An experiment was performed to study the force required to pull out the anchor for three anchor types and two different foam densities. Two replicates of the experiment were performed."),
+       character(0), D534(TRUE), roles = R5("Anchor type", "Foam density", "Pullout force", block = TRUE), labels = L5("pullout force", "anchor type", "foam density", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "RCBD", "random blocks")),
+  prob("5.45", 5, "Keyboard experiment in three blocks", c("Reconsider the keyboard experiment in Problem 5.35. Suppose that this experiment had been conducted in three blocks, with each replicate a block. Assume that the observations in the data table are given in order, that is, the first observation in each cell comes from the first replicate, and so on. Reanalyze the data as a factorial experiment in blocks and estimate the variance component for blocks. Does it appear that blocking was useful in this experiment?", "Problem 5.35: An experiment was performed to investigate the keyboard feel on a computer (crisp or mushy) and the size of the keys (small, medium, or large). The response variable is typing speed. Three replicates of the experiment were performed."),
+       character(0), D535(TRUE), roles = R5("Key size", "Keyboard feel", "Typing speed", block = TRUE), labels = L5("typing speed", "key size", "keyboard feel", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "RCBD", "random blocks"))
+)
+
+PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3, PROBLEMS_CH4, PROBLEMS_CH5)
 names(PROBLEMS) <- vapply(PROBLEMS, `[[`, "", "id")
 
 ps_by_chapter <- function(ch) Filter(function(p) p$chapter == PS_CHAPTERS[[ch]]$num, PROBLEMS)

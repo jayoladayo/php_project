@@ -26,7 +26,7 @@ JUMP_CHOICES <- c(
   "Home" = "home", "Test Advisor" = "advisor", "Data Studio: upload a file" = "data",
   "Descriptive statistics" = "desc", "One sample tests" = "one", "Two sample tests (t-test, Mann-Whitney)" = "two",
   "k samples (one-way ANOVA, Kruskal-Wallis)" = "k",
-  "Problem Sets: Chapter 2, 3 and 4 exercises, custom problems" = "problems",
+  "Problem Sets: Chapter 2 to 5 exercises, custom problems" = "problems",
   "CRD: Completely Randomized Design" = "crd", "RCBD: Randomized Complete Block Design" = "rcbd",
   "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd",
   "Design Planner: randomised layouts" = "planner", "Report builder" = "report", "Learn: method guides" = "learn",
@@ -46,7 +46,8 @@ ui <- page(
     tags$link(rel = "icon", href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23DAC961'/%3E%3Cpath d='M12 18V10M17 18V6M7 18v-4' stroke='%2300573F' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"),
     tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"),
     tags$script(src = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js", defer = NA),
-    tags$script(src = "app.js")
+    tags$script(src = "app.js"),
+    tags$script(src = "tour.js")
   ),
   div(class = "app",
       sidebar_ui(),

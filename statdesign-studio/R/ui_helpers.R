@@ -59,6 +59,8 @@ topbar_ui <- function() {
           selectizeInput("jump", NULL, choices = NULL, width = "100%",
                          options = list(placeholder = "Search analyses, tests, help",
                                         onInitialize = I("function() { this.setValue(''); }")))),
+      tags$button(class = "btn-k bs bsm tour-btn", id = "tour-btn", title = "A guided tour of this page and of the whole app", onclick = "StatTour.menu(); return false;",
+                  icon("compass", 15), span(class = "tour-lbl", "Guided tour")),
       tags$button(class = "ib", title = "Light or dark", onclick = "toggleTheme()", icon("moon", 17)),
       tags$button(class = "ib", title = "Help", onclick = "Shiny.setInputValue('help', Math.random())", icon("help", 17)),
       downloadButton("save_project", label = tagList(icon("save", 15), "Save project"), icon = NULL,

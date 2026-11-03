@@ -6,17 +6,25 @@
 # Plain R with no Shiny, so it can be tested on its own.
 
 PS_BLOCK_KINDS <- c("rcbd", "latin", "glsd", "bibd")
-PS_MULTI_KINDS <- c("k", PS_BLOCK_KINDS)
+# Chapter 5: factorial designs, in a completely randomized layout, in blocks (RCBD), or in a
+# Latin or Graeco-Latin square (R/problem_factorial.R).
+PS_FACT_KINDS <- c("fact", "factb", "factl", "factg")
+PS_MULTI_KINDS <- c("k", PS_BLOCK_KINDS, PS_FACT_KINDS)
 ps_multi <- function(kind) length(kind) == 1 && !is.na(kind) && kind %in% PS_MULTI_KINDS
+ps_is_fact <- function(kind) length(kind) == 1 && !is.na(kind) && kind %in% PS_FACT_KINDS
 
 ps_param_name <- function(kind, test = "anova") switch(kind,
   k = if (identical(test, "welch")) "Welch ANOVA" else "One-way ANOVA (F test)",
   rcbd = "RCBD ANOVA (F test)", latin = "Latin square ANOVA (F test)", glsd = "Graeco-Latin square ANOVA (F test)",
-  bibd = "BIBD ANOVA, treatments adjusted for blocks (F test)")
-ps_model_name <- function(kind) switch(kind, k = "one-way", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square", bibd = "BIBD")
-ps_np_test <- function(kind) switch(kind, k = "kw", rcbd = "friedman", "rankres")
-ps_np_name <- function(kind) switch(kind, k = "Kruskal-Wallis test", rcbd = "Friedman test", "Rank test on the residuals")
-ps_np_short <- function(kind) switch(kind, k = "Kruskal-Wallis", rcbd = "Friedman", "Rank test")
+  bibd = "BIBD ANOVA, treatments adjusted for blocks (F test)",
+  fact = "Factorial ANOVA (F test)", factb = "Factorial RCBD ANOVA (F test)",
+  factl = "Factorial Latin square ANOVA (F test)", factg = "Factorial Graeco-Latin square ANOVA (F test)")
+ps_model_name <- function(kind) switch(kind, k = "one-way", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square", bibd = "BIBD",
+                                       fact = "factorial", factb = "factorial RCBD", factl = "factorial Latin square", factg = "factorial Graeco-Latin square")
+ps_np_test <- function(kind) switch(kind, k = "kw", rcbd = "friedman", fact = "kwf", factb = "friedmanf", factl = , factg = "quadef", "rankres")
+ps_np_name <- function(kind) switch(kind, k = "Kruskal-Wallis test", rcbd = "Friedman test", fact = "Kruskal-Wallis test (factorial)",
+                                    factb = "Friedman test (factorial RCBD)", factl = , factg = "Quade rank test on the residuals", "Rank test on the residuals")
+ps_np_short <- function(kind) switch(kind, k = "Kruskal-Wallis", rcbd = "Friedman", fact = "Kruskal-Wallis", factb = "Friedman", factl = , factg = "Quade", "Rank test")
 
 ps_block_terms <- function(kind) switch(kind, rcbd = c("treatment", "block"), bibd = c("block", "treatment"),
   latin = c("treatment", "row", "column"), glsd = c("treatment", "row", "column", "greek"))
@@ -25,6 +33,7 @@ ps_block_formula <- function(kind) stats::as.formula(paste("y ~", paste(ps_block
 
 # The fitted model whose residuals are checked: the observed data only (no estimated values).
 ps_model_fit <- function(kind, st, d = st$d) {
+  if (ps_is_fact(kind)) return(stats::lm(ps_fact_formula(kind, st), data = d))
   if (kind %in% PS_BLOCK_KINDS) stats::lm(ps_block_formula(kind), data = d) else stats::lm(y ~ treatment, data = d)
 }
 
