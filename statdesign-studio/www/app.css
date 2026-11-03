@@ -783,3 +783,7 @@ html[dir="rtl"] .tour-card, html[dir="rtl"] .tour-menu, html[dir="rtl"] .tour-nu
   html[dir="rtl"] .side { left: auto; right: 0; transform: translateX(100%); }
   html[dir="rtl"] .app.nav-open .side { transform: none; }
 }
+/* the assistant button must not cover the Back and Next buttons at the bottom of a page */
+.content { padding-bottom: 96px; }
+html[dir="rtl"] .selectize-input input { text-align: right; padding-right: 4px; }
+html[dir="rtl"] .selectize-input { padding-left: 12px; }
