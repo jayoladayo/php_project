@@ -21,6 +21,8 @@ A no-code R Shiny app for the KFUPM Experimental Design course.
 
 ## What is in stage 1
 
+> Stages 1 to 3 describe the first version. Since stage 9 the analysis pages follow the five-step process described under "What is new in stage 9"; the result tabs and the R code tab below were replaced.
+
 - App shell in KFUPM colours, light and dark mode, page search, save and open project.
 - Data Studio: Excel and CSV upload with a sheet picker, header and skip-row options, missing value codes, automatic delimiter and decimal detection; typing and editing in a grid; pasting from Excel; class examples; data health checks with one-click fixes; column types.
 - CRD, RCBD, Latin Square and Graeco-Latin Square: choose data, map columns to roles (numeric codes become categories), design check with layout preview, context and display names, level labels with colours and order, Dunnett control, α, confidence level, post-hoc choices, assumption handling, hypotheses.
@@ -112,6 +114,18 @@ The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experim
 - **Custom problems** can be factorial: choose Factor A, Factor B (and Factor C) in the editor.
 - **Guided tour (Guided tour button, top of every page).** A box is drawn around each part of the screen, one at a time, with Back and Next (or the arrow keys; Esc closes). It offers a **tour of the page you are on**, a **hands-on walk-through** that does the steps for you (Problem 3.11 on Problem Sets; the class example on the one, two, k sample and design pages) and an **overview of the whole app**. It knows where you are: the stage of an analysis (Data, Map variables, Context & settings, Results) or the step of a Problem Sets problem, and on Problem Sets it explains exactly the step on screen. A first-time visitor sees a small invitation to take the tour.
 
+## What is new in stage 9
+
+- **One process everywhere.** The analysis pages (**One sample, Two samples, k samples, CRD, RCBD, Latin Square, Graeco-Latin Square** and the new **Factorial** page) now run the same five-step process as the Problem Sets on your own data: pick the dataset (from Data Studio, pasted, uploaded or a class example), say which column is which, and follow the steps. Designs with three or more treatments add the post-hoc step and the assumption checks, and restart with the rank test (steps 9 to 14) when an assumption fails. The old four-stage wizard and the generated R script were replaced; Data Studio, the Advisor, Learn and the Report work as before.
+- **CRD naming.** Chapter 3 problems and problem 4.59 are typed **CRD**, and the test is named "CRD ANOVA (F test)". Factorial layouts name their ANOVA after the layout (CRD, RCBD, LSD or GLSD ANOVA).
+- **BIBD removed.** Problems 4.45 and 4.47 (balanced incomplete blocks) are gone because the course does not cover them; a layout with incomplete blocks gets a clear message instead of an analysis.
+- **Quade's test** is the non-parametric test for every Latin and Graeco-Latin square (and factorial squares), with Dunn's test (Holm adjustment) or the Wilcoxon rank-sum test (Bonferroni adjustment) after it.
+- **Step 5 test can be changed.** The test that fits the design is selected and marked ★; choose another (for example the rank test) and a note explains whether it suits the data: a warning when the ANOVA assumptions hold and the rank test is chosen, or when the group variances differ and the ordinary ANOVA is chosen.
+- **Factorial information page** shows the main-effects plot, the interaction plots and boxplots by treatment combination.
+- **Download solution (PDF)** on every problem (header button and a PDF link on each card) and on every analysis page: the statement, the data and every step with its numbers, tables and plots.
+- **Edit data.** In Problem Sets press **Edit data** on step 1 to change a value, add or delete a row, then **Apply** (the steps restart on your values) or **Reset data**.
+- **English and Arabic.** The button at the top switches the menus, instructions, step texts, results sentences, tables, chart labels, the guided tour and the Learn guides to Arabic (right-to-left layout and Arabic statistical terms). The PDF solutions and the Word, PDF and HTML reports follow the language chosen. The statements of the textbook problems, the data, your own names and the formulas stay as written. The dictionary is in `R/i18n*.R` (one file per area) and the switch in `www/i18n.js`.
+
 ## Ask Professor Riaz (AI assistant)
 
 The **Ask Professor Riaz** button at the bottom right opens a chat with an AI course assistant. It can see the page you are on: your dataset, your column mapping, and on a results page the ANOVA or test tables, assumption checks, post-hoc tables, the interpretation and the generated R code. Ask it to explain results, check assumptions, walk through the R code line by line, or show you how to use the app. Untick **Let Professor Riaz see my current data and results** in its settings to keep your data private.
@@ -156,6 +170,7 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 - `R/ai.R`: Ask Professor Riaz (providers, built-in key, non-blocking requests, page context, chat panel). `ai_key.example.txt`: template for the built-in key.
 
+- `R/mod_problems.R`: the five-step process (Problem Sets and, in page mode, every analysis page). `R/solution_pdf.R`: the worked-solution PDF. `R/i18n.R`, `R/i18n_*.R`, `www/i18n.js`: the English/Arabic switch.
 - `R/mod_planner.R`: Design Planner. `R/report.R`: pinning and the report exports. `R/mod_learn.R`: Learn guides. `deploy.R`: publish script.
 
 - `R/samples.R`: one, two and k sample tests. `R/mod_compare.R`: their pages. `R/mod_desc.R`: descriptive statistics. `R/mod_advisor.R`: Test Advisor.

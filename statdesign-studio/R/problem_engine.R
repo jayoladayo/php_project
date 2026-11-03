@@ -363,6 +363,7 @@ ps_run_test <- function(kind, test, st, meta, s) {
                 k = run_k(st$d$y, st$d$treatment, base))
     t <- r$tests[[test]]
     if (is.null(t)) stop(sprintf("%s is not available for these data.", test))
+    if (kind == "k" && identical(test, "anova")) t$name <- "CRD ANOVA (F test)"   # a one-way layout is a CRD
     out$r <- r; out$t <- t; out$desc <- r$desc
     if (kind == "k") {
       out$anova <- r$anova; out$fit <- r$fit
