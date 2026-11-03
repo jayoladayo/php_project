@@ -99,7 +99,6 @@ problems_ui <- function(id, mode = NULL) {
       kcard(div(class = "hrow", style = "align-items:flex-end",
                 div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Custom Problem" = "custom"), "ch2")),
                 div(class = "ml ps-search", textInput(ns("q"), NULL, placeholder = "Search by number, topic or test"))),
-            downloadLink(ns("dl_sol_any"), "", style = "display:none"),
             uiOutput(ns("cat_blurb")),
             conditionalPanel("input.cat != 'custom'", ns = ns, div(class = "ps-filters",
               div(class = "ps-filter", selectInput(ns("f_type"), "Problem type", c("All problem types" = ""), width = "100%")),
@@ -226,10 +225,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     card <- function(p, cl, cur_id) {
       tags$a(class = paste("kcard acard ps-card", if (identical(cur_id, p$id)) "on"), href = "#",
              onclick = sprintf("Shiny.setInputValue('%s', '%s', {priority: 'event'}); return false;", ns("pick"), p$id),
-             div(class = "hrow", span(class = "ps-num", paste("Problem", p$id)), if (identical(cur_id, p$id)) div(class = "ml", pill("Selected", "pass", "check")),
-                 tags$span(class = paste("ps-pdf", if (!identical(cur_id, p$id)) "ml"), title = "Download the worked solution (PDF)",
-                           onclick = sprintf("event.stopPropagation(); Shiny.setInputValue('%s', '%s', {priority: 'event'}); return false;", ns("sol_pick"), p$id),
-                           icon("download", 12), "Solution PDF")),
+             div(class = "hrow", span(class = "ps-num", paste("Problem", p$id)), if (identical(cur_id, p$id)) div(class = "ml", pill("Selected", "pass", "check"))),
              div(class = "at", p$title),
              div(class = "ad", sprintf("%s · %d observations", PS_KIND_LABEL[[cl$kind]], sum(!is.na(p$data[[p$roles$response]])))),
              div(class = "meta ps-chips",
@@ -291,7 +287,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     save_cur <- function() {
       i <- isolate(cur$id); if (is.null(i)) return()
       memo[[i]] <- isolate(list(s = cur$s, h0 = cur$h0, h1 = cur$h1, hs0 = cur$hs0, hs1 = cur$hs1, h0n = cur$h0n, h1n = cur$h1n, hs0n = cur$hs0n, hs1n = cur$hs1n, fh = cur$fh, fhn = cur$fhn,
-                                test = cur$test, test_user = cur$test_user, ph = cur$ph, res = cur$res, res_np = cur$res_np, step = cur$step, seen = cur$seen))
+                                test = cur$test, test_user = cur$test_user, ph = cur$ph, res = cur$res, res_np = cur$res_np, step = cur$step, seen = cur$seen, visited = cur$visited))
     }
     open_problem <- function(i, step = NULL) {
       m <- meta_of(i); if (is.null(m)) return()
@@ -311,7 +307,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
         fhx <- function(fam) lapply(ps_fact_hypotheses(st, m, fam), function(e) list(h0 = e$h0, h1 = e$h1))
         cur$fh <- sv$fh %||% fhx("param"); cur$fhn <- sv$fhn %||% fhx("nonpar")
       } else { cur$fh <- NULL; cur$fhn <- NULL }
-      cur$res <- sv$res; cur$res_np <- sv$res_np; cur$seen <- sv$seen %||% 1
+      cur$res <- sv$res; cur$res_np <- sv$res_np; cur$seen <- sv$seen %||% 1; cur$visited <- as.integer(sv$visited %||% seq_len(sv$seen %||% 1))
       cur$key <- paste0(gsub("[^A-Za-z0-9]", "", i), "k", isolate(keyn()))
       sel(i)
       go(step %||% sv$step %||% 1, scroll = FALSE)
@@ -455,7 +451,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       if (k && n >= 9 && isTRUE(isolate(rank_first()))) { showNotification("The rank test was chosen in step 5 and has already been carried out, so the non-parametric restart is not needed.", type = "message"); n <- 8L }
       if (k && n >= 9 && isTRUE(isolate(asm())$all_ok)) { showNotification("All the assumptions hold, so the non-parametric analysis is not needed.", type = "message"); n <- 8L }
       if (k && n >= 13 && (is.null(isolate(cur$res_np)) || isolate(stale_np()))) if (!run_np(quiet_ok = TRUE)) n <- 12L
-      cur$step <- n; cur$seen <- max(isolate(cur$seen), n)
+      cur$step <- n; cur$seen <- max(isolate(cur$seen), n); cur$visited <- union(as.integer(isolate(cur$visited)), n)
       updateTabsetPanel(session, "steps", selected = as.character(n))
       if (scroll) session$sendCustomMessage("scroll_top", list())
     }
@@ -503,8 +499,12 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       output[[paste0("nav", n)]] <- renderUI({
         req(cur$key); pv <- flow_prev(n); nx <- flow_next(n)
         end <- is.null(nx) && n >= 6
+        # the worked solution is offered only to a student who has been through the steps, not one who jumped to the last dot
+        went <- all(2:6 %in% as.integer(cur$visited))
         tagList(
-          if (end) div(class = "ps-export",
+          if (end && !went) div(class = "ps-export lock", div(class = "ps-export-t", icon("check", 14, 2.6), "End of the analysis"),
+                                p(class = "small", "The worked solution (PDF) and the R script appear here once you have been through every step, from the hypotheses to the decision.")),
+          if (end && went) div(class = "ps-export",
                        div(class = "ps-export-t", icon("check", 14, 2.6), "End of the analysis"),
                        p(class = "small", "Keep your work: the worked solution as a PDF, or an R script you can run to check the numbers yourself."),
                        div(class = "hrow", style = "gap:10px;flex-wrap:wrap",
@@ -1210,7 +1210,6 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     observeEvent(input$ed_reset, reset_edits())
 
     # ---------- Worked-solution PDF ----------
-    sol_target <- reactiveVal(NULL)
     ui_lang <- function() { l <- if (is.function(lang)) isolate(lang()) else NULL; if (identical(l, "ar")) "ar" else "en" }
     sol_make <- function(m, s, test, ph, file) {
       tryCatch(ps_solution_pdf(m, file, s = s, test = test, ph = ph, lang = ui_lang()), error = function(e) {
@@ -1296,15 +1295,6 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
         if (isTRUE(same)) note(kind = "g", ic = "check", "The numbers computed here are identical to those in the shared file.")
         else if (isFALSE(same)) note(kind = "w", ic = "alert", "The numbers computed here differ from those in the shared file. The file may come from another version of the app.")))
     }
-    observeEvent(input$sol_pick, { sol_target(input$sol_pick); session$sendCustomMessage("click_dl", list(id = ns("dl_sol_any"))) })
-    output$dl_sol_any <- downloadHandler(
-      filename = function() sprintf("solution_%s.pdf", gsub("[^A-Za-z0-9]+", "_", sol_target() %||% "problem")),
-      content = function(file) {
-        id <- sol_target(); req(id); m <- meta_of(id)
-        sv <- if (identical(isolate(cur$id), id)) list(s = isolate(cur$s), test = isolate(cur$test), ph = isolate(cur$ph)) else memo[[id]]
-        sol_make(m, sv$s, sv$test, sv$ph, file)
-      })
-    outputOptions(output, "dl_sol_any", suspendWhenHidden = FALSE)
     observeEvent(input$c_use_paste, {
       df <- tryCatch(parse_pasted(input$c_paste %||% "", isTRUE(input$c_header)), error = function(e) e)
       if (inherits(df, "error") || is.null(df) || !nrow(df)) { showNotification("Nothing could be read from the pasted text. Put one row per line, with values separated by tabs or commas.", type = "error"); return() }

@@ -2,6 +2,8 @@
 
 ar_part_misc <- function() {
 ar_add(
+  "At the end of an analysis you can download the worked solution (PDF) and an R script." = "في نهاية التحليل يمكنك تنزيل الحل المفصَّل (PDF) وسكربت R.",
+  "The worked solution (PDF) and the R script appear here once you have been through every step, from the hypotheses to the decision." = "يظهر الحل المفصَّل (PDF) وسكربت R هنا بعد أن تمرّ بكل الخطوات، من الفرضيات حتى القرار.",
   "Copy link" = "نسخ الرابط", "Press Ctrl+C" = "اضغط Ctrl+C", "End of the analysis" = "نهاية التحليل",
   "Keep your work: the worked solution as a PDF, or an R script you can run to check the numbers yourself." = "احتفظ بعملك: الحل المفصَّل بصيغة PDF، أو سكربت R يمكنك تشغيله للتحقق من الأرقام بنفسك.",
   "Send the link, the file or the code. The other person opens the link in their browser, or uses Open shared analysis (at the top) with the file or the code." = "أرسل الرابط أو الملف أو الرمز. يفتح الطرف الآخر الرابط في متصفحه، أو يستخدم «افتح تحليلًا مشاركًا» (في الأعلى) مع الملف أو الرمز.",

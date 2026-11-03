@@ -741,9 +741,6 @@ body.touring { overflow-anchor: none; }
 @media print { .tour-layer, .tour-menu, .tour-nudge { display: none !important; } }
 
 /* Problem Sets: worked-solution link on each card */
-.ps-pdf { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--green); padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; }
-.ps-pdf:hover { background: var(--green); color: #fff; border-color: var(--green); }
-.ps-pdf svg { flex: none; }
 
 /* ---------- Arabic: right-to-left layout ---------- */
 html[dir="rtl"] body, html[dir="rtl"] .app { font-family: 'Cairo', 'Poppins', system-ui, sans-serif; }
@@ -793,3 +790,5 @@ html[dir="rtl"] .selectize-input { padding-left: 12px; }
 .ps-export-t { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--pass); margin-bottom: 4px; }
 .ps-export p { margin: 0 0 10px; }
 html[dir="rtl"] .ps-export { border-left: 1px solid var(--line, #e2e8f0); border-right: 4px solid var(--pass); }
+.ps-export.lock { border-left-color: var(--line, #cbd5e1); } .ps-export.lock .ps-export-t { color: var(--muted, #64748b); }
+html[dir="rtl"] .ps-export.lock { border-right-color: var(--line, #cbd5e1); }

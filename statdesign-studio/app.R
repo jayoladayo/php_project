@@ -228,7 +228,7 @@ server <- function(input, output, session) {
             tags$li("Pick the dataset and say which column is the response, the treatment and the blocks."),
             tags$li("Follow the five steps: hypotheses, significance level, information available, test and decision (post-hoc and assumption checks for designs with three or more treatments)."),
             tags$li("If an ANOVA assumption fails, the process restarts with the rank test: Kruskal-Wallis, Friedman or Quade's test."),
-            tags$li("Every page has a Download solution button: a worked PDF of the steps."),
+            tags$li("At the end of an analysis you can download the worked solution (PDF) and an R script."),
             tags$li("Not sure which test? The Test Advisor asks a few questions and opens the right page.")),
     p(class = "small", "Save project downloads a file with your datasets and settings. Open it later from Data Studio, Open project.")
   )))
