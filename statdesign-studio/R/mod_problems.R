@@ -1118,7 +1118,13 @@ problems_server <- function(id, store, show_crumb, open_design = NULL) {
     }
     observeEvent(input$ed_apply, {
       m <- cur$meta; req(m, input$ed_grid)
-      df <- tryCatch(as.data.frame(rhandsontable::hot_to_r(input$ed_grid), stringsAsFactors = FALSE, check.names = FALSE), error = function(e) NULL)
+      # The raw cell text is read (not hot_to_r), so text typed in a numeric column is caught instead of turning into NA.
+      g <- input$ed_grid
+      df <- tryCatch({
+        rows <- lapply(g$data, function(r) vapply(r, function(v) if (is.null(v) || (length(v) == 1 && is.na(v))) NA_character_ else as.character(v), ""))
+        x <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE, check.names = FALSE)
+        names(x) <- unlist(g$params$colHeaders); x
+      }, error = function(e) NULL)
       if (is.null(df)) return(show_ed_msg("The grid could not be read. Try again."))
       orig <- m$data
       if (!identical(names(df), names(orig))) return(show_ed_msg("The columns changed. Keep the same columns and edit the values."))
