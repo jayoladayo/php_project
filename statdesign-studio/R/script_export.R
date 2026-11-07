@@ -210,6 +210,7 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
   eff_tab <- function(cd) NULL
   tn <- function(x) gsub("factorE", "E", gsub("factorD", "D", gsub("factorC", "C", gsub("factorB", "B", gsub("treatment", "A", x)))))
   eterms <- if (fact) vapply(ps_fact_effects(st, m), function(e) tn(e$term), "") else NULL   # the effects in the order of the app
+  if (fact && isTRUE(st$unrep)) eterms <- eterms[vapply(ps_fact_effects(st, m), function(e) e$main, TRUE)]   # two factors, one observation per cell: only the main effects are in the model
   if (!rank_first) {
     if (test == "welch") add("res <- oneway.test(y ~ treatment, data = dd, var.equal = FALSE)", "res", "results$p_param <- res$p.value")
     else if (fact) {
