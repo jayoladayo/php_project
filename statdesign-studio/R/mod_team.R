@@ -14,7 +14,7 @@ APP_OBJECTIVES <- c(
   "Analyse the designs taught in the course (CRD, RCBD, Latin and Graeco-Latin squares, factorial designs) and the one, two and k sample tests with the methods used in class.",
   "Guide every analysis through the hypothesis-testing steps: hypotheses, significance level, information available, test, decision by three methods and post-hoc.",
   "Check the model assumptions (normality, constant variance and independence of the residuals) and move to the right non-parametric test when one fails.",
-  "Provide the course problem sets (Chapters 2 to 5) with their full data and worked solutions, and let students solve their own problems the same way.",
+  "Provide the course problem sets (Chapters 2 to 6) with their full data and worked solutions, and let students solve their own problems the same way.",
   "Produce R code, plain-language interpretations and a report ready to submit, with an AI course assistant (Professor Riaz) to explain the results.")
 
 team_initials <- function(name) paste(substr(strsplit(name, " ")[[1]], 1, 1), collapse = "")

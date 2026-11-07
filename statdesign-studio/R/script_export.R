@@ -86,8 +86,8 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
   comment <- function(x) for (l in strsplit(x, "\n", fixed = TRUE)[[1]]) add(fl(l))
 
   # ---- names: the data frame uses short names; the original names are in comments ----
-  fn <- c(treatment = if (fact) "A" else "treatment", factorB = "B", factorC = "C", block = "block", row = "row", column = "col", greek = "greek")
-  cols <- c("y", intersect(c("treatment", "factorB", "factorC", "block", "row", "column", "greek"), names(d)))
+  fn <- c(treatment = if (fact) "A" else "treatment", factorB = "B", factorC = "C", factorD = "D", factorE = "E", block = "block", row = "row", column = "col", greek = "greek")
+  cols <- c("y", intersect(c("treatment", "factorB", "factorC", "factorD", "factorE", "block", "row", "column", "greek"), names(d)))
   dd <- d[, cols, drop = FALSE]
   if (!is.null(st$missing) && nrow(st$missing) && kind %in% c("rcbd", "latin", "glsd")) {
     mi <- st$missing; extra <- dd[rep(1, nrow(mi)), , drop = FALSE]; extra$y <- NA_real_
@@ -154,9 +154,9 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
   }
 
   # ---- model formulas ----
-  terms <- if (fact) strsplit(deparse(ps_fact_formula(kind, st))[1], "~")[[1]][2] else if (kind %in% PS_BLOCK_KINDS) paste(ps_block_terms(kind), collapse = " + ") else "treatment"
+  terms <- if (fact) strsplit(paste(deparse(ps_fact_formula(kind, st), width.cutoff = 500), collapse = ""), "~")[[1]][2] else if (kind %in% PS_BLOCK_KINDS) paste(ps_block_terms(kind), collapse = " + ") else "treatment"
   terms <- trimws(terms)
-  terms <- gsub("\\bfactorB\\b", "B", gsub("\\bfactorC\\b", "C", gsub("\\btreatment\\b", if (fact) "A" else "treatment", terms)))
+  terms <- gsub("\\bfactorE\\b", "E", gsub("\\bfactorD\\b", "D", gsub("\\bfactorB\\b", "B", gsub("\\bfactorC\\b", "C", gsub("\\btreatment\\b", if (fact) "A" else "treatment", terms)))))
   terms <- gsub("\\bcolumn\\b", "col", terms)
   frm <- sprintf("y ~ %s", terms)
   trt <- if (fact) "A" else "treatment"
@@ -208,12 +208,16 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
 
   effects <- if (fact) setdiff(rownames(anova(stats::lm(ps_fact_formula(kind, st), data = d))), "Residuals") else "treatment"
   eff_tab <- function(cd) NULL
+  tn <- function(x) gsub("factorE", "E", gsub("factorD", "D", gsub("factorC", "C", gsub("factorB", "B", gsub("treatment", "A", x)))))
+  eterms <- if (fact) vapply(ps_fact_effects(st, m), function(e) tn(e$term), "") else NULL   # the effects in the order of the app
   if (!rank_first) {
     if (test == "welch") add("res <- oneway.test(y ~ treatment, data = dd, var.equal = FALSE)", "res", "results$p_param <- res$p.value")
     else if (fact) {
       codes <- names(ps_fact_effects(st, m))
+      if (isTRUE(st$pool)) add("# One observation per combination: there is no pure error. The three-factor and higher interactions are not in the model;",
+                               "# they are pooled into the residual, which is the error for every F test below (the usual practice for an unreplicated 2^k design).")
       add(sprintf("# One F test for each effect, against the error mean square (error df = %s)", "dfe"),
-          "ef <- an[rn %in% c(\"A\", \"B\", \"C\", \"A:B\", \"A:C\", \"B:C\", \"A:B:C\"), ]",
+          sprintf("ef <- an[match(%s, rn), ]   # in the order A, B, ..., AB, AC, ...", ps_rvec(unname(eterms))),
           "rownames(ef) <- trimws(rownames(ef))",
           "ef$F <- ef$`Mean Sq` / mse; ef$p <- pf(ef$F, ef$Df, dfe, lower.tail = FALSE)")
       if (isTRUE(st$unrep)) add("# One observation per combination: there is no pure error. The interaction is checked with Tukey's test for nonadditivity (1 df).",
@@ -292,7 +296,7 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
                                               "  rk <- rank(residuals(bm)); MST <- var(rk)", sprintf("  ar <- summary(aov(rk ~ %s, data = dat[!is.na(dat$y), ]))[[1]]", drop_nuis(frm_blk)))
     else add("  # Friedman-type: rank the treatment combinations within each block (mean of y per block and combination),",
              "  # add the ranks of each combination over the blocks, and test each effect on these rank sums.",
-             "  fac <- intersect(c(\"A\", \"B\", \"C\"), names(dat)); combo <- interaction(dat[fac], drop = TRUE, lex.order = FALSE)",
+             "  fac <- intersect(c(\"A\", \"B\", \"C\", \"D\", \"E\"), names(dat)); combo <- interaction(dat[fac], drop = TRUE, lex.order = FALSE)",
              "  ym <- tapply(dat$y, list(dat$block, combo), mean); ym <- ym[complete.cases(ym), , drop = FALSE]",
              "  mblk <- nrow(ym); Tn <- ncol(ym); Rs <- colSums(t(apply(ym, 1, rank)))",
              "  corr <- 1 - sum(apply(ym, 1, function(v) { t <- table(v); sum(t^3 - t) })) / (mblk * (Tn^3 - Tn))   # correction for ties",
@@ -303,7 +307,8 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
                                                   "  rk_tab <- data.frame(effect = rn2, H = H, df = ar[, \"Df\"], p = Hp)[rn2 != \"Residuals\", ]")
     else add("  rn2 <- trimws(rownames(ar)); H <- 12 * ar[, \"Sum Sq\"] / (mblk * Tn * (Tn + 1)) / corr; Hp <- pchisq(H, ar[, \"Df\"], lower.tail = FALSE)",
              "  rk_tab <- data.frame(effect = rn2, H = H, df = ar[, \"Df\"], p = Hp)[rn2 != \"Residuals\", ]")
-    add("  print(rk_tab); results$p_rank <- setNames(rk_tab$p, rk_tab$effect)",
+    add(sprintf("  rk_tab <- rk_tab[match(%s, rk_tab$effect), ]   # in the order A, B, ..., AB, AC, ...", ps_rvec(unname(eterms))),
+        "  print(rk_tab); results$p_rank <- setNames(rk_tab$p, rk_tab$effect)",
         "  cat(\"Effects with p < alpha:\", paste(rk_tab$effect[rk_tab$p < alpha], collapse = \", \"), \"\\n\")")
   }
   add("}", "", "# Conclusion: compare each p-value in `results` with alpha, as in steps 6 and 13.",

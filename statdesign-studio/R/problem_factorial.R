@@ -10,15 +10,20 @@
 #                  Latin and Graeco-Latin squares: Quade (rank the residuals), then Dunn or Wilcoxon
 # Plain R with no Shiny, so it can be tested on its own.
 
-PS_FACT_ROLES <- c("treatment", "factorB", "factorC")
+PS_FACT_ROLES <- PS_FACT_KEYS
 
 ps_fact_nuis <- function(kind) switch(kind, fact = character(0), factb = "block", factl = c("row", "column"), factg = c("row", "column", "greek"))
 
-ps_fact_formula <- function(kind, st) {
+# Right-hand side of the factorial model. One observation per combination: with two factors only the
+# main effects (the interaction is Tukey's one-df test); with three or more the main effects and the
+# two-factor interactions, and the higher-order interactions form the error (the usual 2^k practice).
+ps_fact_rhs <- function(st) {
   f <- st$ffacs
-  rhs <- if (isTRUE(st$unrep)) paste(f, collapse = " + ") else paste(f, collapse = " * ")
-  stats::as.formula(paste("y ~", paste(c(ps_fact_nuis(kind), rhs), collapse = " + ")))
+  if (isTRUE(st$unrep)) paste(f, collapse = " + ")
+  else if (isTRUE(st$pool)) sprintf("(%s)^2", paste(f, collapse = " + "))
+  else paste(f, collapse = " * ")
 }
+ps_fact_formula <- function(kind, st) stats::as.formula(paste("y ~", paste(c(ps_fact_nuis(kind), ps_fact_rhs(st)), collapse = " + ")))
 
 # Which factorial layout the data form, or NA when it cannot be analysed.
 ps_fact_kind <- function(st) {
@@ -36,7 +41,8 @@ ps_fact_kind <- function(st) {
 # The effects tested, in textbook order: A, B, (C), AB, (AC, BC, ABC).
 ps_fact_effects <- function(st, meta) {
   f <- st$ffacs; codes <- LETTERS[seq_along(f)]
-  ix <- unlist(lapply(seq_along(f), function(k) utils::combn(seq_along(f), k, simplify = FALSE)), recursive = FALSE)
+  top <- if (isTRUE(st$pool)) 2L else length(f)
+  ix <- unlist(lapply(seq_len(top), function(k) utils::combn(seq_along(f), k, simplify = FALSE)), recursive = FALSE)
   out <- lapply(ix, function(i) list(code = paste(codes[i], collapse = ""), roles = f[i], term = paste(f[i], collapse = ":"),
                                      label = paste(vapply(f[i], function(r) ucfirst(ps_lab(meta, r)), ""), collapse = " × "), main = length(i) == 1))
   stats::setNames(out, vapply(out, `[[`, "", "code"))
@@ -49,7 +55,7 @@ ps_fact_flabs <- function(st, meta) vapply(stats::setNames(st$ffacs, st$ffacs), 
 ps_fact_hypotheses <- function(st, meta, family = "param") {
   d <- st$d; resp <- ps_lab(meta, "response"); np <- identical(family, "nonpar")
   centre <- if (np) "median" else "mean"; ef <- ps_fact_effects(st, meta)
-  greek <- c("α", "β", "γ"); idxl <- c("i", "j", "k")
+  greek <- c("α", "β", "γ", "δ", "ζ"); idxl <- c("i", "j", "k", "l", "m")
   lc <- function(r) tolower(ps_lab(meta, r))
   out <- lapply(ef, function(e) {
     ix <- match(e$roles, st$ffacs)
@@ -62,12 +68,13 @@ ps_fact_hypotheses <- function(st, meta, family = "param") {
            h0s = if (np) sprintf("H0: %s", lev) else sprintf("H0: %s = 0", lev),
            h1s = if (np) sprintf("H1: ηᵢ ≠ ηⱼ for at least one pair") else sprintf("H1: %sᵢ ≠ 0 for at least one level", greek[ix]))
     } else {
-      labs <- vapply(e$roles, lc, ""); two <- length(labs) == 2
+      labs <- vapply(e$roles, lc, ""); two <- length(labs) == 2; nl <- length(labs)
       sym <- paste0("(", paste(greek[ix], collapse = ""), ")", paste(idxl[seq_along(ix)], collapse = ""))
+      lastl <- labs[nl]; init <- paste(labs[-nl], collapse = " × ")
       list(h0 = if (two) sprintf("There is no interaction between %s and %s: the effect of %s on the %s %s is the same at every level of %s.", labs[1], labs[2], labs[1], centre, resp, labs[2])
-                else sprintf("There is no %s interaction: the %s × %s interaction on the %s %s is the same at every level of %s.", paste(labs, collapse = " × "), labs[1], labs[2], centre, resp, labs[3]),
+                else sprintf("There is no %s interaction: the %s interaction on the %s %s is the same at every level of %s.", paste(labs, collapse = " × "), init, centre, resp, lastl),
            h1 = if (two) sprintf("%s and %s interact: the effect of %s on the %s %s depends on the level of %s.", ucfirst(labs[1]), labs[2], labs[1], centre, resp, labs[2])
-                else sprintf("The %s interaction is present: the %s × %s interaction on the %s %s depends on the level of %s.", paste(labs, collapse = " × "), labs[1], labs[2], centre, resp, labs[3]),
+                else sprintf("The %s interaction is present: the %s interaction on the %s %s depends on the level of %s.", paste(labs, collapse = " × "), init, centre, resp, lastl),
            h0s = if (np) sprintf("H0: no %s interaction", paste(e$code)) else sprintf("H0: %s = 0 for all levels", sym),
            h1s = if (np) sprintf("H1: %s interaction", paste(e$code)) else sprintf("H1: %s ≠ 0 for at least one combination", sym))
     }
@@ -80,9 +87,12 @@ ps_fact_hypotheses <- function(st, meta, family = "param") {
 
 ps_fact_model_text <- function(kind, st) {
   n <- length(st$ffacs)
+  mainsum <- paste(c("αᵢ", "βⱼ", "γₖ", "δₗ", "ζₘ")[seq_len(n)], collapse = " + ")
   core <- if (isTRUE(st$unrep)) "yᵢⱼ = μ + αᵢ + βⱼ + εᵢⱼ (no interaction term: one observation per combination)"
+          else if (isTRUE(st$pool)) sprintf("y = μ + %s + (two-factor interactions) + ε: one observation per combination, so the three-factor and higher interactions are pooled into the error", mainsum)
           else if (n == 2) "yᵢⱼₖ = μ + αᵢ + βⱼ + (αβ)ᵢⱼ + εᵢⱼₖ"
-          else "yᵢⱼₖₗ = μ + αᵢ + βⱼ + γₖ + (αβ)ᵢⱼ + (αγ)ᵢₖ + (βγ)ⱼₖ + (αβγ)ᵢⱼₖ + εᵢⱼₖₗ"
+          else if (n == 3) "yᵢⱼₖₗ = μ + αᵢ + βⱼ + γₖ + (αβ)ᵢⱼ + (αγ)ᵢₖ + (βγ)ⱼₖ + (αβγ)ᵢⱼₖ + εᵢⱼₖₗ"
+          else sprintf("y = μ + %s + all the interactions (two-factor up to the %d-factor interaction) + ε", mainsum, n)
   switch(kind, fact = core, factb = paste(core, "plus a block effect"), factl = paste(core, "plus row and column effects"),
          factg = paste(core, "plus row, column and Greek-letter effects"))
 }
@@ -92,12 +102,14 @@ ps_info_fact <- function(kind, st, meta, s) {
   ncell <- prod(lv); r <- unique(st$cellreps)
   flab <- function(r) ucfirst(ps_lab(meta, r))
   design <- switch(kind,
-    fact = sprintf("Factorial design in a completely randomized layout: the %d factors are crossed, so every combination of their levels is a treatment.", nf),
+    fact = sprintf("Factorial design in a completely randomized layout: the %d factors are crossed, so every combination of their levels is a treatment%s.", nf,
+                   if (all(lv == 2)) sprintf(" (a 2^%d design: every factor has a low and a high level)", nf) else ""),
     factb = sprintf("Factorial design in %d blocks (RCBD): every combination of the factor levels appears once in each block.", nlevels(d$block)),
     factl = sprintf("Factorial design in a Latin square: the %d factors are crossed and the treatment combinations are placed by row and column.", nf),
     factg = sprintf("Factorial design in a Graeco-Latin square: the %d factors are crossed and the combinations are placed by row, column and Greek letter.", nf))
   fl <- vapply(seq_along(f), function(i) sprintf("%s · %s: %d levels (%s)", LETTERS[i], flab(f[i]), lv[i], ps_list(levels(d[[f[i]]]), 6)), "")
-  reps <- if (isTRUE(st$unrep)) "1 observation per combination: there is no replicate, so the interaction cannot be separated from error."
+  reps <- if (isTRUE(st$pool)) "1 observation per combination (unreplicated): there is no pure error, so the three-factor and higher interactions are pooled to estimate the error."
+          else if (isTRUE(st$unrep)) "1 observation per combination: there is no replicate, so the interaction cannot be separated from error."
           else if (kind == "factb") sprintf("%d (one per block)", nlevels(d$block))
           else if (length(r) == 1) sprintf("%d per combination (balanced)", r) else sprintf("%d to %d per combination (unbalanced; sequential sums of squares)", min(r), max(r))
   nuis <- intersect(c("block", "row", "column", "greek"), st$facs)
@@ -130,7 +142,7 @@ ps_fact_effects_df <- function(eff, np_stat = NULL) {
 ps_run_fact <- function(kind, test, st, meta, s) {
   a <- s$alpha; d <- st$d; ef <- ps_fact_effects(st, meta)
   out <- list(kind = kind, test = test, settings = s, alpha = a, conf = 1 - a, alt = "greater", ref = NA, levels = levels(d$treatment),
-              control = meta$control, ef = ef, ffacs = st$ffacs, d = d, unrep = isTRUE(st$unrep), flabs = ps_fact_flabs(st, meta),
+              control = meta$control, ef = ef, ffacs = st$ffacs, d = d, unrep = isTRUE(st$unrep), pool = isTRUE(st$pool), flabs = ps_fact_flabs(st, meta),
               resp = ps_lab(meta, "response"), unit = meta$labels$unit %||% "")
   out <- if (test == "anova") ps_fact_anova(out, kind, st, meta) else ps_fact_rank(out, kind, test, st, meta)
   eff <- out$effects; best <- eff[which.min(eff$p), ]
@@ -146,8 +158,9 @@ ps_fact_anova <- function(out, kind, st, meta) {
   fit <- stats::aov(ps_fact_formula(kind, st), data = d)
   at <- stats::anova(fit)
   sse <- at["Residuals", "Sum Sq"]; dfe <- at["Residuals", "Df"]; mse <- sse / dfe; sst <- sum((d$y - mean(d$y))^2)
-  erow <- function(cd, e, df, df2, ss, ms, f) data.frame(code = cd, term = e$term, label = e$label, main = e$main, df = df, df2 = df2, ss = ss, ms = ms,
-                                                       stat = f, p = stats::pf(f, df, df2, lower.tail = FALSE), crit = stats::qf(1 - a, df, df2), alpha = a, stringsAsFactors = FALSE)
+  erow <- function(cd, e, df, df2, ss, ms, f) { if (isTRUE(ss < 1e-12 * sst)) { ss <- 0; ms <- 0; f <- 0 }   # an effect of exactly zero (rounding noise is not shown)
+    data.frame(code = cd, term = e$term, label = e$label, main = e$main, df = df, df2 = df2, ss = ss, ms = ms,
+                                                       stat = f, p = stats::pf(f, df, df2, lower.tail = FALSE), crit = stats::qf(1 - a, df, df2), alpha = a, stringsAsFactors = FALSE) }
   nonadd <- NULL
   rows <- lapply(names(ef), function(cd) {
     e <- ef[[cd]]
@@ -197,11 +210,13 @@ ps_fact_formula_lines <- function(kind, st, d, effects, nrows, sse, dfe, mse, ss
             sprintf("SS_T = Σ y² − y...²/N = %s − %s = %s", f(sum(d$y^2), 8), f(sum(d$y)^2 / N, 8), f(sst)))
   def <- if (isTRUE(st$unrep)) "SS_A = b Σ (ȳᵢ. − ȳ..)²,   SS_B = a Σ (ȳ.ⱼ − ȳ..)²,   SS_E = SS_T − SS_A − SS_B"
          else if (nf == 2 && kind %in% c("fact", "factb")) "SS_A = r b Σ (ȳᵢ.. − ȳ...)²,   SS_B = r a Σ (ȳ.ⱼ. − ȳ...)²,   SS_AB = r Σ Σ (ȳᵢⱼ. − ȳᵢ.. − ȳ.ⱼ. + ȳ...)²,   SS_E = SS_T − (the other sums of squares)"
+         else if (nf > 3) "Each sum of squares comes from the ANOVA decomposition of the effect means (the main effects and the interactions listed below); SS_E = SS_T − (the other sums of squares)"
          else "Each sum of squares comes from the ANOVA decomposition of the effect means (A, B, C, AB, AC, BC, ABC); SS_E = SS_T − (the other sums of squares)"
   eff <- sprintf("SS_%s = %s on %d df,   MS_%s = %s,   F0 = MS_%s / MS_E = %s / %s = %s", effects$code, f(effects$ss), effects$df, effects$code, f(effects$ms, 6), effects$code,
                  f(effects$ms, 6), f(ifelse(effects$main | !isTRUE(st$unrep), mse, nonadd$rem_ms %||% mse), 6), f(effects$stat, 5))
   blk <- if (!is.null(nrows)) sprintf("SS_%s = %s on %d df,   MS = %s", sub(" .*", "", nrows$label), f(nrows$ss), nrows$df, f(nrows$ms, 6))
-  c(head, def, blk, eff, sprintf("SS_E = %s on %d df,   MS_E = SS_E / df = %s", f(sse), dfe, f(mse, 6)))
+  pooled <- if (isTRUE(st$pool)) sprintf("One observation per combination: SS_E is the pooled sum of squares of the three-factor and higher interactions (%d df), the usual error for an unreplicated 2^k design.", dfe)
+  c(head, def, blk, pooled, eff, sprintf("SS_E = %s on %d df,   MS_E = SS_E / df = %s", f(sse), dfe, f(mse, 6)))
 }
 
 # ---------- Rank tests (the non-parametric restart) ----------
@@ -216,7 +231,7 @@ ps_fact_ss <- function(y, d, fm) {
 ps_fact_rank <- function(out, kind, test, st, meta) {
   a <- out$alpha; d <- st$d; ef <- out$ef; unrep <- out$unrep
   codes <- if (unrep) ps_fact_unrep_codes(ef) else names(ef)
-  fm_eff <- stats::as.formula(paste("~", paste(c(if (unrep) paste(st$ffacs, collapse = " + ") else paste(st$ffacs, collapse = " * ")), collapse = " + ")))
+  fm_eff <- stats::as.formula(paste("~", ps_fact_rhs(st)))
   stat_name <- switch(test, kwf = "H", friedmanf = "χ²r", quadef = "H"); N <- nrow(d)
   rank_rows <- NULL; extra <- list(); lines <- character(0)
   if (test == "kwf") {
@@ -422,7 +437,7 @@ ps_fact_np_posthoc <- function(res, code, method) {
 ps_plot_fact_effect <- function(res, code) {
   e <- res$ef[[code]]; d <- res$d; r <- e$roles; ylab <- paste0(res$resp, if (nzchar(res$unit)) paste0(" (", res$unit, ")") else "")
   cells <- stats::aggregate(d$y, d[r], mean); names(cells)[ncol(cells)] <- "m"
-  if (length(r) >= 3) cells$panel <- paste(res$flabs[[r[3]]], "=", cells[[r[3]]])
+  if (length(r) >= 3) cells$panel <- do.call(paste, c(lapply(r[-(1:2)], function(x) paste(res$flabs[[x]], "=", cells[[x]])), sep = ", "))
   if (length(r) == 1) {
     ggplot(cells, aes(.data[[r]], m, group = 1)) + geom_line(colour = GREEN, linewidth = 1) + geom_point(colour = GREEN, size = 3.4) +
       geom_jitter(data = d, aes(.data[[r]], y), width = .06, height = 0, colour = PETROL, alpha = .35, size = 1.8, inherit.aes = FALSE) +
@@ -480,4 +495,54 @@ ps_plot_fact_inter <- function(st, meta) {
       scale_x_discrete(expand = ggplot2::expansion(add = c(.4, .9)))
   }
   p
+}
+
+# ---------- Two-level designs (2^k): effect estimates and the normal plot of the effects ----------
+
+# TRUE for a completely randomized design whose factors all have exactly two levels.
+ps_fact_2level <- function(st) {
+  f <- st$ffacs
+  length(f) >= 2 && all(vapply(f, function(r) nlevels(st$d[[r]]) == 2, TRUE)) && !any(c("block", "row", "column", "greek") %in% st$facs)
+}
+
+# Effect of every term of the 2^k model in coded units (low = −1, high = +1; the first level of each
+# factor is the low level): effect = 2 × coefficient = (mean at +) − (mean at −); SS = N × coefficient².
+ps_fact_contrasts <- function(st, meta) {
+  d <- st$d; f <- st$ffacs; k <- length(f); N <- nrow(d); codes <- LETTERS[seq_len(k)]
+  X <- stats::setNames(as.data.frame(lapply(f, function(r) ifelse(as.integer(d[[r]]) == 2L, 1, -1))), codes)
+  X$y <- d$y
+  fit <- stats::lm(stats::as.formula(paste("y ~", paste(codes, collapse = " * "))), data = X)
+  b <- stats::coef(fit); b <- b[names(b) != "(Intercept)"]
+  nm <- gsub(":", "", names(b)); ord <- nchar(nm)
+  lab <- function(cd) paste(vapply(strsplit(cd, "")[[1]], function(ch) ucfirst(ps_lab(meta, f[match(ch, codes)])), ""), collapse = " × ")
+  out <- data.frame(code = nm, order = ord, label = vapply(nm, lab, ""), effect = 2 * unname(b), ss = N * unname(b)^2, stringsAsFactors = FALSE)
+  out <- out[order(out$order, match(out$code, nm)), , drop = FALSE]
+  tiny <- abs(out$effect) < 1e-9 * max(1, max(abs(out$effect))); out$effect[tiny] <- 0; out$ss[out$ss < 1e-12 * max(1, max(out$ss))] <- 0   # rounding noise
+  out$pct <- 100 * out$ss / sum(out$ss)
+  rownames(out) <- NULL
+  out
+}
+
+# Lenth's pseudo standard error and margin of error: a rule of thumb for the effects that stand out
+# when there is no pure error (Lenth, Technometrics 1989).
+ps_lenth <- function(e) {
+  s0 <- 1.5 * stats::median(abs(e)); pse <- 1.5 * stats::median(abs(e)[abs(e) < 2.5 * s0])
+  m <- length(e); me <- stats::qt(0.975, m / 3) * pse
+  list(pse = pse, me = me)
+}
+
+# Normal probability plot of the effects: effects that fall off the line through the small ones are active.
+ps_plot_fact_normal <- function(st, meta) {
+  ce <- ps_fact_contrasts(st, meta); e <- ce$effect; m <- length(e); o <- order(e)
+  dd <- data.frame(effect = e[o], code = ce$code[o], z = stats::qnorm((seq_len(m) - 0.5) / m), stringsAsFactors = FALSE)
+  len <- ps_lenth(e); dd$active <- abs(dd$effect) > len$me
+  # the line goes through the effects that are not active (they behave like noise centred on zero)
+  q <- dd[!dd$active, , drop = FALSE]
+  sl <- if (nrow(q) >= 3) unname(stats::coef(stats::lm(effect ~ z, data = q))[2]) else stats::sd(dd$effect); ic <- if (nrow(q) >= 3) unname(stats::coef(stats::lm(effect ~ z, data = q))[1]) else 0
+  ggplot(dd, aes(effect, z)) + geom_abline(slope = 1 / sl, intercept = -ic / sl, colour = RED, linetype = "dashed") +
+    geom_point(aes(colour = active), size = 3) + scale_colour_manual(values = c(`FALSE` = PETROL, `TRUE` = GREEN), guide = "none") +
+    geom_text(data = dd[dd$active, , drop = FALSE], aes(label = code), hjust = -0.35, vjust = 0.4, size = 3.6, colour = INK, fontface = "bold") +
+    scale_x_continuous(expand = ggplot2::expansion(mult = c(0.08, 0.18))) +
+    labs(x = "Effect estimate (coded −1, +1)", y = "Normal score", subtitle = "Dashed line: noise · Labelled points: effects that stand out (Lenth)") +
+    theme_sds() + theme(plot.subtitle = element_text(colour = INK, size = 10.5))
 }

@@ -1,5 +1,5 @@
 # Problem Sets: exercises copied from the course problem sheets (Montgomery,
-# Design and Analysis of Experiments, Sections 2.7, 3.12, 4.5 and 5.7).
+# Design and Analysis of Experiments, Sections 2.7, 3.12, 4.5, 5.7 and 6.10).
 # Each problem keeps its full statement and its complete dataset. Data are stored
 # in long format (one row per observation) for analysis, with the textbook layout
 # kept for display.
@@ -16,7 +16,10 @@ PS_CHAPTERS <- list(
              blurb = "Randomized complete block, Latin square, Graeco-Latin square and balanced incomplete block designs."),
   ch5 = list(key = "ch5", num = 5, label = "Chapter 5 problems", icon = "grid4",
              title = "Chapter 5: Introduction to Factorial Designs",
-             blurb = "Two- and three-factor factorial experiments: main effects and interactions, in a completely randomized layout or in blocks.")
+             blurb = "Two- and three-factor factorial experiments: main effects and interactions, in a completely randomized layout or in blocks."),
+  ch6 = list(key = "ch6", num = 6, label = "Chapter 6 problems", icon = "grid4",
+             title = "Chapter 6: The 2^k Factorial Design",
+             blurb = "Two-level factorial experiments with two to five factors, replicated or with one observation per combination (the higher-order interactions then form the error).")
 )
 
 # ---------- Builders for the three textbook layouts ----------
@@ -868,7 +871,282 @@ PROBLEMS_CH5 <- list(
        character(0), D535(TRUE), roles = R5("Key size", "Keyboard feel", "Typing speed", block = TRUE), labels = L5("typing speed", "key size", "keyboard feel", block = TRUE), random_blocks = TRUE, note = BLK, tags = c("factorial", "RCBD", "random blocks"))
 )
 
-PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3, PROBLEMS_CH4, PROBLEMS_CH5)
+# ---------- Chapter 6: 2^k factorial designs ----------
+
+# A 2^k table from the textbook. `fn` names the factors (A, B, C, ...), `levels` gives the low and the high
+# level of each, and `y` has one row per treatment combination with the replicates across (a plain vector
+# for one observation per combination). The rows are in standard order, (1), a, b, ab, c, ... (A changes
+# fastest), unless `codes` (a matrix of −1/+1, one row per row of `y`) says otherwise. `run` is the run
+# order when the book prints it.
+ps_twok <- function(fn, levels, resp, y, codes = NULL, run = NULL, rep_name = "Replicate", rep_labels = NULL) {
+  k <- length(fn); y <- as.matrix(y); nr <- nrow(y); nrep <- ncol(y)
+  if (is.null(codes)) codes <- unname(as.matrix(expand.grid(rep(list(c(-1, 1)), k))))
+  stopifnot(nr == 2^k, nrow(codes) == nr, ncol(codes) == k, !anyDuplicated(codes))
+  ord <- order(as.vector((codes > 0) %*% 2^(seq_len(k) - 1)))
+  codes <- codes[ord, , drop = FALSE]; y <- y[ord, , drop = FALSE]; if (!is.null(run)) run <- run[ord]
+  lev <- vapply(seq_len(k), function(j) levels[[j]][(codes[, j] > 0) + 1], rep("", nr))
+  if (nr == 1) lev <- matrix(lev, nrow = 1)
+  combo <- apply(codes, 1, function(r) if (all(r < 0)) "(1)" else paste(letters[seq_len(k)][r > 0], collapse = ""))
+  idx <- expand.grid(run = seq_len(nr), rep = seq_len(nrep))              # replicate by replicate, then standard order
+  long <- as.data.frame(lev[idx$run, , drop = FALSE], stringsAsFactors = FALSE); names(long) <- fn
+  if (nrep > 1) long[[rep_name]] <- if (is.null(rep_labels)) idx$rep else rep_labels[idx$rep]
+  else if (!is.null(run)) long[["Run order"]] <- run[idx$run]
+  long[[resp]] <- y[cbind(idx$run, idx$rep)]
+  wide <- data.frame(Combination = combo, stringsAsFactors = FALSE)
+  for (j in seq_len(k)) wide[[fn[j]]] <- lev[, j]
+  if (nrep > 1) for (r in seq_len(nrep)) wide[[paste(rep_name, if (is.null(rep_labels)) r else rep_labels[r])]] <- format(y[, r])
+  else { wide[[resp]] <- format(y[, 1]); if (!is.null(run)) wide[["Run order"]] <- run }
+  list(long = long, wide = wide)
+}
+R6 <- function(fn, resp) { r <- list(response = resp); fk <- c("treatment", "factorB", "factorC", "factorD", "factorE"); for (i in seq_along(fn)) r[[fk[i]]] <- fn[i]; r }
+L6 <- function(resp, labs, unit = "") { l <- list(response = resp, unit = unit); fk <- c("treatment", "factorB", "factorC", "factorD", "factorE"); for (i in seq_along(labs)) l[[fk[i]]] <- labs[i]; l }
+NOREP6 <- "There is one observation per treatment combination, so there is no pure error. The three-factor and higher interactions are pooled to form the error (the usual practice for an unreplicated 2^k design); the normal probability plot of the effects in step 4 shows which effects stand out."
+CTR6 <- "The book also gives centre-point runs; they are not used here, so the problem is analysed as a 2^k design with its factorial runs only."
+
+# ---- Problem 6.5 ----
+D65 <- ps_twok(c("Cutting speed", "Tool geometry", "Cutting angle"), list(c("Low (−)", "High (+)"), c("Low (−)", "High (+)"), c("Low (−)", "High (+)")), "Tool life",
+  matrix(c(22, 31, 25,  32, 43, 29,  35, 34, 50,  55, 47, 46,  44, 45, 38,  40, 37, 36,  60, 50, 54,  39, 41, 47), ncol = 3, byrow = TRUE),
+  rep_labels = c("I", "II", "III"))
+# ---- Problem 6.9 ----
+D69 <- ps_twok(c("Bit size (in)", "Cutting speed (rpm)"), list(c("1/16", "1/8"), c("40", "90")), "Vibration",
+  matrix(c(18.2, 18.9, 12.9, 14.4,  27.2, 24.0, 22.4, 22.5,  15.9, 14.5, 15.1, 14.2,  41.0, 43.9, 36.3, 39.9), ncol = 4, byrow = TRUE), rep_labels = c("I", "II", "III", "IV"))
+# ---- Problem 6.11 ----
+D611 <- ps_twok(c("Factor A", "Factor B", "Factor C", "Factor D"), rep(list(c("Low (−)", "High (+)")), 4), "Yield",
+  matrix(c(90, 93,  74, 78,  81, 85,  83, 80,  77, 78,  81, 80,  88, 82,  73, 70,  98, 95,  72, 76,  87, 83,  85, 86,  99, 90,  79, 75,  87, 84,  80, 80), ncol = 2, byrow = TRUE),
+  rep_labels = c("I", "II"))
+# ---- Problem 6.12 ----
+D612 <- ps_twok(c("Time (h)", "Culture medium"), list(c("12", "18"), c("1", "2")), "Growth",
+  matrix(c(21, 22, 23, 28, 20, 26,  37, 39, 38, 38, 35, 36,  25, 26, 24, 25, 29, 27,  31, 34, 29, 33, 30, 35), ncol = 6, byrow = TRUE))
+# ---- Problems 6.13 and 6.14 ----
+D613 <- ps_twok(c("Bottle type", "Worker"), list(c("Glass", "Plastic"), c("1", "2")), "Time",
+  matrix(c(5.12, 4.89, 4.98, 5.00,  4.95, 4.43, 4.27, 4.25,  6.65, 6.24, 5.49, 5.55,  5.28, 4.91, 4.75, 4.71), ncol = 4, byrow = TRUE))
+D614 <- ps_twok(c("Bottle type", "Worker"), list(c("Glass", "Plastic"), c("1", "2")), "Pulse elevation",
+  matrix(c(39, 45, 58, 35,  44, 35, 42, 21,  20, 13, 16, 11,  13, 10, 16, 15), ncol = 4, byrow = TRUE))
+# ---- Problem 6.16 ----
+D616 <- ps_twok(c("Arsenic flow rate", "Deposition time"), list(c("55%", "59%"), c("Short (10 min)", "Long (15 min)")), "Thickness",
+  matrix(c(14.037, 16.165, 13.972, 13.907,  13.880, 13.860, 14.032, 13.914,  14.821, 14.757, 14.843, 14.878,  14.888, 14.921, 14.415, 14.932), ncol = 4, byrow = TRUE),
+  rep_labels = c("I", "II", "III", "IV"))
+# ---- Problem 6.19 ----
+D619 <- ps_twok(c("Pouring temperature", "Titanium content", "Heat treatment method", "Grain refiner"), rep(list(c("Low (−)", "High (+)")), 4), "Crack length",
+  matrix(c(7.037, 6.376,  14.707, 15.219,  11.635, 12.089,  17.273, 17.815,  10.403, 10.151,  4.368, 4.098,  9.360, 9.253,  13.440, 12.923,
+           8.561, 8.951,  16.867, 17.052,  13.876, 13.658,  19.824, 19.639,  11.846, 12.337,  6.125, 5.904,  11.190, 10.935,  15.653, 15.053), ncol = 2, byrow = TRUE),
+  rep_labels = c("I", "II"))
+# ---- Problem 6.24 ----
+D624 <- ps_twok(c("Carbonation (%)", "Pressure (psi)", "Line speed (b/m)"), list(c("10", "12"), c("25", "30"), c("200", "250")), "Fill height deviation",
+  matrix(c(-3, -1,  0, 1,  -1, 0,  2, 3,  -1, 0,  2, 1,  1, 1,  6, 5), ncol = 2, byrow = TRUE))
+# ---- Problem 6.25 ----
+D625 <- ps_twok(c("Length of putt (ft)", "Type of putter", "Break of putt", "Slope of putt"),
+  list(c("10", "30"), c("Mallet", "Cavity back"), c("Straight", "Breaking"), c("Level", "Downhill")), "Distance from cup",
+  matrix(c(10.0, 18.0, 14.0, 12.5, 19.0, 16.0, 18.5,   0.0, 16.5, 4.5, 17.5, 20.5, 17.5, 33.0,   4.0, 6.0, 1.0, 14.5, 12.0, 14.0, 5.0,   0.0, 10.0, 34.0, 11.0, 25.5, 21.5, 0.0,
+           0.0, 0.0, 18.5, 19.5, 16.0, 15.0, 11.0,   5.0, 20.5, 18.0, 20.0, 29.5, 19.0, 10.0,   6.5, 18.5, 7.5, 6.0, 0.0, 10.0, 0.0,   16.5, 4.5, 0.0, 23.5, 8.0, 8.0, 8.0,
+           4.5, 18.0, 14.5, 10.0, 0.0, 17.5, 6.0,   19.5, 18.0, 16.0, 5.5, 10.0, 7.0, 36.0,   15.0, 16.0, 8.5, 0.0, 0.5, 9.0, 3.0,   41.5, 39.0, 6.5, 3.5, 7.0, 8.5, 36.0,
+           8.0, 4.5, 6.5, 10.0, 13.0, 41.0, 14.0,   21.5, 10.5, 6.5, 0.0, 15.5, 24.0, 16.0,   0.0, 0.0, 0.0, 4.5, 1.0, 4.0, 6.5,   18.0, 5.0, 7.0, 10.0, 32.5, 18.5, 8.0), ncol = 7, byrow = TRUE))
+# ---- Problem 6.26 ----
+D626 <- ps_twok(c("Laser power (W)", "Pulse frequency (Hz)", "Cell size (in)", "Writing speed (in/s)"),
+  list(c("9", "13"), c("4000", "12000"), c("0.07", "0.12"), c("10", "20")), "UEC",
+  c(0.8, 0.81, 0.79, 0.6, 0.65, 0.55, 0.98, 0.67, 0.69, 0.56, 0.63, 0.65, 0.75, 0.72, 0.98, 0.63),
+  codes = matrix(c(1, 1, 1, -1,  1, -1, -1, 1,  1, 1, -1, 1,  -1, -1, -1, 1,  -1, 1, 1, -1,  -1, 1, 1, 1,  1, -1, -1, -1,  1, -1, 1, -1,
+                   1, 1, 1, 1,  -1, -1, 1, 1,  -1, -1, 1, -1,  1, -1, 1, 1,  -1, -1, -1, -1,  -1, 1, -1, -1,  1, 1, -1, -1,  -1, 1, -1, 1), ncol = 4, byrow = TRUE), run = 1:16)
+# ---- Problem 6.28 ----
+D628 <- ps_twok(c("Class of mail", "Type of brochure", "Price ($)"), list(c("3rd", "1st"), c("BW", "Color"), c("19.95", "24.95")), "Orders",
+  matrix(c(50, 54,  44, 42,  46, 48,  42, 43,  49, 46,  48, 45,  47, 48,  56, 54), ncol = 2, byrow = TRUE))
+# ---- Problem 6.30 ----
+D630 <- ps_twok(c("Aperture", "Exposure time", "Development time (s)", "Mask dimension", "Etch time (min)"),
+  list(c("Small", "Large"), c("−20%", "+20%"), c("30", "45"), c("Small", "Large"), c("14.5", "15.5")), "Yield",
+  c(7, 9, 34, 55, 16, 20, 40, 60,  8, 10, 32, 50, 18, 21, 44, 61,  8, 12, 35, 52, 15, 22, 45, 65,  6, 10, 30, 53, 15, 20, 41, 63))
+# ---- Problem 6.32 ----
+D632 <- ps_twok(c("Time (h)", "Concentration (%)", "Pressure (psi)", "Temperature (°C)"), list(c("2.5", "3"), c("14", "18"), c("60", "80"), c("225", "250")), "Yield",
+  c(12, 18, 13, 16, 17, 15, 20, 15, 10, 25, 13, 24, 19, 21, 17, 23), run = c(5, 9, 8, 13, 3, 7, 14, 1, 6, 11, 2, 15, 4, 16, 10, 12))
+# ---- Problem 6.34 ----
+D634 <- ps_twok(c("Pan material", "Stirring method", "Brand of mix"), list(c("Glass", "Aluminum"), c("Spoon", "Mixer"), c("Expensive", "Cheap")), "Scrumptiousness",
+  matrix(c(11, 9, 10, 10, 11, 10, 8, 9,  15, 10, 16, 14, 12, 9, 6, 15,  9, 12, 11, 11, 11, 11, 11, 12,  16, 17, 15, 12, 13, 13, 11, 11,
+           10, 11, 15, 8, 6, 8, 9, 14,  12, 13, 14, 13, 9, 13, 14, 9,  10, 12, 13, 10, 7, 7, 17, 13,  15, 12, 15, 13, 12, 12, 9, 14), ncol = 8, byrow = TRUE), rep_name = "Panelist")
+# ---- Problem 6.35 ----
+D635F <- c(A = "Temperature (°C)", B = "Catalyst concentration (%)", C = "Time (min)", D = "Pressure (psi)")
+D635 <- function(resp, y) ps_twok(unname(D635F), list(c("100", "120"), c("4", "8"), c("20", "30"), c("60", "75")), resp, y, run = c(18, 9, 13, 8, 3, 11, 14, 17, 6, 7, 2, 10, 4, 19, 15, 20))
+D635MW <- D635("Molecular weight", c(2400, 2410, 2315, 2510, 2615, 2625, 2400, 2750, 2400, 2390, 2300, 2520, 2625, 2630, 2500, 2710))
+D635V <- D635("Viscosity", c(1400, 1500, 1520, 1630, 1380, 1525, 1500, 1620, 1400, 1525, 1500, 1500, 1420, 1490, 1500, 1600))
+# ---- Problem 6.39 ----
+D639 <- ps_twok(c("Tool angle (°)", "Cutting fluid viscosity", "Feed rate (in/min)", "Cutting fluid cooler"), list(c("12", "15"), c("300", "400"), c("10", "15"), c("No", "Yes")), "Surface roughness",
+  c(0.00340, 0.00362, 0.00301, 0.00182, 0.00280, 0.00290, 0.00252, 0.00160, 0.00336, 0.00344, 0.00308, 0.00184, 0.00269, 0.00284, 0.00253, 0.00163))
+# ---- Problem 6.40 ----
+D640 <- ps_twok(c("Factor A", "Factor B", "Factor C", "Factor D"), rep(list(c("Low (−)", "High (+)")), 4), "Resistivity",
+  c(1.92, 11.28, 1.09, 5.75, 2.13, 9.53, 1.03, 5.35, 1.60, 11.73, 1.16, 4.68, 2.16, 9.11, 1.07, 5.30))
+# ---- Problem 6.42 ----
+D642 <- ps_twok(c("Acid strength (%)", "Reaction time (min)", "Amount of acid (mL)", "Reaction temperature (°C)"), list(c("87", "93"), c("15", "30"), c("35", "45"), c("60", "70")), "Yield",
+  c(6.08, 6.04, 6.53, 6.43, 6.31, 6.09, 6.12, 6.36, 6.79, 6.68, 6.73, 6.08, 6.77, 6.38, 6.49, 6.23))
+# ---- Problems 6.43 and 6.51 ----
+Y643 <- c(8.11, 5.56, 5.77, 5.82, 9.17, 7.8, 3.23, 5.69, 8.82, 14.23, 9.2, 8.94, 8.68, 11.49, 6.25, 9.12, 7.93, 5, 7.47, 12, 9.86, 3.65, 6.4, 11.61, 12.43, 17.55, 8.87, 25.38, 13.06, 18.85, 11.78, 26.05)
+D643 <- ps_twok(paste("Factor", LETTERS[1:5]), rep(list(c("Low (−)", "High (+)")), 5), "y", Y643)
+# ---- Problem 6.44 ----
+D644 <- ps_twok(c("Glucose (g/dm³)", "NH4NO3 (g/dm³)", "FeSO4 (g/dm³ × 10⁻⁴)", "MnSO4 (g/dm³ × 10⁻²)"), list(c("20", "60"), c("2", "6"), c("6", "30"), c("4", "20")), "Surfactin",
+  c(23, 15, 16, 18, 25, 16, 17, 26, 28, 16, 18, 21, 36, 24, 33, 34))
+# ---- Problem 6.46 ----
+D646F <- c("Apatite (mg)", "Initial pH", "Lead (mM)"); D646L <- list(c("30", "60"), c("4", "7"), c("0.483", "2.41"))
+# the table lists the combinations from (+ + +) down to (− − −), two replicates each; rows below are in standard order, (1), a, b, ab, c, ...
+D646 <- function(resp, v) {
+  # v: (+++), (++−), (+−+), (+−−), (−++), (−+−), (−−+), (−−−), each as c(rep1, rep2)
+  m <- do.call(rbind, v[c(8, 4, 6, 2, 7, 3, 5, 1)])
+  ps_twok(D646F, D646L, resp, m)
+}
+D646FPB <- D646("Lead (fishbone)", list(c(1.82, 1.81), c(0.01, 0.00), c(1.11, 1.04), c(0.00, 0.01), c(2.11, 2.18), c(0.03, 0.05), c(1.70, 1.69), c(0.05, 0.05)))
+D646FPH <- D646("pH (fishbone)", list(c(5.22, 5.12), c(6.84, 6.61), c(3.35, 3.34), c(5.77, 6.25), c(5.29, 5.06), c(5.93, 6.02), c(3.39, 3.34), c(4.50, 4.74)))
+D646HPB <- D646("Lead (hydroxyapatite)", list(c(0.11, 0.12), c(0.00, 0.00), c(0.80, 0.76), c(0.03, 0.05), c(1.03, 1.05), c(0.00, 0.00), c(1.34, 1.26), c(0.06, 0.07)))
+D646HPH <- D646("pH (hydroxyapatite)", list(c(3.49, 3.46), c(5.84, 5.90), c(2.70, 2.74), c(3.36, 3.24), c(3.22, 3.22), c(5.53, 5.43), c(2.82, 2.79), c(3.28, 3.28)))
+# ---- Problem 6.52 ----
+D652 <- ps_twok(c("Temperature (°C)", "Pressure (psig)", "Concentration (g/l)"), list(c("120", "160"), c("40", "80"), c("15", "30")), "Yield", c(32, 46, 57, 65, 36, 48, 57, 68))
+
+TG6 <- c("factorial", "2^k")
+PROBLEMS_CH6 <- list(
+  prob("6.5", 6, "Machine tool life: cutting speed, tool geometry and cutting angle",
+       "An engineer is interested in the effects of cutting speed (A), tool geometry (B), and cutting angle (C) on the life (in hours) of a machine tool. Two levels of each factor are chosen, and three replicates of a 2³ factorial design are run. The results are as follows:",
+       c("(a) Estimate the factor effects. Which effects appear to be large?", "(b) Use the analysis of variance to confirm your conclusions for part (a).", "(c) Write down a regression model for predicting tool life (in hours) based on the results of this experiment.",
+         "(d) Analyze the residuals. Are there any obvious problems?", "(e) On the basis of an analysis of main effect and interaction plots, what coded factor levels of A, B, and C would you recommend using?"),
+       D65, roles = R6(c("Cutting speed", "Tool geometry", "Cutting angle"), "Tool life"), labels = L6("tool life", c("cutting speed", "tool geometry", "cutting angle"), "hours"), tags = c(TG6, "2^3", "replicated")),
+  prob("6.9", 6, "Router vibration: bit size and cutting speed",
+       "A router is used to cut locating notches on a printed circuit board. The vibration level at the surface of the board as it is cut is considered to be a major source of dimensional variation in the notches. Two factors are thought to influence vibration: bit size (A) and cutting speed (B). Two bit sizes (1/16 and 1/8 in.) and two speeds (40 and 90 rpm) are selected, and four boards are cut at each set of conditions shown below. The response variable is vibration measured as the resultant vector of three accelerometers (x, y, and z) on each test circuit board.",
+       c("(a) Analyze the data from this experiment.", "(b) Construct a normal probability plot of the residuals, and plot the residuals versus the predicted vibration level. Interpret these plots.", "(c) Draw the AB interaction plot. Interpret this plot. What levels of bit size and speed would you recommend for routine operation?"),
+       D69, roles = R6(c("Bit size (in)", "Cutting speed (rpm)"), "Vibration"), labels = L6("vibration", c("bit size", "cutting speed")), tags = c(TG6, "2^2", "replicated")),
+  prob("6.11", 6, "Chemical process yield: four factors, two replicates",
+       "An experiment was performed to improve the yield of a chemical process. Four factors were selected, and two replicates of a completely randomized experiment were run. The results are shown in the following table:",
+       c("(a) Estimate the factor effects.", "(b) Prepare an analysis of variance table and determine which factors are important in explaining yield.", "(c) Write down a regression model for predicting yield, assuming that all four factors were varied over the range from −1 to +1 (in coded units).",
+         "(d) Plot the residuals versus the predicted yield and on a normal probability scale. Does the residual analysis appear satisfactory?",
+         "(e) Two three-factor interactions, ABC and ABD, apparently have large effects. Draw a cube plot in the factors A, B, and C with the average yields shown at each corner. Repeat using the factors A, B, and D. Do these two plots aid in data interpretation? Where would you recommend that the process be run with respect to the four variables?"),
+       D611, roles = R6(c("Factor A", "Factor B", "Factor C", "Factor D"), "Yield"), labels = L6("yield", c("factor A", "factor B", "factor C", "factor D")), tags = c(TG6, "2^4", "replicated")),
+  prob("6.12", 6, "Virus growth: culture medium and time",
+       "A bacteriologist is interested in the effects of two different culture media and two different times on the growth of a particular virus. He or she performs six replicates of a 2² design, making the runs in random order. Analyze the bacterial growth data that follow and draw appropriate conclusions. Analyze the residuals and comment on the model’s adequacy.",
+       character(0), D612, roles = R6(c("Time (h)", "Culture medium"), "Growth"), labels = L6("virus growth", c("time", "culture medium")), tags = c(TG6, "2^2", "replicated")),
+  prob("6.13", 6, "Bottle delivery time: bottle type and worker",
+       "An industrial engineer employed by a beverage bottler is interested in the effects of two different types of 32-ounce bottles on the time to deliver 12-bottle cases of the product. The two bottle types are glass and plastic. Two workers are used to perform a task consisting of moving 40 cases of the product 50 feet on a standard type of hand truck and stacking the cases in a display. Four replicates of a 2² factorial design are performed, and the times observed are listed in the following table. Analyze the data and draw appropriate conclusions. Analyze the residuals and comment on the model’s adequacy.",
+       character(0), D613, roles = R6(c("Bottle type", "Worker"), "Time"), labels = L6("delivery time", c("bottle type", "worker")), tags = c(TG6, "2^2", "replicated")),
+  prob("6.14", 6, "Fatigue from the bottle task: elevation of the heart rate",
+       c("In Problem 6.13, the engineer was also interested in potential fatigue differences resulting from the two types of bottles. As a measure of the amount of effort required, he measured the elevation of the heart rate (pulse) induced by the task. The results follow. Analyze the data and draw conclusions. Analyze the residuals and comment on the model’s adequacy."),
+       character(0), D614, roles = R6(c("Bottle type", "Worker"), "Pulse elevation"), labels = L6("elevation of the heart rate", c("bottle type", "worker")), tags = c(TG6, "2^2", "replicated")),
+  prob("6.16", 6, "Epitaxial layer thickness: arsenic flow rate and deposition time",
+       "An article in the AT&T Technical Journal (March/April 1986, Vol. 65, pp. 39–50) describes the application of two-level factorial designs to integrated circuit manufacturing. A basic processing step is to grow an epitaxial layer on polished silicon wafers. The wafers mounted on a susceptor are positioned inside a bell jar, and chemical vapors are introduced. The susceptor is rotated, and heat is applied until the epitaxial layer is thick enough. An experiment was run using two factors: arsenic flow rate (A) and deposition time (B). Four replicates were run, and the epitaxial layer thickness was measured (μm). The data are shown below.",
+       c("(a) Estimate the factor effects.", "(b) Conduct an analysis of variance. Which factors are important?", "(c) Write down a regression equation that could be used to predict epitaxial layer thickness over the region of arsenic flow rate and deposition time used in this experiment.",
+         "(d) Analyze the residuals. Are there any residuals that should cause concern?", "(e) Discuss how you might deal with the potential outlier found in part (d)."),
+       D616, roles = R6(c("Arsenic flow rate", "Deposition time"), "Thickness"), labels = L6("epitaxial layer thickness", c("arsenic flow rate", "deposition time"), "μm"), tags = c(TG6, "2^2", "replicated")),
+  prob("6.19", 6, "Nickel-titanium alloy: cracking in turbine components",
+       "A nickel–titanium alloy is used to make components for jet turbine aircraft engines. Cracking is a potentially serious problem in the final part because it can lead to nonrecoverable failure. A test is run at the parts producer to determine the effect of four factors on cracks. The four factors are pouring temperature (A), titanium content (B), heat treatment method (C), and amount of grain refiner used (D). Two replicates of a 2⁴ design are run, and the length of crack (in mm × 10⁻²) induced in a sample coupon subjected to a standard test is measured. The data are shown below.",
+       c("(a) Estimate the factor effects. Which factor effects appear to be large?", "(b) Conduct an analysis of variance. Do any of the factors affect cracking? Use α = 0.05.", "(c) Write down a regression model that can be used to predict crack length as a function of the significant main effects and interactions you have identified in part (b).",
+         "(d) Analyze the residuals from this experiment.", "(e) Is there an indication that any of the factors affect the variability in cracking?", "(f) What recommendations would you make regarding process operations? Use interaction and/or main effect plots to assist in drawing conclusions."),
+       D619, roles = R6(c("Pouring temperature", "Titanium content", "Heat treatment method", "Grain refiner"), "Crack length"),
+       labels = L6("crack length", c("pouring temperature", "titanium content", "heat treatment method", "amount of grain refiner"), "mm × 10⁻²"), tags = c(TG6, "2^4", "replicated")),
+  prob("6.24", 6, "Bottle filling: carbonation, pressure and line speed",
+       "Consider a variation of the bottle filling experiment from Example 5.3. Suppose that only two levels of carbonation are used so that the experiment is a 2³ factorial design with two replicates. The data are shown below (fill height deviation). Low and high levels: A (%) 10 and 12, B (psi) 25 and 30, C (b/m) 200 and 250.",
+       c("(a) Analyze the data from this experiment. Which factors significantly affect fill height deviation?", "(b) Analyze the residuals from this experiment. Are there any indications of model inadequacy?",
+         "(c) Obtain a model for predicting fill height deviation in terms of the important process variables. Use this model to construct contour plots to assist in interpreting the results of the experiment.",
+         "(d) In part (a), you probably noticed that there was an interaction term that was borderline significant. If you did not include the interaction term in your model, include it now and repeat the analysis. What difference did this make? If you elected to include the interaction term in part (a), remove it and repeat the analysis. What difference does the interaction term make?"),
+       D624, roles = R6(c("Carbonation (%)", "Pressure (psi)", "Line speed (b/m)"), "Fill height deviation"), labels = L6("fill height deviation", c("carbonation", "pressure", "line speed")), tags = c(TG6, "2^3", "replicated")),
+  prob("6.25", 6, "Putting accuracy: length, putter, break and slope",
+       "I am always interested in improving my golf scores. Since a typical golfer uses the putter for about 35–45 percent of his or her strokes, it seems reasonable that improving one’s putting is a logical and perhaps simple way to improve a golf score. An experiment was conducted to study the effects of four factors on putting accuracy. The design factors are length of putt, type of putter, breaking putt versus straight putt, and level versus downhill putt. The response variable is distance from the ball to the center of the cup after the ball comes to rest. One golfer performs the experiment, a 2⁴ factorial design with seven replicates was used, and all putts are made in random order. The results are shown below.",
+       c("(a) Analyze the data from this experiment. Which factors significantly affect putting performance?", "(b) Analyze the residuals from this experiment. Are there any indications of model inadequacy?"),
+       D625, roles = R6(c("Length of putt (ft)", "Type of putter", "Break of putt", "Slope of putt"), "Distance from cup"),
+       labels = L6("distance from the cup", c("length of putt", "type of putter", "break of the putt", "slope of the putt")), tags = c(TG6, "2^4", "replicated")),
+  prob("6.26", 6, "Laser mark on a metal cover: unused error correction (UEC)",
+       "Semiconductor manufacturing processes have long and complex assembly flows, so matrix marks and automated 2d-matrix readers are used at several process steps throughout factories. Unreadable matrix marks negatively affect factory run rates because manual entry of part data is required before manufacturing can resume. A 2⁴ factorial experiment was conducted to develop a 2d-matrix laser mark on a metal cover that protects a substrate-mounted die. The design factors are A = laser power (9 and 13 W), B = laser pulse frequency (4000 and 12,000 Hz), C = matrix cell size (0.07 and 0.12 in.), and D = writing speed (10 and 20 in./sec), and the response variable is the unused error correction (UEC). This is a measure of the unused portion of the redundant information embedded in the 2d-matrix. A UEC of 0 represents the lowest reading that still results in a decodable matrix, while a value of 1 is the highest reading. A DMX Verifier was used to measure the UEC. The data from this experiment are shown below.",
+       c("(a) Analyze the data from this experiment. Which factors significantly affect the UEC?", "(b) Analyze the residuals from this experiment. Are there any indications of model inadequacy?"),
+       D626, roles = R6(c("Laser power (W)", "Pulse frequency (Hz)", "Cell size (in)", "Writing speed (in/s)"), "UEC"),
+       labels = L6("unused error correction (UEC)", c("laser power", "pulse frequency", "cell size", "writing speed")), note = NOREP6, tags = c(TG6, "2^4", "no replicate")),
+  prob("6.28", 6, "Direct mail: class of mail, brochure and price",
+       "A company markets its products by direct mail. An experiment was conducted to study the effects of three factors on the customer response rate for a particular product. The three factors are A = type of mail used (3rd class, 1st class), B = type of descriptive brochure (color, black-and-white), and C = offered price ($19.95, $24.95). The mailings are made to two groups of 8000 randomly selected customers, with 1000 customers in each group receiving each treatment combination. Each group of customers is considered as a replicate. The response variable is the number of orders placed. The experimental data are shown below.",
+       c("(a) Analyze the data from this experiment. Which factors significantly affect the customer response rate?", "(b) Analyze the residuals from this experiment. Are there any indications of model inadequacy?", "(c) What would you recommend to the company?"),
+       D628, roles = R6(c("Class of mail", "Type of brochure", "Price ($)"), "Orders"), labels = L6("number of orders", c("class of mail", "type of brochure", "price")), tags = c(TG6, "2^3", "replicated")),
+  prob("6.30", 6, "Semiconductor yield: five factors, one replicate",
+       "An experiment was run in a semiconductor fabrication plant in an effort to increase yield. Five factors, each at two levels, were studied. The factors (and levels) were A = aperture setting (small, large), B = exposure time (20% below nominal, 20% above nominal), C = development time (30 and 45 s), D = mask dimension (small, large), and E = etch time (14.5 and 15.5 min). The unreplicated 2⁵ design shown below was run.",
+       c("(a) Construct a normal probability plot of the effect estimates. Which effects appear to be large?", "(b) Conduct an analysis of variance to confirm your findings for part (a).", "(c) Write down the regression model relating yield to the significant process variables.",
+         "(d) Plot the residuals on normal probability paper. Is the plot satisfactory?", "(e) Plot the residuals versus the predicted yields and versus each of the five factors. Comment on the plots.", "(f) Interpret any significant interactions.",
+         "(g) What are your recommendations regarding process operating conditions?", "(h) Project the 2⁵ design in this problem into a 2^k design in the important factors. Sketch the design and show the average and range of yields at each run. Does this sketch aid in interpreting the results of this experiment?"),
+       D630, roles = R6(c("Aperture", "Exposure time", "Development time (s)", "Mask dimension", "Etch time (min)"), "Yield"),
+       labels = L6("yield", c("aperture setting", "exposure time", "development time", "mask dimension", "etch time")), note = NOREP6, tags = c(TG6, "2^5", "no replicate")),
+  prob("6.32", 6, "Process development: time, concentration, pressure and temperature",
+       "In a process development study on yield, four factors were studied, each at two levels: time (A), concentration (B), pressure (C), and temperature (D). A single replicate of a 2⁴ design was run, and the resulting data are shown below. Low and high levels: A (h) 2.5 and 3, B (%) 14 and 18, C (psi) 60 and 80, D (°C) 225 and 250.",
+       c("(a) Construct a normal probability plot of the effect estimates. Which factors appear to have large effects?", "(b) Conduct an analysis of variance using the normal probability plot in part (a) for guidance in forming an error term. What are your conclusions?",
+         "(c) Write down a regression model relating yield to the important process variables.", "(d) Analyze the residuals from this experiment. Does your analysis indicate any potential problems?",
+         "(e) Can this design be collapsed into a 2³ design with two replicates? If so, sketch the design with the average and range of yield shown at each point in the cube. Interpret the results."),
+       D632, roles = R6(c("Time (h)", "Concentration (%)", "Pressure (psi)", "Temperature (°C)"), "Yield"),
+       labels = L6("yield", c("time", "concentration", "pressure", "temperature"), "lbs"), note = NOREP6, tags = c(TG6, "2^4", "no replicate")),
+  prob("6.34", 6, "The scrumptious brownie experiment: pan, stirring and mix",
+       "The scrumptious brownie experiment. This problem uses the results of an experiment performed by Gretchen Krueger at Arizona State University. There are many different ways to bake brownies. The purpose of this experiment was to determine how the pan material, the brand of brownie mix, and the stirring method affect the scrumptiousness of brownies. The factor levels are A = pan material (glass, aluminum), B = stirring method (spoon, mixer), C = brand of mix (expensive, cheap). The response variable was scrumptiousness, a subjective measure derived from a questionnaire given to the subjects who sampled each batch of brownies. (The questionnaire dealt with issues such as taste, appearance, consistency, aroma.) An eight-person test panel sampled each batch and filled out the questionnaire. The design matrix and the response data are as follows.",
+       c("(a) Analyze the data from this experiment as if there were eight replicates of a 2³ design. Comment on the results.", "(b) Is the analysis in part (a) the correct approach? There are only eight batches; do we really have eight replicates of a 2³ factorial design?",
+         "(c) Analyze the average and standard deviation of the scrumptiousness ratings. Comment on the results. Is this analysis more appropriate than the one in part (a)? Why or why not?"),
+       D634, roles = R6(c("Pan material", "Stirring method", "Brand of mix"), "Scrumptiousness"), labels = L6("scrumptiousness", c("pan material", "stirring method", "brand of mix")),
+       note = "The steps follow part (a): the eight test-panel ratings of each batch are treated as eight replicates of the 2³ design. Parts (b) and (c) discuss why this is questionable, because the panelists rate the same eight batches.", tags = c(TG6, "2^3", "replicated")),
+  prob("6.35", 6, "Polymer process: molecular weight",
+       "An experiment was conducted on a chemical process that produces a polymer. The four factors studied were temperature (A), catalyst concentration (B), time (C), and pressure (D). Two responses, molecular weight and viscosity, were observed. The design matrix and response data are shown below. Low and high levels: A (°C) 100 and 120, B (%) 4 and 8, C (min) 20 and 30, D (psi) 60 and 75.",
+       c("(a) Consider only the molecular weight response. Plot the effect estimates on a normal probability scale. What effects appear important?", "(b) Use an analysis of variance to confirm the results from part (a). Is there indication of curvature?",
+         "(c) Write down a regression model to predict molecular weight as a function of the important variables.", "(d) Analyze the residuals and comment on model adequacy."),
+       D635MW, roles = R6(unname(D635F), "Molecular weight"), labels = L6("molecular weight", c("temperature", "catalyst concentration", "time", "pressure")),
+       note = paste(NOREP6, CTR6), tags = c(TG6, "2^4", "no replicate")),
+  prob("6.35e", 6, "Polymer process: viscosity",
+       "An experiment was conducted on a chemical process that produces a polymer. The four factors studied were temperature (A), catalyst concentration (B), time (C), and pressure (D). Two responses, molecular weight and viscosity, were observed. The design matrix and response data are those of Problem 6.35. Low and high levels: A (°C) 100 and 120, B (%) 4 and 8, C (min) 20 and 30, D (psi) 60 and 75.",
+       "(e) Repeat parts (a)–(d) of Problem 6.35 using the viscosity response.",
+       D635V, roles = R6(unname(D635F), "Viscosity"), labels = L6("viscosity", c("temperature", "catalyst concentration", "time", "pressure")),
+       note = paste(NOREP6, CTR6), tags = c(TG6, "2^4", "no replicate")),
+  prob("6.39", 6, "Surface roughness of a machined part",
+       "An engineer has performed an experiment to study the effect of four factors on the surface roughness of a machined part. The factors (and their levels) are A = tool angle (12, 15°), B = cutting fluid viscosity (300, 400), C = feed rate (10 and 15 in./min), and D = cutting fluid cooler used (no, yes). The data from this experiment (with the factors coded to the usual −1, +1 levels) are shown below.",
+       c("(a) Estimate the factor effects. Plot the effect estimates on a normal probability plot and select a tentative model.", "(b) Fit the model identified in part (a) and analyze the residuals. Is there any indication of model inadequacy?",
+         "(c) Repeat the analysis from parts (a) and (b) using 1/y as the response variable. Is there an indication that the transformation has been useful?", "(d) Fit a model in terms of the coded variables that can be used to predict the surface roughness. Convert this prediction equation into a model in the natural variables."),
+       D639, roles = R6(c("Tool angle (°)", "Cutting fluid viscosity", "Feed rate (in/min)", "Cutting fluid cooler"), "Surface roughness"),
+       labels = L6("surface roughness", c("tool angle", "cutting fluid viscosity", "feed rate", "cutting fluid cooler")), note = paste(NOREP6, "For part (c), use Copy to Custom Problem and replace the response by 1/y."), tags = c(TG6, "2^4", "no replicate")),
+  prob("6.40", 6, "Resistivity on a silicon wafer",
+       "Resistivity on a silicon wafer is influenced by several factors. The results of a 2⁴ factorial experiment performed during a critical processing step are shown below.",
+       c("(a) Estimate the factor effects. Plot the effect estimates on a normal probability plot and select a tentative model.", "(b) Fit the model identified in part (a) and analyze the residuals. Is there any indication of model inadequacy?",
+         "(c) Repeat the analysis from parts (a) and (b) using ln(y) as the response variable. Is there an indication that the transformation has been useful?", "(d) Fit a model in terms of the coded variables that can be used to predict the resistivity."),
+       D640, roles = R6(c("Factor A", "Factor B", "Factor C", "Factor D"), "Resistivity"), labels = L6("resistivity", c("factor A", "factor B", "factor C", "factor D")),
+       note = paste(NOREP6, "For part (c), use Copy to Custom Problem and replace the response by ln(y)."), tags = c(TG6, "2^4", "no replicate")),
+  prob("6.42", 6, "Yield of isatin: acid strength, time, amount of acid and temperature",
+       "The book by Davies (Design and Analysis of Industrial Experiments) describes an experiment to study the yield of isatin. The factors studied and their levels are A: acid strength (87 and 93%), B: reaction time (15 and 30 min), C: amount of acid (35 and 45 mL), and D: reaction temperature (60 and 70 °C). The data from the 2⁴ factorial are shown below.",
+       c("(a) Fit a main-effects-only model to the data from this experiment. Are any of the main effects significant?", "(b) Analyze the residuals. Are there any indications of model inadequacy or violation of the assumptions?",
+         "(c) Find an equation for predicting the yield of isatin over the design space. Express the equation in both coded and engineering units.", "(d) Is there any indication that adding interactions to the model would improve the results that you have obtained?"),
+       D642, roles = R6(c("Acid strength (%)", "Reaction time (min)", "Amount of acid (mL)", "Reaction temperature (°C)"), "Yield"),
+       labels = L6("yield of isatin", c("acid strength", "reaction time", "amount of acid", "reaction temperature")), note = NOREP6, tags = c(TG6, "2^4", "no replicate")),
+  prob("6.43", 6, "Quality and reliability article: a 2⁵ design",
+       "An article in Quality and Reliability Engineering International (2010, Vol. 26, pp. 223–233) presents a 2⁵ factorial design. The experiment is shown below.",
+       c("(a) Analyze the data from this experiment. Identify the significant factors and interactions.", "(b) Analyze the residuals from this experiment. Are there any indications of model inadequacy or violations of the assumptions?",
+         "(c) One of the factors from this experiment does not seem to be important. If you drop this factor, what type of design remains? Analyze the data using the full factorial model for only the four active factors. Compare your results with those obtained in part (a).",
+         "(d) Find settings of the active factors that maximize the predicted response."),
+       D643, roles = R6(paste("Factor", LETTERS[1:5]), "y"), labels = L6("response", paste("factor", LETTERS[1:5])), note = NOREP6, tags = c(TG6, "2^5", "no replicate")),
+  prob("6.44", 6, "Surfactin production: glucose, NH4NO3, FeSO4 and MnSO4",
+       "A paper in the Journal of Chemical Technology and Biotechnology (“Response Surface Optimization of the Critical Media Components for the Production of Surfactin,” 1997, Vol. 68, pp. 263–270) describes the use of a designed experiment to maximize surfactin production. A portion of the data from this experiment is shown below. Surfactin was assayed by an indirect method, which involves measurement of surface tensions of the diluted broth samples. Relative surfactin concentrations were determined by serially diluting the broth until the critical micelle concentration (CMC) was reached. The dilution at which the surface tension starts rising abruptly was denoted by CMC⁻¹ and was considered proportional to the amount of surfactant present in the original sample.",
+       c("(a) Analyze the data from this experiment. Identify the significant factors and interactions.", "(b) Analyze the residuals from this experiment. Are there any indications of model inadequacy or violations of the assumptions?", "(c) What conditions would optimize the surfactin production?"),
+       D644, roles = R6(c("Glucose (g/dm³)", "NH4NO3 (g/dm³)", "FeSO4 (g/dm³ × 10⁻⁴)", "MnSO4 (g/dm³ × 10⁻²)"), "Surfactin"),
+       labels = L6("surfactin production", c("glucose", "NH4NO3", "FeSO4", "MnSO4"), "(CMC)⁻¹"), note = paste(NOREP6, "The book also reports six centre points (Problem 6.45); they are not used here."), tags = c(TG6, "2^4", "no replicate")),
+  prob("6.46a", 6, "Fishbone apatite: lead response",
+       "An article in the Journal of Hazardous Materials (“Feasibility of Using Natural Fishbone Apatite as a Substitute for Hydroxyapatite in Remediating Aqueous Heavy Metals,” Vol. 69, Issue 2, 1999, pp. 187–196) describes an experiment to study the suitability of fishbone, a natural, apatite, rich substance, as a substitute for hydroxyapatite in the sequestering of aqueous divalent heavy metal ions. Direct comparison of hydroxyapatite and fishbone apatite was performed using a three-factor two-level full factorial design. Apatite (30 or 60 mg) was added to 100 mL deionized water and gently agitated overnight in a shaker. The pH was then adjusted using nitric acid. Sufficient concentration of lead nitrate solution was added to each flask to result in a final volume of 200 mL and a lead concentration of 0.483 or 2.41 mM, respectively. The experiment was a 2³ replicated twice and it was performed for both fishbone and synthetic apatite. Results are shown below.",
+       c("(a) Analyze the lead response for fishbone apatite. What factors are important?", "(b) Analyze the residuals from this response and comment on model adequacy."),
+       D646FPB, roles = R6(D646F, "Lead (fishbone)"), labels = L6("lead remaining (fishbone apatite)", c("amount of apatite", "initial pH", "lead concentration"), "mM"),
+       note = "Parts (a) and (b) of Problem 6.46. The initial pH levels are 4 and 7, as in the legend of the book’s table (the text of the problem says 5 or 7).", tags = c(TG6, "2^3", "replicated")),
+  prob("6.46c", 6, "Fishbone apatite: pH response",
+       c("Problem 6.46: three-factor two-level full factorial design, replicated twice, with fishbone and with hydroxyapatite; the factors are the amount of apatite (30 or 60 mg), the initial pH and the lead concentration (0.483 or 2.41 mM)."),
+       c("(c) Analyze the pH response for fishbone apatite. What factors are important?", "(d) Analyze the residuals from this response and comment on model adequacy."),
+       D646FPH, roles = R6(D646F, "pH (fishbone)"), labels = L6("final pH (fishbone apatite)", c("amount of apatite", "initial pH", "lead concentration")),
+       note = "Parts (c) and (d) of Problem 6.46. The initial pH levels are 4 and 7, as in the legend of the book’s table.", tags = c(TG6, "2^3", "replicated")),
+  prob("6.46e", 6, "Hydroxyapatite: lead response",
+       c("Problem 6.46: three-factor two-level full factorial design, replicated twice, with fishbone and with hydroxyapatite; the factors are the amount of apatite (30 or 60 mg), the initial pH and the lead concentration (0.483 or 2.41 mM)."),
+       c("(e) Analyze the lead response for hydroxyapatite apatite. What factors are important?", "(f) Analyze the residuals from this response and comment on model adequacy."),
+       D646HPB, roles = R6(D646F, "Lead (hydroxyapatite)"), labels = L6("lead remaining (hydroxyapatite)", c("amount of apatite", "initial pH", "lead concentration"), "mM"),
+       note = "Parts (e) and (f) of Problem 6.46. The initial pH levels are 4 and 7, as in the legend of the book’s table.", tags = c(TG6, "2^3", "replicated")),
+  prob("6.46g", 6, "Hydroxyapatite: pH response",
+       c("Problem 6.46: three-factor two-level full factorial design, replicated twice, with fishbone and with hydroxyapatite; the factors are the amount of apatite (30 or 60 mg), the initial pH and the lead concentration (0.483 or 2.41 mM)."),
+       c("(g) Analyze the pH response for hydroxyapatite apatite. What factors are important?", "(h) Analyze the residuals from this response and comment on model adequacy.",
+         "(i) What differences do you see between fishbone and hydroxyapatite apatite? The authors of this paper concluded that fishbone apatite was comparable to hydroxyapatite apatite. Because the fishbone apatite is cheaper, it was recommended for adoption. Do you agree with these conclusions?"),
+       D646HPH, roles = R6(D646F, "pH (hydroxyapatite)"), labels = L6("final pH (hydroxyapatite)", c("amount of apatite", "initial pH", "lead concentration")),
+       note = "Parts (g) to (i) of Problem 6.46. The initial pH levels are 4 and 7, as in the legend of the book’s table.", tags = c(TG6, "2^3", "replicated")),
+  prob("6.51", 6, "Quality and reliability article: the 2⁵ experiment of Table P6.15",
+       "An article in Quality and Reliability Engineering International (2010, Vol. 26, pp. 223–233) presents a 2⁵ factorial design. The experiment is shown below.",
+       c("(a) Analyze the data from this experiment. Identify the significant factors and interactions.", "(b) Analyze the residuals from this experiment. Are there any indications of model inadequacy or violations of the assumptions?",
+         "(c) One of the factors from this experiment does not seem to be important. If you drop this factor, what type of design remains? Analyze the data using the full factorial model for only the four active factors. Compare your results with those obtained in part (a).",
+         "(d) Find settings of the active factors that maximize the predicted response."),
+       D643, roles = R6(paste("Factor", LETTERS[1:5]), "y"), labels = L6("response", paste("factor", LETTERS[1:5])), note = paste("These are the data of Problem 6.43.", NOREP6), tags = c(TG6, "2^5", "no replicate")),
+  prob("6.52", 6, "Yield of a process: temperature, pressure and concentration",
+       "Consider the 2³ shown below. The process variables are temperature (120 and 160 °C), pressure (40 and 80 psig) and concentration (15 and 30 g/l).",
+       character(0), D652, roles = R6(c("Temperature (°C)", "Pressure (psig)", "Concentration (g/l)"), "Yield"), labels = L6("yield", c("temperature", "pressure", "concentration")),
+       note = paste(NOREP6, CTR6), tags = c(TG6, "2^3", "no replicate"))
+)
+
+PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3, PROBLEMS_CH4, PROBLEMS_CH5, PROBLEMS_CH6)
 names(PROBLEMS) <- vapply(PROBLEMS, `[[`, "", "id")
 
 ps_by_chapter <- function(ch) Filter(function(p) p$chapter == PS_CHAPTERS[[ch]]$num, PROBLEMS)

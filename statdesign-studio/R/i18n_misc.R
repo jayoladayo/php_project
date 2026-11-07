@@ -2,6 +2,32 @@
 
 ar_part_misc <- function() {
 ar_add(
+  "Each sum of squares comes from the ANOVA decomposition of the effect means (the main effects and the interactions listed below); SS_E = SS_T − (the other sums of squares)" = "ينتج كل مجموع مربعات من تحليل التباين لمتوسطات الآثار (الآثار الرئيسية والتفاعلات المدرجة أدناه)؛ و SS_E = SS_T − (مجاميع المربعات الأخرى)",
+  "Chapter 6" = "الفصل 6", "Four-factor factorial (CRD)" = "عاملي بأربعة عوامل (CRD)", "Five-factor factorial (CRD)" = "عاملي بخمسة عوامل (CRD)",
+  "Four-factor ANOVA" = "تحليل تباين بأربعة عوامل", "Five-factor ANOVA" = "تحليل تباين بخمسة عوامل",
+  "Four crossed factors (usually a 2⁴ design) in a completely randomized layout: four main effects and their interactions. With one observation per combination, the three- and four-factor interactions form the error." = "أربعة عوامل متقاطعة (عادةً تصميم 2⁴) بتوزيع عشوائي كامل: أربعة آثار رئيسية وتفاعلاتها. وعند وجود مشاهدة واحدة لكل توليفة تشكّل التفاعلات الثلاثية والرباعية الخطأ.",
+  "Five crossed factors (a 2⁵ design) in a completely randomized layout. With one observation per combination, the three-factor and higher interactions form the error." = "خمسة عوامل متقاطعة (تصميم 2⁵) بتوزيع عشوائي كامل. وعند وجود مشاهدة واحدة لكل توليفة تشكّل التفاعلات الثلاثية فما فوق الخطأ.",
+  "Factor C (three or more factors)" = "العامل C (ثلاثة عوامل أو أكثر)", "Factor D (four or five factors)" = "العامل D (أربعة أو خمسة عوامل)", "Factor E (five factors)" = "العامل E (خمسة عوامل)",
+  "Factor D (four-factor)" = "العامل D (أربعة عوامل)", "Factor E (five-factor)" = "العامل E (خمسة عوامل)", "Factor D" = "العامل D", "Factor E" = "العامل E",
+  "Effect estimates of the 2² design" = "تقديرات الآثار في التصميم 2²", "Effect estimates of the 2³ design" = "تقديرات الآثار في التصميم 2³", "Effect estimates of the 2⁴ design" = "تقديرات الآثار في التصميم 2⁴", "Effect estimates of the 2⁵ design" = "تقديرات الآثار في التصميم 2⁵",
+  "Effect estimates of the 2^k design" = "تقديرات الآثار في التصميم 2^k", "Normal probability plot of the effects" = "الرسم الاحتمالي الطبيعي للآثار", "Effect estimate" = "تقدير الأثر", "% contribution" = "النسبة المئوية للمساهمة",
+  "Effect estimate (coded −1, +1)" = "تقدير الأثر (بالترميز −1، +1)", "Normal score" = "الدرجة الطبيعية",
+  "Dashed line: noise · Labelled points: effects that stand out (Lenth)" = "الخط المتقطع: الضجيج · النقاط المسمّاة: آثار بارزة (لِنث)",
+  "Each effect is the average response at the high level minus the average at the low level (for an interaction, the same contrast of the product of the coded levels, −1 and +1). The sum of squares of an effect is N × (effect/2)², and the % contribution is its share of the total of all effects." = "الأثر هو متوسط الاستجابة عند المستوى المرتفع مطروحًا منه المتوسط عند المستوى المنخفض (وللتفاعل التباين نفسه لحاصل ضرب المستويات المرمَّزة −1 و+1). ومجموع مربعات الأثر هو N × (الأثر/2)²، والنسبة المئوية للمساهمة هي حصته من مجموع الآثار كلها.",
+  "With one observation per combination there is no pure error. Effects that fall off the line through the small ones are real; the points near the line behave like noise, which is why the higher-order interactions can be pooled into the error in step 5." = "عند وجود مشاهدة واحدة لكل توليفة لا يوجد خطأ خالص. الآثار التي تبتعد عن الخط المار بالآثار الصغيرة حقيقية؛ أما النقاط القريبة من الخط فتسلك سلوك الضجيج، ولهذا يمكن دمج التفاعلات العليا في الخطأ في الخطوة 5.",
+  "A quick look before the tests: effects far from the line stand out. Step 5 tests every effect against the pure error of the replicates." = "نظرة سريعة قبل الاختبارات: الآثار البعيدة عن الخط بارزة. وتختبر الخطوة 5 كل أثر مقابل الخطأ الخالص للمكررات.",
+  "There is one observation per combination, so there is no pure error: the main effects and the two-factor interactions are tested, and the three-factor and higher interactions are pooled to form the error (step 5)." = "توجد مشاهدة واحدة لكل توليفة فلا يوجد خطأ خالص: تُختبر الآثار الرئيسية والتفاعلات الثنائية، وتُدمج التفاعلات الثلاثية فما فوق لتكوين الخطأ (الخطوة 5).",
+  "1 observation per combination (unreplicated): there is no pure error, so the three-factor and higher interactions are pooled to estimate the error." = "مشاهدة واحدة لكل توليفة (دون تكرار): لا يوجد خطأ خالص، لذلك تُدمج التفاعلات الثلاثية فما فوق لتقدير الخطأ."
+)
+ar_tpl(
+  "Factorial design in a completely randomized layout: the %d factors are crossed, so every combination of their levels is a treatment (a 2^%d design: every factor has a low and a high level)." = "تصميم عاملي بتوزيع عشوائي كامل: العوامل الـ$1 متقاطعة، فكل توليفة من مستوياتها معالجة (تصميم 2^$2: لكل عامل مستوى منخفض ومستوى مرتفع).",
+  "y = μ + %s + (two-factor interactions) + ε: one observation per combination, so the three-factor and higher interactions are pooled into the error" = "y = μ + $1 + (التفاعلات الثنائية) + ε: مشاهدة واحدة لكل توليفة، لذلك تُدمج التفاعلات الثلاثية فما فوق في الخطأ",
+  "y = μ + %s + all the interactions (two-factor up to the %d-factor interaction) + ε" = "y = μ + $1 + جميع التفاعلات (من الثنائي حتى التفاعل بين $2 عوامل) + ε",
+  "One observation per combination: SS_E is the pooled sum of squares of the three-factor and higher interactions (%d df), the usual error for an unreplicated 2^k design." = "مشاهدة واحدة لكل توليفة: SS_E هو مجموع المربعات المدموج للتفاعلات الثلاثية فما فوق ($1 درجة حرية)، وهو الخطأ المعتاد في تصميم 2^k غير المكرَّر.",
+  "There is one observation per combination, so there is no pure error. The error line pools the three-factor and higher interactions (%d df), which are assumed negligible; every main effect and two-factor interaction is tested against it." = "توجد مشاهدة واحدة لكل توليفة فلا يوجد خطأ خالص. يدمج سطر الخطأ التفاعلات الثلاثية فما فوق ($1 درجة حرية) المفترض أنها مهملة؛ ويُختبر كل أثر رئيسي وكل تفاعل ثنائي مقابله."
+)
+
+ar_add(
   "At the end of an analysis you can download the worked solution (PDF) and an R script." = "في نهاية التحليل يمكنك تنزيل الحل المفصَّل (PDF) وسكربت R.",
   "The worked solution (PDF) and the R script appear here once you have been through every step, from the hypotheses to the decision." = "يظهر الحل المفصَّل (PDF) وسكربت R هنا بعد أن تمرّ بكل الخطوات، من الفرضيات حتى القرار.",
   "Copy link" = "نسخ الرابط", "Press Ctrl+C" = "اضغط Ctrl+C", "End of the analysis" = "نهاية التحليل",

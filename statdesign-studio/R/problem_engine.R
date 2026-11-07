@@ -7,8 +7,9 @@
 # Plain R with no Shiny, so it can be tested on its own.
 
 # treatment is the group (or Factor A); factorB and factorC make a factorial design.
-PS_ROLE_KEYS <- c("treatment", "factorB", "factorC", "block", "row", "column", "greek")
-PS_ROLE_NAMES <- c(response = "Response", treatment = "Group or Factor A", factorB = "Factor B", factorC = "Factor C", block = "Block or pair",
+PS_ROLE_KEYS <- c("treatment", "factorB", "factorC", "factorD", "factorE", "block", "row", "column", "greek")
+PS_FACT_KEYS <- c("treatment", "factorB", "factorC", "factorD", "factorE")
+PS_ROLE_NAMES <- c(response = "Response", treatment = "Group or Factor A", factorB = "Factor B", factorC = "Factor C", factorD = "Factor D", factorE = "Factor E", block = "Block or pair",
                    row = "Row", column = "Column", greek = "Greek letter")
 
 PS_KIND_LABEL <- c(one = "One sample", variance = "One sample (variance)", two = "Two independent samples",
@@ -91,9 +92,13 @@ ps_structure <- function(df, roles) {
   if ("treatment" %in% st$facs) { st$ntrt <- nlevels(d$treatment); st$reps <- table(d$treatment) }
   # Factorial layouts: the replicates in each combination of the factor levels.
   if (all(c("treatment", "factorB") %in% st$facs)) {
-    st$ffacs <- intersect(c("treatment", "factorB", "factorC"), st$facs)
+    st$ffacs <- intersect(PS_FACT_KEYS, st$facs)
     st$cellreps <- as.vector(table(d[st$ffacs]))
-    st$unrep <- length(st$ffacs) == 2 && all(st$cellreps == 1) && !any(c("block", "row", "column", "greek") %in% st$facs)
+    one_obs <- all(st$cellreps == 1) && !any(c("block", "row", "column", "greek") %in% st$facs)
+    # One observation per combination: with two factors the interaction is checked with Tukey's one-df test (unrep);
+    # with three or more the higher-order interactions are pooled into the error (pool).
+    st$unrep <- length(st$ffacs) == 2 && one_obs
+    st$pool <- length(st$ffacs) >= 3 && one_obs
   }
   if (all(c("treatment", "block") %in% st$facs)) {
     tab <- table(d$treatment, d$block); st$nblk <- nlevels(d$block)
@@ -106,7 +111,8 @@ ps_structure <- function(df, roles) {
 ps_kind <- function(st, meta) {
   if (length(st$errors)) return(NA_character_)
   has <- function(k) k %in% st$facs
-  if ((has("factorC") && !has("factorB")) || (has("factorB") && !has("treatment"))) return(NA_character_)
+  fk <- PS_FACT_KEYS[PS_FACT_KEYS %in% st$facs]; if (length(fk) && !identical(fk, PS_FACT_KEYS[seq_along(fk)])) return(NA_character_)
+  if (length(fk) == 1 && !has("treatment")) return(NA_character_)
   if (!has("treatment")) return(if (identical(meta$target, "variance")) "variance" else "one")
   if (st$ntrt < 2) return(NA_character_)
   if (has("factorB")) return(ps_fact_kind(st))
@@ -719,9 +725,10 @@ ps_default_settings <- function(meta, kind) {
 # per problem: used for the categories and filters of the list.
 .ps_class_cache <- new.env()
 # Problem type shown on the cards and used by the filters.
+ps_nfac_word <- function(n) c("One-factor", "Two-factor", "Three-factor", "Four-factor", "Five-factor")[min(max(n, 1), 5)]
 ps_type_of <- function(kind, st) {
   if (is.na(kind)) return("Other")
-  if (ps_is_fact(kind)) return(switch(kind, fact = if (length(st$ffacs) >= 3) "Three-factor factorial (CRD)" else "Two-factor factorial (CRD)",
+  if (ps_is_fact(kind)) return(switch(kind, fact = sprintf("%s factorial (CRD)", ps_nfac_word(length(st$ffacs))),
                                       factb = "Factorial in blocks (RCBD)", factl = "Factorial in a Latin square (LSD)", factg = "Factorial in a Graeco-Latin square (GLSD)"))
   unname(PS_TYPE[kind])
 }
@@ -740,7 +747,7 @@ ps_classify <- function(p) {
     res <- tryCatch(ps_run_test(kind, test, st, p, s), error = function(e) NULL)
     asm <- tryCatch(ps_assumptions(kind, st, s, test), error = function(e) NULL)
     pname <- sub(" \\(F test\\)$", "", ps_param_name(kind, test))
-    if (ps_is_fact(kind)) pname <- if (length(st$ffacs) >= 3) "Three-factor ANOVA" else "Two-factor ANOVA"
+    if (ps_is_fact(kind)) pname <- sprintf("%s ANOVA", ps_nfac_word(length(st$ffacs)))
     if (!is.null(asm) && !asm$all_ok) {
       npt <- ps_np_test(kind); rn <- tryCatch(ps_run_test(kind, npt, st, p, s), error = function(e) NULL)
       out$family <- "nonpar"; out$test <- sprintf("%s, then %s", pname, ps_np_short(kind))

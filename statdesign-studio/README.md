@@ -126,6 +126,15 @@ The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experim
 - **Edit data.** In Problem Sets press **Edit data** on step 1 to change a value, add or delete a row, then **Apply** (the steps restart on your values) or **Reset data**.
 - **English and Arabic.** The button at the top switches the menus, instructions, step texts, results sentences, tables, chart labels, the guided tour and the Learn guides to Arabic (right-to-left layout and Arabic statistical terms). The PDF solutions and the Word, PDF and HTML reports follow the language chosen. The statements of the textbook problems, the data, your own names and the formulas stay as written. The dictionary is in `R/i18n*.R` (one file per area) and the switch in `www/i18n.js`.
 
+## What is new in stage 11
+
+- **Chapter 6 in Problem Sets: the 2^k factorial design (28 problems with their data).** All the exercises of Montgomery's Chapter 6 that come with data in the problem sheet: 6.5, 6.9, 6.11 to 6.14, 6.16, 6.19, 6.24 to 6.26, 6.28, 6.30, 6.32, 6.34, 6.35 (molecular weight and viscosity), 6.39, 6.40, 6.42 to 6.44, 6.46 (the four responses, as 6.46a, c, e and g), 6.51 and 6.52. They follow the same five steps as the factorial problems of Chapter 5, with two to five factors:
+  - **Replicated designs** (6.5, 6.9, 6.11 to 6.14, 6.16, 6.19, 6.24, 6.25, 6.28, 6.34, 6.46): every main effect and interaction is tested against the pure error.
+  - **Unreplicated designs** (one observation per combination: 6.26, 6.30, 6.32, 6.35, 6.39, 6.40, 6.42 to 6.44, 6.51, 6.52): there is no pure error, so the **three-factor and higher interactions are pooled into the error** and every main effect and two-factor interaction is tested against it (the usual practice for an unreplicated 2^k design).
+  - **Effect estimates and the normal probability plot of the effects** (with Lenth's rule to label the effects that stand out) appear in step 4 for every two-level design, and in the solution PDF.
+  - Factorial analysis now handles **up to five factors** (roles Factor D and Factor E in custom problems and on the Factorial page), including the rank-test restart, the post-hoc (simple effects), the R script and the solution PDF.
+  - Not included: the exercises that need centre points (6.10, 6.27, 6.31, 6.37, 6.41, 6.45) or the data of the book's Example 6.2 (6.29, 6.37, 6.38), because the sheet does not contain that data; the centre runs of 6.35 and 6.52 are not used.
+
 ## What is new in stage 10
 
 - **R script.** At the **end of every analysis** (the last step, under "End of the analysis") you find **Download solution (PDF)** and **R script**. The R script writes the worked solution as a script you can run top to bottom: the data, then steps 1 to 8 (hypotheses, α, information, test, decision, post-hoc, assumption checks) and, when an assumption fails, the rank test (steps 9 to 14). It follows your choices (the test chosen in step 5, α, the alternative, the post-hoc method, edited data) and uses base R and `lmtest`. The small helper functions it needs (Tukey-Kramer, Dunn, Games-Howell, Nemenyi, Scheffé, Levene) are written inside the script, so there is nothing else to install. For all 87 problems the script gives the same p-values as the app (tested).
@@ -167,9 +176,9 @@ Open `deploy.R` in RStudio, paste your account name, token and secret from shiny
 
 ## Files
 
-- `R/problems.R`: the Problem Sets exercises and their data (Chapters 2, 3 and 4). `R/problem_engine.R`: the step-by-step process (information available, hypotheses, tests, decision, post-hoc, assumption checks, classification for the filters). `R/problem_blocks.R`: the Chapter 4 designs (RCBD, Latin, Graeco-Latin, BIBD, missing values, Friedman and the rank test on residuals). `R/mod_problems.R`: the Problem Sets page, its categories and filters, its steps and the custom problem editor.
+- `R/problems.R`: the Problem Sets exercises and their data (Chapters 2 to 6). `R/problem_engine.R`: the step-by-step process (information available, hypotheses, tests, decision, post-hoc, assumption checks, classification for the filters). `R/problem_blocks.R`: the Chapter 4 designs (RCBD, Latin, Graeco-Latin, BIBD, missing values, Friedman and the rank test on residuals). `R/mod_problems.R`: the Problem Sets page, its categories and filters, its steps and the custom problem editor.
 
-- `R/problem_factorial.R`: the Chapter 5 factorial designs (hypotheses for each effect, factorial ANOVA, nonadditivity, rank tests, simple effects, effect plots). `www/tour.js`: the guided tour.
+- `R/problem_factorial.R`: the Chapter 5 and 6 factorial designs (hypotheses for each effect, factorial ANOVA with up to five factors, nonadditivity, pooled error for unreplicated 2^k designs, effect estimates and the normal plot of effects, rank tests, simple effects, effect plots). `www/tour.js`: the guided tour.
 
 - `R/mod_team.R`: the team, aim and objectives (home page and About the team). `www/team/`: team photos. `www/kfupm_logo.svg`: the KFUPM logo.
 

@@ -28,8 +28,8 @@ ar_add(
     "إرشاد كل تحليل عبر خطوات اختبار الفرضيات: الفرضيات، ومستوى الدلالة، والمعلومات المتاحة، والاختبار، والقرار بثلاث طرق، والاختبارات البعدية.",
   "Check the model assumptions (normality, constant variance and independence of the residuals) and move to the right non-parametric test when one fails." =
     "فحص افتراضات النموذج (طبيعية البواقي وثبات تباينها واستقلالها) والانتقال إلى الاختبار اللامعلمي المناسب عند فشل أحدها.",
-  "Provide the course problem sets (Chapters 2 to 5) with their full data and worked solutions, and let students solve their own problems the same way." =
-    "توفير مسائل المقرر (الفصول من 2 إلى 5) ببياناتها الكاملة وحلولها المفصَّلة، وتمكين الطلاب من حل مسائلهم الخاصة بالطريقة نفسها.",
+  "Provide the course problem sets (Chapters 2 to 6) with their full data and worked solutions, and let students solve their own problems the same way." =
+    "توفير مسائل المقرر (الفصول من 2 إلى 6) ببياناتها الكاملة وحلولها المفصَّلة، وتمكين الطلاب من حل مسائلهم الخاصة بالطريقة نفسها.",
   "Produce R code, plain-language interpretations and a report ready to submit, with an AI course assistant (Professor Riaz) to explain the results." =
     "إنتاج تفسيرات بلغة مبسّطة وحلول مفصّلة بصيغة PDF وتقرير جاهز للتسليم، مع مساعد ذكي للمقرر (الأستاذ رياض) لشرح النتائج.",
   "Project team" = "فريق المشروع", "Group 4 · KFUPM Experimental Design" = "المجموعة 4 · التصميم التجريبي في جامعة الملك فهد للبترول والمعادن",

@@ -34,13 +34,15 @@ PS_TYPE_DESC <- c(
   "Graeco-Latin square" = "Three blocking or treatment factors laid over a square.",
   "Two-factor factorial (CRD)" = "Two crossed factors in a completely randomized layout (CRD ANOVA): the main effect of each and their interaction. Kruskal-Wallis for each effect if an assumption fails.",
   "Three-factor factorial (CRD)" = "Three crossed factors in a completely randomized layout (CRD ANOVA): three main effects and the AB, AC, BC and ABC interactions.",
+  "Four-factor factorial (CRD)" = "Four crossed factors (usually a 2⁴ design) in a completely randomized layout: four main effects and their interactions. With one observation per combination, the three- and four-factor interactions form the error.",
+  "Five-factor factorial (CRD)" = "Five crossed factors (a 2⁵ design) in a completely randomized layout. With one observation per combination, the three-factor and higher interactions form the error.",
   "Factorial in blocks (RCBD)" = "A factorial experiment with each replicate run as a block (RCBD ANOVA). Friedman if an assumption fails.",
   "Factorial in a Latin square (LSD)" = "A factorial experiment with row and column blocking (LSD ANOVA). Quade's test if an assumption fails.",
   "Factorial in a Graeco-Latin square (GLSD)" = "A factorial experiment with row, column and Greek-letter blocking (GLSD ANOVA). Quade's test if an assumption fails.",
   "Parametric" = "The parametric test is the answer: its assumptions hold.",
   "Non-parametric" = "A rank test is the answer: normality or another assumption fails.")
 PS_TYPE_ORDER <- c("One sample", "Two sample · independent", "Two sample · paired", "CRD", "RCBD", "Latin square", "Graeco-Latin square",
-                   "Two-factor factorial (CRD)", "Three-factor factorial (CRD)", "Factorial in blocks (RCBD)", "Factorial in a Latin square (LSD)", "Factorial in a Graeco-Latin square (GLSD)")
+                   "Two-factor factorial (CRD)", "Three-factor factorial (CRD)", "Four-factor factorial (CRD)", "Five-factor factorial (CRD)", "Factorial in blocks (RCBD)", "Factorial in a Latin square (LSD)", "Factorial in a Graeco-Latin square (GLSD)")
 PS_PH_ORDER <- c("Tukey HSD", "Fisher LSD", "Bonferroni", "Scheffé", "Dunnett", "Games-Howell", "Dunn", "Nemenyi", "Wilcoxon", "None", "Not applicable")
 
 ps_alt_choices <- function(kind) {
@@ -80,8 +82,8 @@ PS_MODES <- list(
               sub = "Graeco-Latin square design: GLSD ANOVA first, then Quade's test if an assumption fails.",
               need = "A Graeco-Latin square needs a Response, a Treatment, a Row, a Column and a Greek letter column."),
   fact = list(title = "Factorial", kinds = c("fact", "factb", "factl", "factg"),
-              roles = c("response", "treatment", "factorB", "factorC", "block", "row", "column", "greek"),
-              labels = list(treatment = "Factor A", factorB = "Factor B", factorC = "Factor C (three-factor designs only)", block = "Block (factorial in blocks, optional)",
+              roles = c("response", "treatment", "factorB", "factorC", "factorD", "factorE", "block", "row", "column", "greek"),
+              labels = list(treatment = "Factor A", factorB = "Factor B", factorC = "Factor C (three or more factors)", factorD = "Factor D (four or five factors)", factorE = "Factor E (five factors)", block = "Block (factorial in blocks, optional)",
                             row = "Row (Latin square, optional)", column = "Column (Latin square, optional)", greek = "Greek letter (Graeco-Latin, optional)"),
               sub = "Factorial designs: every factor and every interaction is tested; CRD, RCBD, LSD or GLSD ANOVA first, then the rank test of the layout if an assumption fails.",
               need = "A factorial design needs a Response and at least Factor A and Factor B, with every combination of levels observed more than once (or in blocks)."))
@@ -97,7 +99,7 @@ problems_ui <- function(id, mode = NULL) {
                 btn(ns("new_custom"), "Create custom problem", "plus", "bp", "bsm")),
       uiOutput(ns("resume")),
       kcard(div(class = "hrow", style = "align-items:flex-end",
-                div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Custom Problem" = "custom"), "ch2")),
+                div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Chapter 6" = "ch6", "Custom Problem" = "custom"), "ch2")),
                 div(class = "ml ps-search", textInput(ns("q"), NULL, placeholder = "Search by number, topic or test"))),
             uiOutput(ns("cat_blurb")),
             conditionalPanel("input.cat != 'custom'", ns = ns, div(class = "ps-filters",
@@ -152,6 +154,9 @@ problems_ui <- function(id, mode = NULL) {
                         if (show_role("factorB") || show_role("factorC")) div(class = "grid g2", style = "gap:12px",
                             if (show_role("factorB")) selectInput(ns("c_factorB"), rlab("factorB", "Factor B (factorial)"), NULL),
                             if (show_role("factorC")) selectInput(ns("c_factorC"), rlab("factorC", "Factor C (three-factor)"), NULL)),
+                        if (show_role("factorD") || show_role("factorE")) div(class = "grid g2", style = "gap:12px",
+                            if (show_role("factorD")) selectInput(ns("c_factorD"), rlab("factorD", "Factor D (four-factor)"), NULL),
+                            if (show_role("factorE")) selectInput(ns("c_factorE"), rlab("factorE", "Factor E (five-factor)"), NULL)),
                         if (show_role("block")) selectInput(ns("c_block"), rlab("block", "Block or pair ID (paired samples, RCBD)"), NULL),
                         if (show_role("row") || show_role("column") || show_role("greek")) div(class = "grid g3", style = "gap:12px",
                             if (show_role("row")) selectInput(ns("c_row"), rlab("row", "Row (Latin square)"), NULL),
@@ -571,7 +576,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       req(cur$key); kind <- isolate(cur$kind); s <- isolate(cur$s); multi <- ps_multi(kind)
       if (ps_is_fact(kind)) return(step_card(2, sprintf("State H0 and H1 for the %s, for each factor (its main effect) and for each interaction, about the population means (medians η if you choose the rank test in step 5). The system suggests them; edit them if needed.", pname(kind, info()$suggest)),
         fact_hyp_block("fh", "param"),
-        note(kind = "i", ic = "info", if (isTRUE(isolate(cur$st$unrep))) "There is one observation per combination, so only the main effects are tested; the interaction is checked with Tukey's test for nonadditivity (step 5)."
+        note(kind = "i", ic = "info", if (isTRUE(isolate(cur$st$pool))) "There is one observation per combination, so there is no pure error: the main effects and the two-factor interactions are tested, and the three-factor and higher interactions are pooled to form the error (step 5)."
+                                      else if (isTRUE(isolate(cur$st$unrep))) "There is one observation per combination, so only the main effects are tested; the interaction is checked with Tukey's test for nonadditivity (step 5)."
                                       else "If an interaction is significant, the main effects of the factors in it cannot be read alone: the post-hoc step compares the levels within each level of the other factor (simple effects)."),
         div(class = "hrow", actionLink(ns(kid("fh_reset")), tagList(icon("wand", 14), " Restore the suggested wording"), class = "small ps-link"))))
       step_card(2, if (multi) sprintf("State H0 and H1 for the parametric test (%s), about the population means μ (medians η if you choose the rank test in step 5). The system suggests both; edit them if needed.", pname(kind, info()$suggest))
@@ -654,12 +660,25 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     output$info_body <- renderUI({
       inf <- info(); a <- cur$s$alpha; kind <- cur$kind; m <- cur$meta
       facts <- div(h3(class = "ct", "What we know"), div(style = "margin-top:6px", lapply(seq_len(nrow(inf$facts)), function(i) div(class = "kv-row ps-fact", span(inf$facts$What[i]), span(inf$facts$Information[i])))))
-      if (ps_is_fact(kind)) return(tagList(facts, data_block(m, "The data"),
-        div(class = "col", style = "gap:8px", h3(class = "ct", "Plots of the data"),
-            p(class = "small", style = "margin:0", "Look at the data before testing: the main-effects plot shows how the mean response changes with each factor, the interaction plots show whether the effect of one factor depends on the level of another (non-parallel lines), and the boxplots show the spread of every treatment combination."),
-            div(class = "grid g2", style = "align-items:start", plot_box("pl_fmain", "Main-effects plot"), plot_box("pl_finter", "Interaction plots", if (length(cur$st$ffacs) >= 3) 300 else 250)),
-            plot_box("pl_fbox", "Boxplots by treatment combination", 280)),
-        plan_ui(kind, info()$suggest)))
+      if (ps_is_fact(kind)) {
+        nf <- length(cur$st$ffacs); npair <- choose(nf, 2); ih <- if (npair <= 1) 250 else if (npair <= 3) 300 else 130 * ceiling(npair / 3) + 90
+        pl2 <- list(plot_box("pl_fmain", "Main-effects plot", if (nf >= 4) 260 else 300), plot_box("pl_finter", "Interaction plots", ih))
+        eff2k <- if (ps_fact_2level(cur$st)) {
+          ce <- ps_fact_contrasts(cur$st, m)
+          div(class = "col", style = "gap:8px", h3(class = "ct", sprintf("Effect estimates of the 2%s design", c("²", "³", "⁴", "⁵")[min(max(nf - 1, 1), 4)])),
+              p(class = "small", style = "margin:0", "Each effect is the average response at the high level minus the average at the low level (for an interaction, the same contrast of the product of the coded levels, −1 and +1). The sum of squares of an effect is N × (effect/2)², and the % contribution is its share of the total of all effects."),
+              tbl(data.frame(Effect = sprintf("%s (%s)", ce$label, ce$code), `Effect estimate` = ps_fmt(ce$effect, 5), `Sum of squares` = ps_fmt(ce$ss, 6), `% contribution` = sprintf("%.2f", ce$pct), check.names = FALSE)),
+              plot_box("pl_fnorm", "Normal probability plot of the effects", 340),
+              p(class = "small", style = "margin:0", if (isTRUE(cur$st$pool)) "With one observation per combination there is no pure error. Effects that fall off the line through the small ones are real; the points near the line behave like noise, which is why the higher-order interactions can be pooled into the error in step 5."
+                                                      else "A quick look before the tests: effects far from the line stand out. Step 5 tests every effect against the pure error of the replicates."))
+        }
+        return(tagList(facts, data_block(m, "The data"),
+          div(class = "col", style = "gap:8px", h3(class = "ct", "Plots of the data"),
+              p(class = "small", style = "margin:0", "Look at the data before testing: the main-effects plot shows how the mean response changes with each factor, the interaction plots show whether the effect of one factor depends on the level of another (non-parallel lines), and the boxplots show the spread of every treatment combination."),
+              if (nf >= 4) tagList(pl2[[1]], pl2[[2]]) else div(class = "grid g2", style = "align-items:start", pl2[[1]], pl2[[2]]),
+              plot_box("pl_fbox", "Boxplots by treatment combination", 280)),
+          eff2k, plan_ui(kind, info()$suggest)))
+      }
       if (kind %in% PS_BLOCK_KINDS) return(tagList(facts, data_block(m, "The data"), plan_ui(kind, info()$suggest)))
       norm_card <- if (!is.null(inf$normality)) div(class = "kcard soft ps-card-s", h3(class = "ct", "Normality"),
         tbl(transform(inf$normality, W = ps_fmt(W, 4), p = ps_p(p))),
@@ -740,7 +759,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
             tile(if (anova_t) "Error df" else "Statistic", if (anova_t) as.character(r$an$dfe) else sprintf("%s per effect", r$stat_name), if (anova_t) sprintf("MS_E = %s", ps_fmt(r$an$mse, 5)) else "χ² distribution")),
         div(class = "col", style = "gap:6px;margin-top:6px", h3(class = "ct", "How the statistics are computed"), div(class = "am-formula", lapply(r$formula, div))),
         if (!is.null(r$anova_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "ANOVA table"), tbl(r$anova_df),
-            p(class = "small", style = "margin:0", if (isTRUE(r$unrep)) "There is one observation per combination, so there is no pure error: the error line is the interaction, and the interaction itself is tested below with Tukey's test for nonadditivity."
+            p(class = "small", style = "margin:0", if (isTRUE(r$pool)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the three-factor and higher interactions (%d df), which are assumed negligible; every main effect and two-factor interaction is tested against it.", r$an$dfe)
+                                                  else if (isTRUE(r$unrep)) "There is one observation per combination, so there is no pure error: the error line is the interaction, and the interaction itself is tested below with Tukey's test for nonadditivity."
                                                   else if (identical(r$kind, "factb")) "Each replicate is a block: the block effect is removed from the error. The test of interest is each factor and each interaction."
                                                   else "Every factor and every interaction is tested against the error mean square.")),
         if (!is.null(r$nonadd_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "Test for nonadditivity (Tukey, 1 df)"), tbl(r$nonadd_df),
@@ -942,6 +962,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     output$pl_ord <- renderPlot({ ps_plot_order(asm()$ind_fit) }, bg = "transparent", res = 88)
     output$pl_fmain <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_fact_main(cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_finter <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_fact_inter(cur$st, cur$meta) }, bg = "transparent", res = 88)
+    output$pl_fnorm <- renderPlot({ req(ps_is_fact(cur$kind), ps_fact_2level(cur$st)); ps_plot_fact_normal(cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_fbox <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_data(cur$kind, cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_box <- renderPlot({ ps_plot_data(cur$kind, cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_rvf <- renderPlot({ ps_plot_rvf(asm()$ind_fit) }, bg = "transparent", res = 88)
@@ -1117,7 +1138,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       }))
 
     # ---------- Custom problem editor ----------
-    role_ids <- c(response = "c_response", treatment = "c_treatment", factorB = "c_factorB", factorC = "c_factorC", block = "c_block", row = "c_row", column = "c_column", greek = "c_greek")
+    role_ids <- c(response = "c_response", treatment = "c_treatment", factorB = "c_factorB", factorC = "c_factorC", factorD = "c_factorD", factorE = "c_factorE", block = "c_block", row = "c_row", column = "c_column", greek = "c_greek")
     # "(none)" needs a real value: the dropdown cannot send an empty one, so an emptied role
     # would otherwise keep pointing at a column from the previous dataset.
     NO_ROLE <- ".none"
@@ -1487,7 +1508,7 @@ ps_guess_roles_mode <- function(df, mode, paired = FALSE) {
   md <- PS_MODES[[mode]]; base <- ps_guess_roles(df)
   resp <- base$response; pool <- setdiff(names(df), resp)
   pool <- pool[!grepl("^column \\d+$", tolower(pool)) | length(pool) <= 2]
-  out <- list(response = resp, treatment = "", factorB = "", factorC = "", block = "", row = "", column = "", greek = "")
+  out <- list(response = resp, treatment = "", factorB = "", factorC = "", factorD = "", factorE = "", block = "", row = "", column = "", greek = "")
   take <- function(pat) { h <- pool[grepl(pat, tolower(pool))]; if (length(h)) { pool <<- setdiff(pool, h[1]); h[1] } else "" }
   nextcol <- function() if (length(pool)) { x <- pool[1]; pool <<- pool[-1]; x } else ""
   switch(mode,

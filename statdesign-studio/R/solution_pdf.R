@@ -54,7 +54,14 @@ ps_solution_blocks <- function(m, s = NULL, test = NULL, ph = NULL, lang = "en")
   if (!is.null(info$suggest_reason)) add("p", text = info$suggest_reason)
   if (fact) {
     add("plot", plot = ps_plot_fact_main(st, m), h = 60, caption = tr("Main-effects plot"))
-    add("plot", plot = ps_plot_fact_inter(st, m), h = if (length(st$ffacs) >= 3) 70 else 60, caption = tr("Interaction plots"))
+    np <- choose(length(st$ffacs), 2)
+    add("plot", plot = ps_plot_fact_inter(st, m), h = if (np <= 1) 60 else if (np <= 3) 70 else 40 + 28 * ceiling(np / 3), caption = tr("Interaction plots"))
+    if (ps_fact_2level(st)) {
+      ce <- ps_fact_contrasts(st, m)
+      add("tbl", df = data.frame(Effect = sprintf("%s (%s)", ce$label, ce$code), `Effect estimate` = ps_fmt(ce$effect, 5), `Sum of squares` = ps_fmt(ce$ss, 6), `% contribution` = sprintf("%.2f", ce$pct), check.names = FALSE),
+          caption = tr("Effect estimates of the 2^k design"), widths = c(.4, .2, .2, .2))
+      add("plot", plot = ps_plot_fact_normal(st, m), h = 70, caption = tr("Normal probability plot of the effects"))
+    }
   }
 
   # ---- Step 5 ----
