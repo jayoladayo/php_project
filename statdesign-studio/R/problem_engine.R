@@ -99,6 +99,11 @@ ps_structure <- function(df, roles) {
     # with three or more the higher-order interactions are pooled into the error (pool).
     st$unrep <- length(st$ffacs) == 2 && one_obs
     st$pool <- length(st$ffacs) >= 3 && one_obs
+    # A 2^k design with one observation per combination: the effects are the contrasts of the -1/+1 columns .A, .B, ...; some go into the error.
+    if (isTRUE(st$pool) && ps_fact_2level(st)) {
+      for (j in seq_along(st$ffacs)) st$d[[paste0(".", LETTERS[j])]] <- ifelse(as.integer(st$d[[st$ffacs[j]]]) == 2L, 1, -1)
+      st$cpool <- TRUE; st$pool_codes <- ps_fact_pool_suggest(st)
+    }
   }
   if (all(c("treatment", "block") %in% st$facs)) {
     tab <- table(d$treatment, d$block); st$nblk <- nlevels(d$block)
@@ -246,6 +251,7 @@ ps_test_advice <- function(kind, test, suggest, ch, a = NULL) {
 }
 
 ps_info <- function(kind, st, meta, s) {
+  st <- ps_fact_set_pool(st, s)
   if (kind %in% PS_BLOCK_KINDS) return(ps_info_block(kind, st, meta, s))
   if (ps_is_fact(kind)) return(ps_info_fact(kind, st, meta, s))
   a <- s$alpha; d <- st$d
@@ -346,6 +352,7 @@ ps_hypotheses <- function(kind, st, meta, s, family = "param") {
 # ---------- Test (step 5) ----------
 
 ps_run_test <- function(kind, test, st, meta, s) {
+  st <- ps_fact_set_pool(st, s)
   if (kind %in% PS_BLOCK_KINDS) return(ps_run_block(kind, test, st, meta, s))
   if (ps_is_fact(kind)) return(ps_run_fact(kind, test, st, meta, s))
   a <- s$alpha; conf <- 1 - a; alt <- if (kind == "k") "two.sided" else s$alt %||% "two.sided"; v <- s$value %||% 0
@@ -506,7 +513,7 @@ ps_decision <- function(res, h1_text) {
                  text = sprintf("%g%% %s intervals for every difference of two %s: %d of %d exclude 0. %s", 100 * res$conf, res$ci_name %||% "Tukey",
                                 "means",
                                 sum(excl), length(excl),
-                                if (any(excl) == rej) { if (rej) "At least one pair of means differs, which agrees with rejecting H0." else "Every interval contains 0, which agrees with not rejecting H0." }
+                                if (isTRUE(any(excl, na.rm = TRUE) == rej)) { if (rej) "At least one pair of means differs, which agrees with rejecting H0." else "Every interval contains 0, which agrees with not rejecting H0." }
                                 else if (rej) "No single pair is clearly different even though the F test rejects H0; near the boundary the two methods can disagree. The F test decides H0."
                                 else "One interval excludes 0 although the F test does not reject H0; near the boundary the two methods can disagree. The F test decides H0, and the post-hoc step is not carried out."))
     } else ci <- list(available = FALSE, text = sprintf("The %s has no confidence interval, so decide with the p-value or the rejection region.", t$name))
@@ -586,6 +593,7 @@ ps_posthoc <- function(res, method) {
 # Normality, constant variance and independence of the residuals of the fitted model.
 # Constant variance is the Breusch-Pagan test on the residuals; Welch ANOVA does not need it.
 ps_assumptions <- function(kind, st, s, test = "anova") {
+  st <- ps_fact_set_pool(st, s)
   a <- s$alpha; fit <- ps_model_fit(kind, st); res <- unname(stats::residuals(fit))
   sw <- sw_test(res); ad <- if (length(res) >= 8) quiet(nortest::ad.test(res)) else NULL
   nm <- sprintf("Residuals of the %s model", ps_model_name(kind))

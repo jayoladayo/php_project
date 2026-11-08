@@ -52,6 +52,7 @@ ps_solution_blocks <- function(m, s = NULL, test = NULL, ph = NULL, lang = "en")
   add("tbl", df = info$facts, widths = c(.28, .72))
   if (!is.null(info$family_reason)) add("p", text = info$family_reason)
   if (!is.null(info$suggest_reason)) add("p", text = info$suggest_reason)
+  if (fact && isTRUE(st$cpool)) { st2 <- ps_fact_set_pool(st, s); add("p", text = sprintf("%s %s (%s %d).", tr("Effects put into the error:"), paste(st2$pool_codes, collapse = ", "), tr("error df ="), length(st2$pool_codes))) }
   if (fact) {
     add("plot", plot = ps_plot_fact_main(st, m), h = 60, caption = tr("Main-effects plot"))
     np <- choose(length(st$ffacs), 2)

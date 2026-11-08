@@ -900,7 +900,7 @@ ps_twok <- function(fn, levels, resp, y, codes = NULL, run = NULL, rep_name = "R
 }
 R6 <- function(fn, resp) { r <- list(response = resp); fk <- c("treatment", "factorB", "factorC", "factorD", "factorE"); for (i in seq_along(fn)) r[[fk[i]]] <- fn[i]; r }
 L6 <- function(resp, labs, unit = "") { l <- list(response = resp, unit = unit); fk <- c("treatment", "factorB", "factorC", "factorD", "factorE"); for (i in seq_along(labs)) l[[fk[i]]] <- labs[i]; l }
-NOREP6 <- "There is one observation per treatment combination, so there is no pure error. The three-factor and higher interactions are pooled to form the error (the usual practice for an unreplicated 2^k design); the normal probability plot of the effects in step 4 shows which effects stand out."
+NOREP6 <- "There is one observation per treatment combination, so there is no pure error. In step 4 you choose which effects go into the error: the normal probability plot and the Q-Q plot of the effects show which ones stand out (the ones that do not are pooled into the error). The ticks start from the plots' suggestion."
 CTR6 <- "The book also gives centre-point runs; they are not used here, so the problem is analysed as a 2^k design with its factorial runs only."
 
 # ---- Problem 6.5 ----

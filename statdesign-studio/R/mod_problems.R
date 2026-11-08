@@ -347,7 +347,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       k <- cur$key; req(k)
       g <- function(n) input[[paste0(n, "_", k)]]
       v <- list(alt = g("alt"), value = g("value"), alpha = g("alpha"), family = g("family"), var_mode = g("var_mode"), var_test = g("var_test"),
-                sigma = g("sigma"), sigma2 = g("sigma2"), test = g("test"), ph = g("ph"), h0 = g("h0"), h1 = g("h1"), h0n = g("h0n"), h1n = g("h1n"))
+                sigma = g("sigma"), sigma2 = g("sigma2"), test = g("test"), ph = g("ph"), h0 = g("h0"), h1 = g("h1"), h0n = g("h0n"), h1n = g("h1n"), pool_sel = g("pool_sel"))
       # The hypotheses of every effect of a factorial design are read here, outside isolate(), so typing re-runs this.
       fin <- list()
       if (ps_is_fact(isolate(cur$kind))) for (slot in c("fh", "fhn")) for (cd in names(isolate(cur[[slot]]))) for (w in c("h0", "h1"))
@@ -360,6 +360,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
         if (!is.null(v$family)) s$family <- v$family
         if (!is.null(v$var_mode)) s$var_mode <- v$var_mode
         if (!is.null(v$var_test)) s$var_test <- v$var_test
+        if (!is.null(v$pool_sel) && length(v$pool_sel) && isTRUE(cur$st$cpool)) s[["pool_sel"]] <- as.character(v$pool_sel)   # the effects the student puts into the error
         if (!is.null(v$sigma)) s["sigma"] <- list(if (is.finite(v$sigma) && v$sigma > 0) v$sigma else NULL)
         if (!is.null(v$sigma2)) s["sigma2"] <- list(if (is.finite(v$sigma2) && v$sigma2 > 0) v$sigma2 else NULL)
         s <- Filter(Negate(is.null), s)
@@ -383,7 +384,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     sname <- function(n) ps_step_name(n, isolate(cur$kind))
     pname <- function(kind, test) sub(" \\(F test\\)$", "", ps_param_name(kind, test))
     pname_lc <- function(kind, test) sub("^One-way", "one-way", pname(kind, test))
-    info <- reactive({ req(cur$kind); ps_info(cur$kind, cur$st, cur$meta, cur$s) })
+    # step 4 does not depend on the choice of the effects put into the error (that choice has its own output), so it is not redrawn at every tick
+    s_base <- reactiveVal(NULL)
+    observe({ s <- cur$s; s[["pool_sel"]] <- NULL; if (!identical(s, isolate(s_base()))) s_base(s) })
+    info <- reactive({ req(cur$kind); ps_info(cur$kind, cur$st, cur$meta, s_base()) })
     choices <- reactive({ req(cur$kind); ps_test_choices(cur$kind, cur$s) })
     # The assumption checks always belong to the parametric model (a rank test chosen in step 5 is judged against it).
     asm_base <- reactive({ req(cur$kind); ps_assumptions(cur$kind, cur$st, cur$s, info()$suggest) })
@@ -586,7 +590,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     fact_hyp_block <- function(slot, fam) {
       hs <- ps_fact_hypotheses(isolate(cur$st), isolate(cur$meta), fam); vals <- isolate(cur[[slot]])
       div(class = "col", style = "gap:12px", lapply(names(hs), function(cd) {
-        e <- hs[[cd]]; ef <- isolate(ps_fact_effects(cur$st, cur$meta))[[cd]]; np <- identical(fam, "nonpar")
+        e <- hs[[cd]]; ef <- isolate(ps_fact_effects_all(cur$st, cur$meta))[[cd]]; np <- identical(fam, "nonpar")
         div(class = paste("ps-hblock", if (np) "np"),
             div(class = "ps-hhead", span(class = paste("pill", if (ef$main) "inf" else "warn"), if (ef$main) "Main effect" else "Interaction"), span(sprintf("%s (%s)", ef$label, cd))),
             div(class = "ps-sym", span(class = "chip", e$h0s), span(class = "chip", e$h1s)),
@@ -597,7 +601,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       req(cur$key); kind <- isolate(cur$kind); s <- isolate(cur$s); multi <- ps_multi(kind)
       if (ps_is_fact(kind)) return(step_card(2, sprintf("State H0 and H1 for the %s, for each factor (its main effect) and for each interaction, about the population means (medians η if you choose the rank test in step 5). The system suggests them; edit them if needed.", pname(kind, info()$suggest)),
         fact_hyp_block("fh", "param"),
-        note(kind = "i", ic = "info", if (isTRUE(isolate(cur$st$pool))) "There is one observation per combination, so there is no pure error: the main effects and the two-factor interactions are tested, and the three-factor and higher interactions are pooled to form the error (step 5)."
+        note(kind = "i", ic = "info", if (isTRUE(isolate(cur$st$pool))) "There is one observation per combination, so there is no pure error. Every main effect and interaction is stated here; in step 4 you choose which effects go into the error (the plots show which ones stand out), and only the others are tested in step 5."
                                       else if (isTRUE(isolate(cur$st$unrep))) "There is one observation per combination, so only the main effects are tested; the interaction is checked with Tukey's test for nonadditivity (step 5)."
                                       else "If an interaction is significant, the main effects of the factors in it cannot be read alone: the post-hoc step compares the levels within each level of the other factor (simple effects)."),
         div(class = "hrow", actionLink(ns(kid("fh_reset")), tagList(icon("wand", 14), " Restore the suggested wording"), class = "small ps-link"))))
@@ -678,8 +682,29 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
           span(class = "ps-chipstep np", sprintf("Non-parametric restart: %s (only if an assumption fails)", ps_np_name(kind)))),
       p(class = "small", style = "margin:8px 0 0", sprintf("If every assumption holds, the %s result is the answer. If any fails, the process starts again for the non-parametric test: hypotheses about medians (η), α, information, the %s, its decision and post-hoc.",
                                                      pname_lc(kind, test), ps_np_name(kind))))
+    # ---------- Which effects go into the error (2^k, one observation per combination) ----------
+    output$pool_ui <- renderUI({
+      req(cur$key, isTRUE(cur$st$cpool)); st <- cur$st; ce <- ps_fact_contrasts(st, cur$meta)
+      sel <- isolate(ps_fact_set_pool(st, cur$s)$pool_codes)
+      div(class = "kcard soft ps-card-s", style = "margin-top:6px",
+          h3(class = "ct", "Which effects go into the error?"),
+          p(class = "small", style = "margin:4px 0 10px", "With no replicate the error has to come from the effects that behave like noise. Tick the effects to put into the error: the ones sitting with the small points on the Q-Q plot. They are not tested in step 5; the others are tested against them. The ticks start from the plots' suggestion (Lenth's rule)."),
+          div(class = "ps-poolgrid", checkboxGroupInput(ns(kid("pool_sel")), NULL, choices = stats::setNames(ce$code, sprintf("%s · %s", ce$code, ce$label)), selected = sel, width = "100%")),
+          div(class = "hrow", style = "gap:14px;flex-wrap:wrap",
+              actionLink(ns(kid("pool_plot")), tagList(icon("wand", 14), " Use the plot's suggestion"), class = "small ps-link"),
+              actionLink(ns(kid("pool_rule")), tagList(icon("layers", 14), " Pool the interactions of three or more factors"), class = "small ps-link")),
+          uiOutput(ns("pool_sum")))
+    })
+    output$pool_sum <- renderUI({
+      req(cur$key, isTRUE(cur$st$cpool)); st <- ps_fact_set_pool(cur$st, cur$s); pc <- st$pool_codes; allc <- ps_fact_codes(length(st$ffacs))
+      tested <- setdiff(allc, pc)
+      note(kind = "i", ic = "info", sprintf("Into the error: %s (error df = %d). Tested in step 5: %s.", paste(pc, collapse = ", "), length(pc), paste(tested, collapse = ", ")))
+    })
+    pool_set <- function(codes) updateCheckboxGroupInput(session, kid("pool_sel"), selected = codes)
+    observeEvent(input[[paste0("pool_plot_", cur$key)]], pool_set(ps_fact_pool_suggest(cur$st)), ignoreInit = TRUE)
+    observeEvent(input[[paste0("pool_rule_", cur$key)]], pool_set(ps_fact_pool_rule(cur$st)), ignoreInit = TRUE)
     output$info_body <- renderUI({
-      inf <- info(); a <- cur$s$alpha; kind <- cur$kind; m <- cur$meta
+      inf <- info(); a <- s_base()$alpha; kind <- cur$kind; m <- cur$meta
       facts <- div(h3(class = "ct", "What we know"), div(style = "margin-top:6px", lapply(seq_len(nrow(inf$facts)), function(i) div(class = "kv-row ps-fact", span(inf$facts$What[i]), span(inf$facts$Information[i])))))
       if (ps_is_fact(kind)) {
         nf <- length(cur$st$ffacs); npair <- choose(nf, 2); ih <- if (npair <= 1) 250 else if (npair <= 3) 300 else 130 * ceiling(npair / 3) + 90
@@ -691,8 +716,9 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
               tbl(data.frame(Effect = sprintf("%s (%s)", ce$label, ce$code), `Effect estimate` = ps_fmt(ce$effect, 5), `Sum of squares` = ps_fmt(ce$ss, 6), `% contribution` = sprintf("%.2f", ce$pct), check.names = FALSE)),
               plot_box("pl_fnorm", "Normal probability plot of the effects", 340),
               plot_box("pl_fqq", "Normal Q-Q plot of the effects (as in class)", 340),
-              p(class = "small", style = "margin:0", if (isTRUE(cur$st$pool)) "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the interactions pooled into the error in step 5. The first plot shows the signed effects with the line through the small ones; the Q-Q plot below is the one used in class (absolute effects, every point labelled)."
-                                                      else "A quick look before the tests: effects far from the line stand out. Step 5 tests every effect against the pure error of the replicates."))
+              p(class = "small", style = "margin:0", if (isTRUE(cur$st$pool)) "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the effects to put into the error. The first plot shows the signed effects with the line through the small ones; the Q-Q plot is the one used in class (absolute effects, every point labelled). Choose the effects for the error just below."
+                                                      else "A quick look before the tests: effects far from the line stand out. Step 5 tests every effect against the pure error of the replicates."),
+              if (isTRUE(cur$st$cpool)) uiOutput(ns("pool_ui")))
         }
         return(tagList(facts, data_block(m, "The data"),
           div(class = "col", style = "gap:8px", h3(class = "ct", "Plots of the data"),
@@ -781,7 +807,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
             tile(if (anova_t) "Error df" else "Statistic", if (anova_t) as.character(r$an$dfe) else sprintf("%s per effect", r$stat_name), if (anova_t) sprintf("MS_E = %s", ps_fmt(r$an$mse, 5)) else "χ² distribution")),
         div(class = "col", style = "gap:6px;margin-top:6px", h3(class = "ct", "How the statistics are computed"), div(class = "am-formula", lapply(r$formula, div))),
         if (!is.null(r$anova_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "ANOVA table"), tbl(r$anova_df),
-            p(class = "small", style = "margin:0", if (isTRUE(r$pool)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the three-factor and higher interactions (%d df), which are assumed negligible; every main effect and two-factor interaction is tested against it.", r$an$dfe)
+            p(class = "small", style = "margin:0", if (length(r$pooled)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the %d effects you put into the error in step 4 (%s), which are taken to be noise; every other effect is tested against it.", r$an$dfe, paste(r$pooled, collapse = ", "))
+                                                  else if (isTRUE(r$pool)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the three-factor and higher interactions (%d df), which are assumed negligible; every main effect and two-factor interaction is tested against it.", r$an$dfe)
                                                   else if (isTRUE(r$unrep)) "There is one observation per combination, so there is no pure error: the error line is the interaction, and the interaction itself is tested below with Tukey's test for nonadditivity."
                                                   else if (identical(r$kind, "factb")) "Each replicate is a block: the block effect is removed from the error. The test of interest is each factor and each interaction."
                                                   else "Every factor and every interaction is tested against the error mean square.")),

@@ -66,6 +66,7 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
   st <- ps_structure(m$data, m$roles); kind <- ps_kind(st, m)
   if (is.na(kind)) stop(ps_kind_problem(kind, st))
   s <- s %||% ps_default_settings(m, kind)
+  st <- ps_fact_set_pool(st, s)   # the effects the student put into the error (one observation per combination)
   info <- ps_info(kind, st, m, s); multi <- ps_multi(kind); fact <- ps_is_fact(kind)
   test <- test %||% info$suggest
   rank_first <- multi && test %in% PS_NONPAR_TESTS
@@ -116,6 +117,8 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
   }
   add(")")
   for (j in seq_along(dd)[-1]) { v <- dd[[j]]; add(sprintf("dat$%s <- factor(dat$%s, levels = %s)", names(dd)[j], names(dd)[j], ps_rvec(levels(v)))) }
+  if (isTRUE(st$cpool)) add("# The effects of a 2^k design are contrasts of the coded columns (low = -1, high = +1); the effects put into the error are not in the model.",
+                            vapply(c("A", "B", "C", "D", "E")[seq_along(st$ffacs)], function(l) sprintf("dat$.%s <- ifelse(as.integer(dat$%s) == 2, 1, -1)", l, l), ""))
   add("str(dat)")
 
   # ---- Step 2 and 3 ----
@@ -223,7 +226,9 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
     if (test == "welch") add("res <- oneway.test(y ~ treatment, data = dd, var.equal = FALSE)", "res", "results$p_param <- res$p.value")
     else if (fact) {
       codes <- names(ps_fact_effects(st, m))
-      if (isTRUE(st$pool)) add("# One observation per combination: there is no pure error. The three-factor and higher interactions are not in the model;",
+      if (isTRUE(st$cpool)) add("# One observation per combination: there is no pure error. The effects put into the error are not in the model;",
+                                sprintf("# they are pooled into the residual (%s), which is the error for every F test below.", paste(st$pool_codes, collapse = ", ")))
+      else if (isTRUE(st$pool)) add("# One observation per combination: there is no pure error. The three-factor and higher interactions are not in the model;",
                                "# they are pooled into the residual, which is the error for every F test below (the usual practice for an unreplicated 2^k design).")
       add(sprintf("# One F test for each effect, against the error mean square (error df = %s)", "dfe"),
           sprintf("ef <- an[match(%s, rn), ]   # in the order A, B, ..., AB, AC, ...", ps_rvec(unname(eterms))),
@@ -249,7 +254,7 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
     gv <- if (fact) "dat$A" else "dat$treatment"
     if (fact) {
       need("tukey"); add("  for (e in rownames(ef)[ef$p < alpha]) {", "    cat(\"\\n== \", e, \" ==\\n\")")
-      add("    fs <- strsplit(e, \":\")[[1]]",
+      add("    fs <- sub(\"^\\\\.\", \"\", strsplit(e, \":\", fixed = TRUE)[[1]])   # (the coded columns of a 2^k design are named .A, .B, ...)",
           "    if (length(fs) == 1) print(tukey_pairs(dd$y, dd[[fs]], mse, dfe, alpha))   # the levels of a significant main effect",
           "    else for (w in fs) { oth <- setdiff(fs, w)   # an interaction: compare the levels of w within each level of the other factor",
           "      for (lv in levels(interaction(dd[oth]))) { sub <- interaction(dd[oth]) == lv; cat(\"  within\", paste(oth, collapse = \":\"), \"=\", lv, \"\\n\"); print(tukey_pairs(dd$y[sub], dd[[w]][sub], mse, dfe, alpha)) } }", "  }")

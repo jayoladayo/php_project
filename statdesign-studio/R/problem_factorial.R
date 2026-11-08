@@ -20,6 +20,10 @@ ps_fact_nuis <- function(kind) switch(kind, fact = character(0), factb = "block"
 ps_fact_rhs <- function(st) {
   f <- st$ffacs
   if (isTRUE(st$unrep)) paste(f, collapse = " + ")
+  else if (isTRUE(st$cpool)) {   # the tested effects, as -1/+1 columns. All the main-effect columns are named first (and the untested ones removed), so that R keeps the order of the letters inside every interaction term.
+    tt <- vapply(ps_fact_effects(st, NULL), function(e) e$term, ""); mains <- paste0(".", LETTERS[seq_along(f)]); drop <- setdiff(mains, tt)
+    paste(paste(c(mains, setdiff(tt, mains)), collapse = " + "), if (length(drop)) paste("-", drop, collapse = " ") else "")
+  }
   else if (isTRUE(st$pool)) sprintf("(%s)^2", paste(f, collapse = " + "))
   else paste(f, collapse = " * ")
 }
@@ -38,14 +42,44 @@ ps_fact_kind <- function(st) {
   kind
 }
 
-# The effects tested, in textbook order: A, B, (C), AB, (AC, BC, ABC).
-ps_fact_effects <- function(st, meta) {
+# Every effect of the design, in textbook order: A, B, (C), AB, (AC, BC, ABC, ...). `meta` may be NULL (labels are then the codes).
+ps_fact_effects_all <- function(st, meta) {
   f <- st$ffacs; codes <- LETTERS[seq_along(f)]
-  top <- if (isTRUE(st$pool)) 2L else length(f)
-  ix <- unlist(lapply(seq_len(top), function(k) utils::combn(seq_along(f), k, simplify = FALSE)), recursive = FALSE)
-  out <- lapply(ix, function(i) list(code = paste(codes[i], collapse = ""), roles = f[i], term = paste(f[i], collapse = ":"),
-                                     label = paste(vapply(f[i], function(r) ucfirst(ps_lab(meta, r)), ""), collapse = " × "), main = length(i) == 1))
+  ix <- unlist(lapply(seq_along(f), function(k) utils::combn(seq_along(f), k, simplify = FALSE)), recursive = FALSE)
+  out <- lapply(ix, function(i) list(code = paste(codes[i], collapse = ""), roles = f[i],
+                                     term = if (isTRUE(st$cpool)) paste0(".", codes[i], collapse = ":") else paste(f[i], collapse = ":"),
+                                     label = if (is.null(meta)) paste(codes[i], collapse = "") else paste(vapply(f[i], function(r) ucfirst(ps_lab(meta, r)), ""), collapse = " × "), main = length(i) == 1))
   stats::setNames(out, vapply(out, `[[`, "", "code"))
+}
+# The effects that are tested. A 2^k design with one observation per combination tests the effects that are not
+# put into the error (st$pool_codes: chosen by the student in step 4, the plots' suggestion by default); a design
+# with factors of more than two levels pools the interactions of three or more factors.
+ps_fact_effects <- function(st, meta) {
+  ef <- ps_fact_effects_all(st, meta)
+  if (isTRUE(st$cpool)) ef <- ef[setdiff(names(ef), st$pool_codes)]
+  else if (isTRUE(st$pool)) ef <- ef[vapply(ef, function(e) length(e$roles) <= 2, TRUE)]
+  ef
+}
+
+# ---- which effects go into the error (one observation per combination, two levels per factor) ----
+# the codes of the effects of a 2^k design, in textbook order
+ps_fact_codes <- function(k) { codes <- LETTERS[seq_len(k)]; vapply(unlist(lapply(seq_len(k), function(j) utils::combn(codes, j, simplify = FALSE)), recursive = FALSE), paste, "", collapse = "") }
+# the fixed rule: the interactions of three or more factors
+ps_fact_pool_rule <- function(st) { cd <- ps_fact_codes(length(st$ffacs)); cd[nchar(cd) >= 3] }
+# the suggestion read from the plot: the effects that sit with the small ones (Lenth's margin of error)
+ps_fact_pool_suggest <- function(st) {
+  ce <- ps_fact_contrasts(st, NULL); len <- ps_lenth(ce$effect)
+  p <- ce$code[abs(ce$effect) <= len$me]
+  if (length(p) < 1 || length(p) >= nrow(ce)) p <- ps_fact_pool_rule(st)
+  p
+}
+# the student's choice (settings s$pool_sel) replaces the suggestion; at least one effect must stay in the error and one be tested
+ps_fact_set_pool <- function(st, s) {
+  if (isTRUE(st$cpool)) {
+    sel <- intersect(as.character(unlist(s[["pool_sel"]])), ps_fact_codes(length(st$ffacs)))
+    if (length(sel) >= 1 && length(sel) < 2^length(st$ffacs) - 1) st$pool_codes <- sel
+  }
+  st
 }
 ps_fact_unrep_codes <- function(ef) names(ef)[vapply(ef, function(e) e$main, TRUE)]
 ps_fact_flabs <- function(st, meta) vapply(stats::setNames(st$ffacs, st$ffacs), function(r) ucfirst(ps_lab(meta, r)), "")
@@ -54,7 +88,7 @@ ps_fact_flabs <- function(st, meta) vapply(stats::setNames(st$ffacs, st$ffacs), 
 
 ps_fact_hypotheses <- function(st, meta, family = "param") {
   d <- st$d; resp <- ps_lab(meta, "response"); np <- identical(family, "nonpar")
-  centre <- if (np) "median" else "mean"; ef <- ps_fact_effects(st, meta)
+  centre <- if (np) "median" else "mean"; ef <- ps_fact_effects_all(st, meta)   # every effect is stated; the ones put into the error are not tested
   greek <- c("α", "β", "γ", "δ", "ζ"); idxl <- c("i", "j", "k", "l", "m")
   lc <- function(r) tolower(ps_lab(meta, r))
   out <- lapply(ef, function(e) {
@@ -89,7 +123,7 @@ ps_fact_model_text <- function(kind, st) {
   n <- length(st$ffacs)
   mainsum <- paste(c("αᵢ", "βⱼ", "γₖ", "δₗ", "ζₘ")[seq_len(n)], collapse = " + ")
   core <- if (isTRUE(st$unrep)) "yᵢⱼ = μ + αᵢ + βⱼ + εᵢⱼ (no interaction term: one observation per combination)"
-          else if (isTRUE(st$pool)) sprintf("y = μ + %s + (two-factor interactions) + ε: one observation per combination, so the three-factor and higher interactions are pooled into the error", mainsum)
+          else if (isTRUE(st$pool)) sprintf("y = μ + %s + (interactions) + ε: one observation per combination, so the effects put into the error (chosen below) form ε", mainsum)
           else if (n == 2) "yᵢⱼₖ = μ + αᵢ + βⱼ + (αβ)ᵢⱼ + εᵢⱼₖ"
           else if (n == 3) "yᵢⱼₖₗ = μ + αᵢ + βⱼ + γₖ + (αβ)ᵢⱼ + (αγ)ᵢₖ + (βγ)ⱼₖ + (αβγ)ᵢⱼₖ + εᵢⱼₖₗ"
           else sprintf("y = μ + %s + all the interactions (two-factor up to the %d-factor interaction) + ε", mainsum, n)
@@ -108,7 +142,7 @@ ps_info_fact <- function(kind, st, meta, s) {
     factl = sprintf("Factorial design in a Latin square: the %d factors are crossed and the treatment combinations are placed by row and column.", nf),
     factg = sprintf("Factorial design in a Graeco-Latin square: the %d factors are crossed and the combinations are placed by row, column and Greek letter.", nf))
   fl <- vapply(seq_along(f), function(i) sprintf("%s · %s: %d levels (%s)", LETTERS[i], flab(f[i]), lv[i], ps_list(levels(d[[f[i]]]), 6)), "")
-  reps <- if (isTRUE(st$pool)) "1 observation per combination (unreplicated): there is no pure error, so the three-factor and higher interactions are pooled to estimate the error."
+  reps <- if (isTRUE(st$pool)) "1 observation per combination (unreplicated): there is no pure error, so some effects must be put into the error. Choose them below, from the plots."
           else if (isTRUE(st$unrep)) "1 observation per combination: there is no replicate, so the interaction cannot be separated from error."
           else if (kind == "factb") sprintf("%d (one per block)", nlevels(d$block))
           else if (length(r) == 1) sprintf("%d per combination (balanced)", r) else sprintf("%d to %d per combination (unbalanced; sequential sums of squares)", min(r), max(r))
@@ -140,9 +174,10 @@ ps_fact_effects_df <- function(eff, np_stat = NULL) {
 }
 
 ps_run_fact <- function(kind, test, st, meta, s) {
+  st <- ps_fact_set_pool(st, s)
   a <- s$alpha; d <- st$d; ef <- ps_fact_effects(st, meta)
   out <- list(kind = kind, test = test, settings = s, alpha = a, conf = 1 - a, alt = "greater", ref = NA, levels = levels(d$treatment),
-              control = meta$control, ef = ef, ffacs = st$ffacs, d = d, unrep = isTRUE(st$unrep), pool = isTRUE(st$pool), flabs = ps_fact_flabs(st, meta),
+              control = meta$control, ef = ef, ffacs = st$ffacs, d = d, unrep = isTRUE(st$unrep), pool = isTRUE(st$pool), pooled = if (isTRUE(st$cpool)) st$pool_codes, flabs = ps_fact_flabs(st, meta),
               resp = ps_lab(meta, "response"), unit = meta$labels$unit %||% "")
   out <- if (test == "anova") ps_fact_anova(out, kind, st, meta) else ps_fact_rank(out, kind, test, st, meta)
   eff <- out$effects; best <- eff[which.min(eff$p), ]
@@ -215,7 +250,8 @@ ps_fact_formula_lines <- function(kind, st, d, effects, nrows, sse, dfe, mse, ss
   eff <- sprintf("SS_%s = %s on %d df,   MS_%s = %s,   F0 = MS_%s / MS_E = %s / %s = %s", effects$code, f(effects$ss), effects$df, effects$code, f(effects$ms, 6), effects$code,
                  f(effects$ms, 6), f(ifelse(effects$main | !isTRUE(st$unrep), mse, nonadd$rem_ms %||% mse), 6), f(effects$stat, 5))
   blk <- if (!is.null(nrows)) sprintf("SS_%s = %s on %d df,   MS = %s", sub(" .*", "", nrows$label), f(nrows$ss), nrows$df, f(nrows$ms, 6))
-  pooled <- if (isTRUE(st$pool)) sprintf("One observation per combination: SS_E is the pooled sum of squares of the three-factor and higher interactions (%d df), the usual error for an unreplicated 2^k design.", dfe)
+  pooled <- if (isTRUE(st$cpool)) sprintf("One observation per combination: SS_E is the sum of squares of the %d effects put into the error (%s), on %d df.", length(st$pool_codes), paste(st$pool_codes, collapse = ", "), dfe)
+            else if (isTRUE(st$pool)) sprintf("One observation per combination: SS_E is the pooled sum of squares of the three-factor and higher interactions (%d df).", dfe)
   c(head, def, blk, pooled, eff, sprintf("SS_E = %s on %d df,   MS_E = SS_E / df = %s", f(sse), dfe, f(mse, 6)))
 }
 
@@ -224,7 +260,7 @@ ps_fact_formula_lines <- function(kind, st, d, effects, nrows, sse, dfe, mse, ss
 # Sums of squares per term from an anova on a response, with the effect rows named by term.
 ps_fact_ss <- function(y, d, fm) {
   dd <- d; dd$.r <- y
-  at <- suppressWarnings(stats::anova(stats::lm(stats::update(fm, .r ~ .), data = dd)))
+  at <- suppressWarnings(stats::anova(stats::lm(stats::as.formula(paste(".r ~", paste(deparse(fm[[length(fm)]], width.cutoff = 500), collapse = ""))), data = dd)))
   at[rownames(at) != "Residuals", c("Df", "Sum Sq"), drop = FALSE]
 }
 
@@ -232,11 +268,12 @@ ps_fact_rank <- function(out, kind, test, st, meta) {
   a <- out$alpha; d <- st$d; ef <- out$ef; unrep <- out$unrep
   codes <- if (unrep) ps_fact_unrep_codes(ef) else names(ef)
   fm_eff <- stats::as.formula(paste("~", ps_fact_rhs(st)))
+  fm_y <- stats::as.formula(paste("y ~", ps_fact_rhs(st)))
   stat_name <- switch(test, kwf = "H", friedmanf = "χ²r", quadef = "H"); N <- nrow(d)
   rank_rows <- NULL; extra <- list(); lines <- character(0)
   if (test == "kwf") {
     rk <- rank(d$y); mst <- sum((rk - mean(rk))^2) / (N - 1)
-    ss <- ps_fact_ss(rk, d, stats::update(fm_eff, y ~ .)); H <- ss[, "Sum Sq"] / mst; names(H) <- rownames(ss)
+    ss <- ps_fact_ss(rk, d, fm_y); H <- ss[, "Sum Sq"] / mst; names(H) <- rownames(ss)
     units <- d; units$score <- rk; extra$units <- units; extra$N <- N
     lines <- c(sprintf("Rank all N = %d observations together (ties get the average rank); the variance of the ranks is MS_T = %s.", N, ps_fmt(mst, 6)),
                "H for an effect = (sum of squares of the ranks for that effect) / MS_T, compared with the χ² distribution with the effect's df.",
@@ -245,10 +282,10 @@ ps_fact_rank <- function(out, kind, test, st, meta) {
   } else if (test == "quadef") {
     bm <- stats::lm(stats::as.formula(paste("y ~", paste(ps_fact_nuis(kind), collapse = " + "))), data = d)
     rk <- rank(stats::residuals(bm)); mst <- sum((rk - mean(rk))^2) / (N - 1)
-    ss <- ps_fact_ss(rk, d, stats::update(fm_eff, y ~ .)); H <- ss[, "Sum Sq"] / mst; names(H) <- rownames(ss)
+    ss <- ps_fact_ss(rk, d, fm_y); H <- ss[, "Sum Sq"] / mst; names(H) <- rownames(ss)
     units <- d; units$score <- rk; extra$units <- units; extra$N <- N
-    set.seed(1); B <- 2000; X <- stats::model.matrix(stats::update(fm_eff, y ~ .), data = d); qx <- qr(X); asg <- attr(X, "assign")
-    termlab <- attr(stats::terms(stats::update(fm_eff, y ~ .)), "term.labels")
+    set.seed(1); B <- 2000; X <- stats::model.matrix(fm_y, data = d); qx <- qr(X); asg <- attr(X, "assign")
+    termlab <- attr(stats::terms(fm_y), "term.labels")
     cnt <- vapply(seq_len(B), function(b) { q <- qr.qty(qx, sample(rk))[seq_len(qx$rank)]; vapply(seq_along(termlab), function(i) sum(q[asg[qx$pivot[seq_len(qx$rank)]] == i]^2), 0) }, numeric(length(termlab)))
     obs <- vapply(seq_along(termlab), function(i) sum(qr.qty(qx, rk)[seq_len(qx$rank)][asg[qx$pivot[seq_len(qx$rank)]] == i]^2), 0)
     permp <- stats::setNames(rowMeans(cnt >= obs - 1e-9), termlab)
@@ -264,7 +301,7 @@ ps_fact_rank <- function(out, kind, test, st, meta) {
     R <- t(apply(ym, 1, rank)); Rcell <- colSums(R)
     ct <- cell_tab[match(colnames(ym), as.character(cell_tab$cell)), , drop = FALSE]; ct$score <- as.numeric(Rcell)
     tie_sum <- sum(apply(ym, 1, function(v) { t <- table(v); sum(t^3 - t) })); corr <- 1 - tie_sum / (m * (Tn^3 - Tn))
-    ss <- ps_fact_ss(ct$score, ct, stats::update(fm_eff, y ~ .))
+    ss <- ps_fact_ss(ct$score, ct, fm_y)
     H <- 12 * ss[, "Sum Sq"] / (m * Tn * (Tn + 1)) / corr; names(H) <- rownames(ss)
     extra$cells <- ct; extra$m <- m; extra$T <- Tn; extra$ym <- ym
     lines <- c(sprintf("Rank the %d treatment combinations within each of the m = %d blocks (ties get the average rank), then add the ranks of each combination over the blocks.", Tn, m),
@@ -514,9 +551,9 @@ ps_fact_contrasts <- function(st, meta) {
   fit <- stats::lm(stats::as.formula(paste("y ~", paste(codes, collapse = " * "))), data = X)
   b <- stats::coef(fit); b <- b[names(b) != "(Intercept)"]
   nm <- gsub(":", "", names(b)); ord <- nchar(nm)
-  lab <- function(cd) paste(vapply(strsplit(cd, "")[[1]], function(ch) ucfirst(ps_lab(meta, f[match(ch, codes)])), ""), collapse = " × ")
+  lab <- function(cd) if (is.null(meta)) cd else paste(vapply(strsplit(cd, "")[[1]], function(ch) ucfirst(ps_lab(meta, f[match(ch, codes)])), ""), collapse = " × ")
   out <- data.frame(code = nm, order = ord, label = vapply(nm, lab, ""), effect = 2 * unname(b), ss = N * unname(b)^2, stringsAsFactors = FALSE)
-  out <- out[order(out$order, match(out$code, nm)), , drop = FALSE]
+  out <- out[match(ps_fact_codes(k), out$code), , drop = FALSE]
   tiny <- abs(out$effect) < 1e-9 * max(1, max(abs(out$effect))); out$effect[tiny] <- 0; out$ss[out$ss < 1e-12 * max(1, max(out$ss))] <- 0   # rounding noise
   out$pct <- 100 * out$ss / sum(out$ss)
   rownames(out) <- NULL

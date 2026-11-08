@@ -2,6 +2,22 @@
 
 ar_part_misc <- function() {
 ar_add(
+  "Which effects go into the error?" = "أي الآثار تذهب إلى الخطأ؟",
+  "With no replicate the error has to come from the effects that behave like noise. Tick the effects to put into the error: the ones sitting with the small points on the Q-Q plot. They are not tested in step 5; the others are tested against them. The ticks start from the plots' suggestion (Lenth's rule)." = "عند غياب التكرار يجب أن يأتي الخطأ من الآثار التي تسلك سلوك الضجيج. علّم الآثار التي تريد وضعها في الخطأ: تلك التي تقع مع النقاط الصغيرة في رسم Q-Q. لا تُختبر هذه في الخطوة 5؛ وتُختبر الآثار الأخرى مقابلها. تبدأ العلامات من اقتراح الرسمين (قاعدة لِنث).",
+  "Use the plot's suggestion" = "استخدم اقتراح الرسم", "Pool the interactions of three or more factors" = "ادمج التفاعلات بين ثلاثة عوامل فأكثر",
+  "There is one observation per combination, so there is no pure error. Every main effect and interaction is stated here; in step 4 you choose which effects go into the error (the plots show which ones stand out), and only the others are tested in step 5." = "توجد مشاهدة واحدة لكل توليفة فلا يوجد خطأ خالص. يُصاغ هنا كل أثر رئيسي وكل تفاعل؛ وفي الخطوة 4 تختار الآثار التي تذهب إلى الخطأ (تُظهر الرسوم أيها بارز)، ولا تُختبر في الخطوة 5 إلا الآثار الأخرى.",
+  "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the effects to put into the error. The first plot shows the signed effects with the line through the small ones; the Q-Q plot is the one used in class (absolute effects, every point labelled). Choose the effects for the error just below." = "عند وجود مشاهدة واحدة لكل توليفة لا يوجد خطأ خالص. في الرسمين تكون الآثار التي تبتعد عن الصغيرة حقيقية، وتسلك الصغيرة سلوك الضجيج: وهي الآثار التي توضع في الخطأ. يعرض الرسم الأول الآثار بإشاراتها مع الخط المار بالصغيرة؛ ورسم Q-Q هو المستخدم في الحصة (القيم المطلقة للآثار، وكل نقطة مسمّاة). اختر الآثار الخاصة بالخطأ أدناه مباشرة.",
+  "1 observation per combination (unreplicated): there is no pure error, so some effects must be put into the error. Choose them below, from the plots." = "مشاهدة واحدة لكل توليفة (دون تكرار): لا يوجد خطأ خالص، لذلك يجب وضع بعض الآثار في الخطأ. اخترها أدناه من الرسوم.",
+  "Effects put into the error:" = "الآثار الموضوعة في الخطأ:", "error df =" = "درجات حرية الخطأ ="
+)
+ar_tpl(
+  "Into the error: %s (error df = %d). Tested in step 5: %s." = "في الخطأ: $1 (درجات حرية الخطأ = $2). المختبَرة في الخطوة 5: $3.",
+  "There is one observation per combination, so there is no pure error. The error line pools the %d effects you put into the error in step 4 (%s), which are taken to be noise; every other effect is tested against it." = "توجد مشاهدة واحدة لكل توليفة فلا يوجد خطأ خالص. يدمج سطر الخطأ الآثار الـ$1 التي وضعتها في الخطأ في الخطوة 4 ($2) على أنها ضجيج؛ ويُختبر كل أثر آخر مقابله.",
+  "y = μ + %s + (interactions) + ε: one observation per combination, so the effects put into the error (chosen below) form ε" = "y = μ + $1 + (التفاعلات) + ε: مشاهدة واحدة لكل توليفة، لذلك تشكّل الآثار الموضوعة في الخطأ (المختارة أدناه) ε",
+  "One observation per combination: SS_E is the sum of squares of the %d effects put into the error (%s), on %d df." = "مشاهدة واحدة لكل توليفة: SS_E هو مجموع مربعات الآثار الـ$1 الموضوعة في الخطأ ($2)، على $3 درجة حرية."
+)
+
+ar_add(
   "Normal Q-Q plot of the effects (as in class)" = "الرسم الاحتمالي الطبيعي Q-Q للآثار (كما في الحصة)", "Theoretical quantiles" = "الكميات النظرية", "Sample quantiles (absolute effects)" = "كميات العيّنة (القيم المطلقة للآثار)",
   "Active effects stand away from the small ones · the rest go into the error" = "الآثار النشطة تبتعد عن الصغيرة · والباقي يذهب إلى الخطأ",
   "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the interactions pooled into the error in step 5. The first plot shows the signed effects with the line through the small ones; the Q-Q plot below is the one used in class (absolute effects, every point labelled)." = "عند وجود مشاهدة واحدة لكل توليفة لا يوجد خطأ خالص. في الرسمين تكون الآثار التي تبتعد عن الصغيرة حقيقية، وتسلك الصغيرة سلوك الضجيج: وهي التفاعلات التي تُدمج في الخطأ في الخطوة 5. يعرض الرسم الأول الآثار بإشاراتها مع الخط المار بالصغيرة؛ أما رسم Q-Q أدناه فهو المستخدم في الحصة (القيم المطلقة للآثار، وكل نقطة مسمّاة).",

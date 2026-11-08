@@ -792,3 +792,7 @@ html[dir="rtl"] .selectize-input { padding-left: 12px; }
 html[dir="rtl"] .ps-export { border-left: 1px solid var(--line, #e2e8f0); border-right: 4px solid var(--pass); }
 .ps-export.lock { border-left-color: var(--line, #cbd5e1); } .ps-export.lock .ps-export-t { color: var(--muted, #64748b); }
 html[dir="rtl"] .ps-export.lock { border-right-color: var(--line, #cbd5e1); }
+
+/* the effects that can go into the error (2^k, no replicate) */
+.ps-poolgrid .shiny-options-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 0 18px; }
+.ps-poolgrid .checkbox { margin: 3px 0; }
