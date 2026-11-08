@@ -108,7 +108,7 @@ problems_ui <- function(id, mode = NULL) {
       page_head("Problem Sets", "Exercises from the course problem sheets with their complete data, solved with the step-by-step hypothesis-testing process.",
                 btn(ns("new_custom"), "Create custom problem", "plus", "bp", "bsm")),
       uiOutput(ns("resume")),
-      kcard(div(class = "hrow", style = "align-items:flex-end",
+      kcard(class = "ps-toolbar", div(class = "hrow", style = "align-items:center",
                 div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Chapter 6" = "ch6", "Custom Problem" = "custom"), "ch2")),
                 div(class = "ml ps-search", textInput(ns("q"), NULL, placeholder = "Search by number, topic or test"))),
             uiOutput(ns("cat_blurb")),
@@ -117,7 +117,10 @@ problems_ui <- function(id, mode = NULL) {
               div(class = "ps-filter", selectInput(ns("f_family"), "Test type", c("Parametric and non-parametric" = "", "Parametric" = "param", "Non-parametric" = "nonpar"), width = "100%")),
               div(class = "ps-filter", selectInput(ns("f_ph"), "Post-hoc", c("All post-hoc types" = ""), width = "100%")),
               uiOutput(ns("f_rep_ui"), class = "ps-filter"),
-              div(class = "ps-filter", selectInput(ns("f_group"), "Group by", c("Problem type" = "type", "Test type" = "family", "Post-hoc" = "posthoc", "Replication" = "rep", "No grouping" = "none"), width = "100%"))))),
+              ),
+              div(class = "ps-groupbar", span(class = "ps-gb-lab", "Group by"),
+                  seg_input(ns("f_group"), c("Problem type" = "type", "Test type" = "family", "Post-hoc" = "posthoc", "Replication" = "rep", "None" = "none"), "type"),
+                  div(class = "ml"), actionLink(ns("f_reset"), tagList(icon("x", 13), " Reset filters"), class = "small ps-link")))),
       uiOutput(ns("cards")))),
     # ---------- One problem, step by step ----------
     tabPanelBody("detail",
@@ -136,11 +139,11 @@ problems_ui <- function(id, mode = NULL) {
       else page_head(md$title, md$sub),
       div(class = "split wide",
           div(class = "col",
-              kcard(div(class = "hrow", div(class = "ps-stepn", "1"), h2(class = "ct", if (is.null(md)) "Problem statement" else "Your question (optional)")),
+              if (is.null(md)) kcard(div(class = "hrow", ico_box("edit", "ig", 18), h2(class = "ct", "Problem statement")),
                     div(style = "margin-top:12px", textInput(ns("c_title"), "Title", placeholder = "For example: Tensile strength of four mixing techniques")),
-                    div(style = "margin-top:12px", textAreaInput(ns("c_statement"), if (is.null(md)) "Statement and questions" else "What you want to find out", rows = if (is.null(md)) 7 else 4, width = "100%",
+                    div(style = "margin-top:12px", textAreaInput(ns("c_statement"), "Statement and questions", rows = 7, width = "100%",
                                                                  placeholder = "Paste the full problem. Writing α (for example α = 0.01), μ0 = … or σ = … lets the steps fill them in."))),
-              kcard(div(class = "hrow", div(class = "ps-stepn", "2"), h2(class = "ct", "Dataset")),
+              kcard(div(class = "hrow", ico_box("database", "ig", 18), div(h2(class = "ct", "Your data"), span(class = "small", "Choose where the data come from, then check the table."))),
                     div(style = "margin-top:12px", seg_input(ns("c_src"), c(if (!is.null(md)) c("Data Studio" = "ds"), "Paste" = "paste", "Upload a file" = "upload", "Class example" = "example"), if (is.null(md)) "paste" else "ds")),
                     conditionalPanel("input.c_src == 'ds'", ns = ns, div(class = "hrow", style = "margin-top:12px;align-items:flex-end",
                       div(style = "flex:1;min-width:220px", selectInput(ns("c_ds"), NULL, character(0), width = "100%")),
@@ -155,9 +158,14 @@ problems_ui <- function(id, mode = NULL) {
                       btn(ns("c_use_ex"), "Load", "check", "bs", "bsm"))),
                     uiOutput(ns("c_wide")),
                     div(style = "margin-top:12px", class = "gridbox", rhandsontable::rHandsontableOutput(ns("c_grid"))),
-                    p(class = "small", style = "margin:8px 0 0", "Edit cells directly. Right-click the grid to add or remove rows."))),
-          div(class = "col",
-              kcard(div(class = "hrow", div(class = "ps-stepn", "3"), h2(class = "ct", "What each column is")),
+                    p(class = "small", style = "margin:8px 0 0", "Edit cells directly. Right-click the grid to add or remove rows.")),
+              if (!is.null(md)) tags$details(class = "kcard setup-opt",
+                    tags$summary(ico_box("edit", "ip", 18), div(h2(class = "ct", "Your question (optional)"), span(class = "small", "A title and the wording of the problem. Writing α = 0.01, μ0 = … or σ = … fills those settings in.")), icon("chev", 16)),
+                    div(class = "setup-opt-body", div(style = "margin-top:12px", textInput(ns("c_title"), "Title", placeholder = "For example: Tensile strength of four mixing techniques")),
+                    div(style = "margin-top:12px", textAreaInput(ns("c_statement"), "What you want to find out", rows = 4, width = "100%",
+                                                                 placeholder = "Paste the full problem. Writing α (for example α = 0.01), μ0 = … or σ = … lets the steps fill them in."))))),
+          div(class = "col setup-side",
+              kcard(div(class = "hrow", ico_box("columns", "ig", 18), h2(class = "ct", "What each column is")),
                     p(class = "small", style = "margin:6px 0 12px", if (is.null(md)) "One sample: a Response only. Two or more groups: a Response and a Group (treatment). Paired data or a randomized block design: also the Block or pair ID. A Latin square needs Row and Column (and a Greek letter for a Graeco-Latin square). A factorial design needs Factor A and Factor B (and Factor C). The response is always a number." else md$need),
                     div(class = "col", style = "gap:12px",
                         selectInput(ns("c_response"), "Response (numeric)", NULL),
@@ -176,7 +184,8 @@ problems_ui <- function(id, mode = NULL) {
                         if (is.null(md) || length(intersect(md$roles, "treatment"))) uiOutput(ns("c_control_ui")),
                         if (is.null(md) || identical(mode, "one")) checkboxInput(ns("c_variance"), "The question is about a variance, not a mean (one sample)", FALSE))),
               uiOutput(ns("c_check")),
-              btn(ns("c_go"), if (is.null(md)) "Continue to the steps" else "Start the 5 steps", "arrowr", "bp", "blg"))))
+              btn(ns("c_go"), if (is.null(md)) "Continue to the steps" else "Start the 5 steps", "arrowr", "bp", "blg"),
+              div(class = "setup-next", span(class = "small", "You will be guided through:"), five_steps_strip()))))
   )
 }
 
@@ -237,7 +246,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       updateSelectInput(session, "f_type", choices = c("All problem types" = "", stats::setNames(ty, ty)), selected = "")
       updateSelectInput(session, "f_ph", choices = c("All post-hoc types" = "", stats::setNames(ph, ph)), selected = "")
       updateSelectInput(session, "f_family", selected = "")
-      updateSelectInput(session, "f_group", selected = if (identical(k, "ch6")) "rep" else "type")   # the 2^k problems are first sorted into replicated and no-replicate
+      updateRadioButtons(session, "f_group", selected = if (identical(k, "ch6")) "rep" else "type")   # the 2^k problems are first sorted into replicated and no-replicate
     })
     # The Replication filter appears for the chapters that hold factorial problems.
     output$f_rep_ui <- renderUI({
@@ -246,10 +255,23 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       if (!length(rp)) return(NULL)
       selectInput(ns("f_rep"), "Replication", c("All problems" = "", stats::setNames(rp, rp)), width = "100%")
     })
+    observeEvent(input$f_reset, {
+      for (n in c("f_type", "f_ph", "f_rep")) updateSelectInput(session, n, selected = "")
+      updateSelectInput(session, "f_family", selected = ""); updateTextInput(session, "q", value = "")
+    })
+    # how far the student has got with a problem: nothing, in progress (with the step) or completed (every step of the 5-step process visited)
+    progress_of <- function(id) {
+      m <- memo[[id]]; if (is.null(m)) return(NULL)
+      vis <- as.integer(unlist(m$visited)); if (length(vis) <= 1 && (m$seen %||% 1) <= 1) return(NULL)
+      if (all(2:6 %in% vis)) list(kind = "done", label = "Completed") else list(kind = "doing", label = sprintf("In progress · %s", PS_STEP_SHORT[min(m$step %||% 1, length(PS_STEP_SHORT))]))
+    }
     card <- function(p, cl, cur_id) {
+      pr <- progress_of(p$id)
       tags$a(class = paste("kcard acard ps-card", if (identical(cur_id, p$id)) "on"), href = "#",
              onclick = sprintf("Shiny.setInputValue('%s', '%s', {priority: 'event'}); return false;", ns("pick"), p$id),
-             div(class = "hrow", span(class = "ps-num", paste("Problem", p$id)), if (identical(cur_id, p$id)) div(class = "ml", pill("Selected", "pass", "check"))),
+             div(class = "hrow", span(class = "ps-num", paste("Problem", p$id)),
+                 if (!is.null(pr)) span(class = paste("ps-prog", pr$kind), if (pr$kind == "done") icon("check", 12, 3), pr$label),
+                 if (identical(cur_id, p$id)) div(class = "ml", pill("Selected", "pass", "check"))),
              div(class = "at", p$title),
              div(class = "ad", sprintf("%s · %d observations", PS_KIND_LABEL[[cl$kind]], sum(!is.na(p$data[[p$roles$response]])))),
              div(class = "meta ps-chips",
@@ -289,12 +311,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       }, TRUE)
       if (!any(hit)) return(kcard(div(class = "empty", ico_box("search", "io", 24), h2(class = "ct", "No problems match"), p(class = "sub", "Change a filter or the search, or choose All."))))
       grid_of <- function(idx) div(class = "grid g3", lapply(idx, function(i) card(ps[[i]], cls[[i]], cur_id)))
-      if (gb == "none") return(div(class = "col ps-groups", grid_of(which(hit))))
+      done_n <- sum(vapply(ps[hit], function(p) identical(progress_of(p$id)$kind, "done"), TRUE))
+      count_line <- div(class = "ps-count", span(tags$b(sum(hit)), sprintf(" of %d problems", length(ps))), if (done_n > 0) span(class = "ps-prog done", icon("check", 12, 3), sprintf("%d completed", done_n)))
+      if (gb == "none") return(div(class = "col ps-groups", count_line, grid_of(which(hit))))
       key <- vapply(cls, function(c) switch(gb, type = c$type, family = if (c$family == "nonpar") "Non-parametric" else "Parametric",
                                            posthoc = c$posthoc, rep = c$rep), "")
       ord <- switch(gb, type = PS_TYPE_ORDER, family = c("Parametric", "Non-parametric"), posthoc = PS_PH_ORDER, rep = c(PS_REP_ORDER, "Not applicable"))
       groups <- intersect(ord, unique(key[hit]))
-      div(class = "col ps-groups", lapply(groups, function(g) {
+      div(class = "col ps-groups", count_line, lapply(groups, function(g) {
         idx <- which(hit & key == g)
         group_box(switch(gb, posthoc = if (g == "None") "No post-hoc (H0 not rejected)" else if (g == "Not applicable") "No post-hoc (one or two samples)" else paste("Post-hoc:", g),
                             rep = if (g == "Not applicable") "Not a factorial design" else if (g == "No replicate") "No replicate (one observation per combination)" else g, g),
@@ -386,8 +410,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     pname_lc <- function(kind, test) sub("^One-way", "one-way", pname(kind, test))
     # step 4 does not depend on the choice of the effects put into the error (that choice has its own output), so it is not redrawn at every tick
     s_base <- reactiveVal(NULL)
-    observe({ s <- cur$s; s[["pool_sel"]] <- NULL; if (!identical(s, isolate(s_base()))) s_base(s) })
-    info <- reactive({ req(cur$kind); ps_info(cur$kind, cur$st, cur$meta, s_base()) })
+    observe({ s <- cur$s; s[["pool_sel"]] <- NULL; if (!identical(s, isolate(s_base()))) s_base(s) }, priority = 1000)
+    info <- reactive({ req(cur$kind, s_base()); ps_info(cur$kind, cur$st, cur$meta, s_base()) })
     choices <- reactive({ req(cur$kind); ps_test_choices(cur$kind, cur$s) })
     # The assumption checks always belong to the parametric model (a rank test chosen in step 5 is judged against it).
     asm_base <- reactive({ req(cur$kind); ps_assumptions(cur$kind, cur$st, cur$s, info()$suggest) })
@@ -508,18 +532,32 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
                     onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("go"), i),
                     div(class = "dot", if (i != n && i <= seen && !skipped(i)) icon("check", 12, 3) else ps_step_num(i)), span(class = "lbl", PS_STEP_SHORT[i]))
       }
-      row <- function(idx) { parts <- list(); for (j in seq_along(idx)) { parts[[length(parts) + 1]] <- dot(idx[j]); if (j < length(idx)) parts[[length(parts) + 1]] <- div(class = paste("sline", if (idx[j] < seen) "done")) }; parts }
-      if (!k) return(div(class = "ps-stepbar", div(class = "stepper ps-stepper", row(1:6))))
+      # The steps of the 5-step process (hypotheses, level, information, test, decision) sit inside a bracket with a progress line.
+      row <- function(idx, core = integer(0)) {
+        els <- list(); isc <- logical(0)
+        for (j in seq_along(idx)) {
+          els[[length(els) + 1]] <- dot(idx[j]); isc <- c(isc, idx[j] %in% core)
+          if (j < length(idx)) { els[[length(els) + 1]] <- div(class = paste("sline", if (idx[j] < seen) "done")); isc <- c(isc, idx[j] %in% core && idx[j + 1] %in% core) }
+        }
+        out <- list(); a <- 1
+        while (a <= length(els)) {
+          if (isc[a]) { b <- a; while (b < length(els) && isc[b + 1]) b <- b + 1
+            out[[length(out) + 1]] <- div(class = "ps-core", style = sprintf("--p:%d%%", round(100 * sum(core <= seen) / length(core))), span(class = "ps-core-lab", "5-step process"), els[a:b]); a <- b + 1
+          } else { out[[length(out) + 1]] <- els[[a]]; a <- a + 1 }
+        }
+        out
+      }
+      if (!k) return(div(class = "ps-stepbar", div(class = "stepper ps-stepper", row(1:6, 2:6))))
       # The phase being worked on is shown in full; the other one is folded to its dots.
       np_on <- !isTRUE(asm()$all_ok) && !isTRUE(rank_first()) && !is.null(cur$res); in_np <- n >= 9
       div(class = "ps-stepbar",
           div(class = paste("ps-phase", if (in_np) "fold" else "open"),
               div(class = "ps-phase-lab", if (isTRUE(rank_first())) paste("1 · Rank test:", ps_np_name(kind)) else if (in_np) "1 · Parametric" else paste("1 · Parametric:", sub(" \\(F test\\)$", "", ps_param_name(kind, cur$test)))),
-              div(class = "stepper ps-stepper many", title = if (in_np) sprintf("%s: an assumption failed", ps_param_name(kind, cur$test)), row(1:8),
+              div(class = "stepper ps-stepper many", title = if (in_np) sprintf("%s: an assumption failed", ps_param_name(kind, cur$test)), row(1:8, 2:6),
                   if (in_np) span(class = "ps-fold-note", "Done"))),
           div(class = paste("ps-phase np", if (in_np) "open" else "fold", if (!np_on) "off"),
               div(class = "ps-phase-lab", if (in_np) paste("2 · Non-parametric:", ps_np_short(kind)) else "2 · Non-parametric"),
-              div(class = "stepper ps-stepper", title = if (!in_np) sprintf("%s: used only if an ANOVA assumption fails", ps_np_name(kind)), row(9:PS_K_LAST),
+              div(class = "stepper ps-stepper", title = if (!in_np) sprintf("%s: used only if an ANOVA assumption fails", ps_np_name(kind)), row(9:PS_K_LAST, 9:13),
                   if (!in_np) span(class = "ps-fold-note", if (np_on) "Next" else "If needed"))))
     })
     nav_btn <- function(n, label, primary = FALSE, back = FALSE) tags$button(class = paste("btn-k", if (primary) "bp" else "bs"),
@@ -805,7 +843,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
             tile("Test", r$t$name), tile("Effects tested", as.character(nrow(eff)), paste(eff$code, collapse = ", ")),
             tile("Significant effects", if (length(sg)) paste(sg, collapse = ", ") else "None", sprintf("at α = %s", format(r$alpha))),
             tile(if (anova_t) "Error df" else "Statistic", if (anova_t) as.character(r$an$dfe) else sprintf("%s per effect", r$stat_name), if (anova_t) sprintf("MS_E = %s", ps_fmt(r$an$mse, 5)) else "χ² distribution")),
-        div(class = "col", style = "gap:6px;margin-top:6px", h3(class = "ct", "How the statistics are computed"), div(class = "am-formula", lapply(r$formula, div))),
+        tags$details(class = "ps-calc", tags$summary(icon("chev", 14), "How the statistics are computed", span(class = "small", "show the calculation")), div(class = "am-formula", lapply(r$formula, div))),
         if (!is.null(r$anova_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "ANOVA table"), tbl(r$anova_df),
             p(class = "small", style = "margin:0", if (length(r$pooled)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the %d effects you put into the error in step 4 (%s), which are taken to be noise; every other effect is tested against it.", r$an$dfe, paste(r$pooled, collapse = ", "))
                                                   else if (isTRUE(r$pool)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the three-factor and higher interactions (%d df), which are assumed negligible; every main effect and two-factor interaction is tested against it.", r$an$dfe)
@@ -841,7 +879,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
             h3(class = "ct", if (fill$n == 1) "Estimated missing value" else "Estimated missing values"),
             tbl(stats::setNames(transform(fill$est, Estimate = ps_fmt(Estimate, 6)), c(vapply(names(fill$est)[-ncol(fill$est)], function(k) ucfirst(ps_lab(m, k)), ""), "Estimated value"))),
             p(class = "small", style = "margin:8px 0 0", "The value that makes the error sum of squares smallest is put in the empty cell, and one error degree of freedom is removed for each estimated value.")),
-        div(class = "col", style = "gap:6px;margin-top:6px", h3(class = "ct", "How the statistic is computed"), div(class = "am-formula", lapply(r$formula, div))),
+        tags$details(class = "ps-calc", tags$summary(icon("chev", 14), "How the statistic is computed", span(class = "small", "show the calculation")), div(class = "am-formula", lapply(r$formula, div))),
         if (!is.null(r$anova_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "ANOVA table"), tbl(r$anova_df),
                                       if (!is.null(block_note(r))) p(class = "small", style = "margin:0", block_note(r))),
         if (!is.null(r$exact)) div(class = "col", style = "gap:6px", h3(class = "ct", "Approximate and exact analysis"), tbl(r$exact),

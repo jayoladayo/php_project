@@ -1,6 +1,49 @@
 # Arabic: assorted labels, the assistant context labels, page help and the test-selector suffix.
 
 ar_part_misc <- function() {
+ar_add("Skip to the content" = "تخطَّ إلى المحتوى", "Open the menu" = "افتح القائمة", "Main menu" = "القائمة الرئيسية")
+
+ar_add(
+  "No data yet? Start here" = "لا توجد بيانات بعد؟ ابدأ من هنا", "Your data stay in this session and are shared by every analysis." = "تبقى بياناتك في هذه الجلسة وتُستخدم في كل تحليل.",
+  "Try a class example" = "جرّب مثالًا من الحصة", "One click loads a real dataset from the course." = "نقرة واحدة تحمّل مجموعة بيانات حقيقية من المقرر.",
+  "Paste from Excel" = "الصق من إكسل", "Copy the cells, including the header row." = "انسخ الخلايا مع صف العناوين.",
+  "Type the values" = "اكتب القيم", "A small table you fill in by hand." = "جدول صغير تملؤه يدويًا.",
+  "After that, pick an analysis in the menu. It reads your columns and walks you through the 5 steps." = "بعد ذلك اختر تحليلًا من القائمة. يقرأ أعمدتك ويرشدك عبر الخطوات الخمس."
+)
+
+ar_add(
+  "Your data" = "بياناتك", "Choose where the data come from, then check the table." = "اختر مصدر البيانات ثم راجع الجدول.",
+  "Your question (optional)" = "سؤالك (اختياري)", "A title and the wording of the problem. Writing α = 0.01, μ0 = … or σ = … fills those settings in." = "عنوان وصياغة المسألة. وكتابة α = 0.01 أو μ0 = … أو σ = … تملأ تلك الإعدادات.",
+  "What happens next" = "ما يحدث بعد ذلك", "You are guided through the 5 steps, then the post-hoc comparisons and the assumption checks." = "ستُرشَد عبر الخطوات الخمس، ثم المقارنات البعدية وفحص الافتراضات."
+)
+
+ar_add(
+  "5-step process" = "عملية الخطوات الخمس", "show the calculation" = "اعرض الحساب"
+)
+
+ar_add(
+  "Hypotheses" = "الفرضيات", "Significance level" = "مستوى المعنوية", "Information available" = "المعلومات المتاحة", "Test" = "الاختبار", "Decision" = "القرار",
+  "State what you want to show" = "حدّد ما تريد إثباته", "How sure you need to be (α)" = "درجة التأكد المطلوبة (α)", "What the data and the design tell us" = "ما تخبرنا به البيانات والتصميم",
+  "The right test, run for you" = "الاختبار المناسب، يُجرى لك", "Reject H0 or not, three ways" = "رفض H0 أو عدمه، بثلاث طرق",
+  "Every analysis follows the same 5 steps" = "كل تحليل يتبع الخطوات الخمس نفسها", "The 5-step process" = "عملية الخطوات الخمس",
+  "Bring your data, follow five clear steps, and finish with a decision you can explain and a report you can submit." = "أحضر بياناتك، واتبع خمس خطوات واضحة، وانتهِ بقرار تستطيع شرحه وتقرير تستطيع تسليمه.",
+  "Practise with course problems" = "تدرّب على مسائل المقرر", "What would you like to do?" = "ماذا تريد أن تفعل؟", "Pick the closest match. You can always change your mind." = "اختر الأقرب. ويمكنك تغيير رأيك في أي وقت.",
+  "Analyse my own data" = "حلّل بياناتي", "Upload or paste a table, say what each column is, and get the five steps on your data." = "ارفع جدولًا أو الصقه، وحدّد معنى كل عمود، لتحصل على الخطوات الخمس على بياناتك.", "Open Data Studio" = "افتح استوديو البيانات",
+  "I am not sure which test" = "لست متأكدًا من الاختبار", "Answer three short questions and we open the right analysis with sensible settings." = "أجب عن ثلاثة أسئلة قصيرة لنفتح لك التحليل المناسب بإعدادات معقولة.", "Ask the Test Advisor" = "اسأل مرشد الاختبارات",
+  "Practise with course problems" = "تدرّب على مسائل المقرر", "Open Problem Sets" = "افتح مجموعات المسائل",
+  "Learn the methods" = "تعلّم الطرق", "When to use each design, the model, the assumptions and a worked example from class." = "متى تستخدم كل تصميم، والنموذج، والافتراضات، ومثال محلول من الحصة.", "Open Learn" = "افتح تعلّم",
+  "Designed experiments" = "التجارب المصمَّمة", "ANOVA, assumption checks, post-hoc comparisons and the rank-test fallback, in five steps" = "تحليل التباين وفحص الافتراضات والمقارنات البعدية واختبار الرتب البديل، في خمس خطوات",
+  "About this project" = "حول هذا المشروع", "The aim of the app and the team behind it" = "هدف التطبيق والفريق الذي يقف وراءه",
+  "Completely Randomised (CRD)" = "العشوائي الكامل (CRD)", "Randomised Complete Block (RCBD)" = "القطاعات العشوائية الكاملة (RCBD)"
+)
+ar_tpl("Chapters 2 to 6 with their complete data, solved step by step (%d problems)." = "الفصول من 2 إلى 6 ببياناتها الكاملة، محلولة خطوة بخطوة ($1 مسألة).")
+
+ar_add(
+  "Start" = "ابدأ", "Practice" = "تدرّب", "5-step" = "5 خطوات", "Guided tour" = "جولة إرشادية",
+  "Open a shared analysis" = "افتح تحليلًا مشاركًا", "Light or dark" = "فاتح أو داكن", "Light or dark theme" = "السمة الفاتحة أو الداكنة", "Help" = "مساعدة", "Language" = "اللغة",
+  "Save your datasets and settings" = "احفظ بياناتك وإعداداتك"
+)
+
 ar_add(
   "Which effects go into the error?" = "أي الآثار تذهب إلى الخطأ؟",
   "With no replicate the error has to come from the effects that behave like noise. Tick the effects to put into the error: the ones sitting with the small points on the Q-Q plot. They are not tested in step 5; the others are tested against them. The ticks start from the plots' suggestion (Lenth's rule)." = "عند غياب التكرار يجب أن يأتي الخطأ من الآثار التي تسلك سلوك الضجيج. علّم الآثار التي تريد وضعها في الخطأ: تلك التي تقع مع النقاط الصغيرة في رسم Q-Q. لا تُختبر هذه في الخطوة 5؛ وتُختبر الآثار الأخرى مقابلها. تبدأ العلامات من اقتراح الرسمين (قاعدة لِنث).",
@@ -21,7 +64,7 @@ ar_add(
   "Normal Q-Q plot of the effects (as in class)" = "الرسم الاحتمالي الطبيعي Q-Q للآثار (كما في الحصة)", "Theoretical quantiles" = "الكميات النظرية", "Sample quantiles (absolute effects)" = "كميات العيّنة (القيم المطلقة للآثار)",
   "Active effects stand away from the small ones · the rest go into the error" = "الآثار النشطة تبتعد عن الصغيرة · والباقي يذهب إلى الخطأ",
   "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the interactions pooled into the error in step 5. The first plot shows the signed effects with the line through the small ones; the Q-Q plot below is the one used in class (absolute effects, every point labelled)." = "عند وجود مشاهدة واحدة لكل توليفة لا يوجد خطأ خالص. في الرسمين تكون الآثار التي تبتعد عن الصغيرة حقيقية، وتسلك الصغيرة سلوك الضجيج: وهي التفاعلات التي تُدمج في الخطأ في الخطوة 5. يعرض الرسم الأول الآثار بإشاراتها مع الخط المار بالصغيرة؛ أما رسم Q-Q أدناه فهو المستخدم في الحصة (القيم المطلقة للآثار، وكل نقطة مسمّاة).",
-  "2^k Factorial" = "العاملي 2^k", "2² to 2⁵" = "من 2² إلى 2⁵", "Pooled error if unreplicated" = "خطأ مدمج عند غياب التكرار",
+  "2^k Factorial" = "العاملي ‎2^k‎", "2² to 2⁵" = "من 2² إلى 2⁵", "Pooled error if unreplicated" = "خطأ مدمج عند غياب التكرار",
   "Two-level designs with two to five factors, replicated or with one observation per combination." = "تصاميم بمستويين وبعاملين إلى خمسة عوامل، مكرَّرة أو بمشاهدة واحدة لكل توليفة.",
   "2^k Factorial: two-level designs with two to five factors" = "العاملي 2^k: تصاميم بمستويين وبعاملين إلى خمسة عوامل",
   "Two-level factorial designs (2² to 2⁵): every factor and every interaction is tested, replicated or with one observation per combination, then the Kruskal-Wallis test if an assumption fails." = "التصاميم العاملية بمستويين (من 2² إلى 2⁵): يُختبر كل عامل وكل تفاعل، بتكرار أو بمشاهدة واحدة لكل توليفة، ثم اختبار كروسكال-واليس إذا فشل أحد الافتراضات.",

@@ -19,7 +19,7 @@ PS_CHAPTERS <- list(
              blurb = "Two- and three-factor factorial experiments: main effects and interactions, in a completely randomized layout or in blocks."),
   ch6 = list(key = "ch6", num = 6, label = "Chapter 6 problems", icon = "grid4",
              title = "Chapter 6: The 2^k Factorial Design",
-             blurb = "Two-level factorial experiments with two to five factors, replicated or with one observation per combination (the higher-order interactions then form the error).")
+             blurb = "Two-level factorial experiments with two to five factors, replicated or with one observation per combination (you then choose which effects go into the error).")
 )
 
 # ---------- Builders for the three textbook layouts ----------

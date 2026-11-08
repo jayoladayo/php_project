@@ -732,6 +732,23 @@ ps_default_settings <- function(meta, kind) {
 # Problem type, test type, test and post-hoc of a problem as the steps would solve it, cached
 # per problem: used for the categories and filters of the list.
 .ps_class_cache <- new.env()
+# The classification of the course problems is fixed, so it is computed once and kept in data/class_cache.rds
+# (rebuilt by tools/build_class_cache.R). Without it the first student to open the list waits several seconds.
+# The cache is used only when the files that decide the classification are unchanged.
+PS_CLASS_FILE <- "data/class_cache.rds"
+ps_class_sig <- function() { f <- file.path("R", c("problem_engine.R", "problem_factorial.R", "problem_blocks.R", "problems.R", "samples.R", "analysis.R")); f <- f[file.exists(f)]
+  paste(unname(tools::md5sum(f)), collapse = "") }
+.ps_class_state <- new.env(); .ps_class_state$loaded <- FALSE
+ps_class_cache_load <- function() {
+  .ps_class_state$loaded <- TRUE
+  x <- tryCatch(if (file.exists(PS_CLASS_FILE)) readRDS(PS_CLASS_FILE), error = function(e) NULL)
+  if (is.list(x) && identical(x$sig, ps_class_sig())) for (n in names(x$val)) .ps_class_cache[[n]] <- x$val[[n]]
+  invisible(NULL)
+}
+ps_class_cache_save <- function() {
+  vals <- as.list(.ps_class_cache); if (length(vals) < length(PROBLEMS)) return(invisible(FALSE))
+  tryCatch({ dir.create(dirname(PS_CLASS_FILE), showWarnings = FALSE); saveRDS(list(sig = ps_class_sig(), val = vals), PS_CLASS_FILE); TRUE }, error = function(e) FALSE)
+}
 # Problem type shown on the cards and used by the filters.
 ps_nfac_word <- function(n) c("One-factor", "Two-factor", "Three-factor", "Four-factor", "Five-factor")[min(max(n, 1), 5)]
 ps_type_of <- function(kind, st) {
@@ -741,6 +758,7 @@ ps_type_of <- function(kind, st) {
   unname(PS_TYPE[kind])
 }
 ps_classify <- function(p) {
+  if (!.ps_class_state$loaded) ps_class_cache_load()
   if (!is.null(.ps_class_cache[[p$id]])) return(.ps_class_cache[[p$id]])
   st <- ps_structure(p$data, p$roles); kind <- ps_kind(st, p)
   out <- list(kind = kind, type = ps_type_of(kind, st), family = "param", test = "", posthoc = "Not applicable", rep = "Not applicable")

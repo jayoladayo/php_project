@@ -160,4 +160,23 @@
     try { s = JSON.parse(localStorage.getItem(RZKEY) || 'null'); } catch (e) {}
     if (s && s.provider) Shiny.setInputValue(RZ + 'restore', s, { priority: 'event' });
   });
+
+  // ---------- Keyboard: "/" searches, Alt+arrows move between the steps ----------
+  function typing(e) { var t = e.target; return t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable); }
+  function vis(el) { return !!(el && el.getBoundingClientRect().width > 0 && el.offsetParent !== null); }
+  $(document).on('keydown', function (e) {
+    if (e.key === '/' && !typing(e) && !e.ctrlKey && !e.metaKey) {
+      var i = document.getElementById('jump-selectized'); if (i) { e.preventDefault(); i.focus(); }
+    } else if (e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+      var bars = Array.prototype.filter.call(document.querySelectorAll('.ps-nav'), vis); if (!bars.length) return;
+      var b = bars[0].querySelectorAll('.btn-k'); var fwd = e.key === 'ArrowRight';
+      var btn = fwd ? bars[0].querySelector('.btn-k.bp') : bars[0].querySelector('.btn-k.bs'); if (btn) { e.preventDefault(); btn.click(); }
+    }
+  });
+  // the assistant button shows its name for the first seconds, then settles into a round button
+  $(document).on('shiny:connected', function () {
+    var f = document.querySelector('.riaz-fab'); if (!f) return;
+    try { if (sessionStorage.getItem('sds-fab')) return; sessionStorage.setItem('sds-fab', '1'); } catch (e) {}
+    f.classList.add('intro'); setTimeout(function () { f.classList.remove('intro'); }, 6500);
+  });
 })();

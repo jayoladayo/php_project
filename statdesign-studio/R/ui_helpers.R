@@ -1,27 +1,31 @@
 # Small UI building blocks that follow the design system.
 
+# The menu follows the student's task: start, explore, run an analysis (every one of them walks through the
+# same 5-step process), practise, and the tools around the analyses.
 NAV <- list(
+  list(group = "Start"),
   list(page = "home", label = "Home", icon = "home"),
   list(page = "advisor", label = "Test Advisor", icon = "compass"),
   list(page = "data", label = "Data Studio", icon = "database", badge = "data-count"),
   list(group = "Explore"),
   list(page = "desc", label = "Descriptive statistics", icon = "bar"),
-  list(group = "Compare"),
+  list(group = "Compare", tag = "5-step"),
   list(page = "one", label = "One sample", icon = "target"),
   list(page = "two", label = "Two samples", icon = "columns"),
   list(page = "k", label = "k samples", icon = "layers"),
-  list(group = "Design of experiments"),
-  list(page = "problems", label = "Problem Sets", icon = "clipboard"),
+  list(group = "Design of experiments", tag = "5-step"),
   list(page = "crd", label = "CRD", icon = "shuffle"),
   list(page = "rcbd", label = "RCBD", icon = "rows"),
   list(page = "lsd", label = "Latin Square", icon = "grid"),
   list(page = "glsd", label = "Graeco-Latin Square", icon = "grid4"),
   list(page = "fact", label = "Factorial", icon = "cross"),
   list(page = "twok", label = "2^k Factorial", icon = "cross"),
+  list(group = "Practice"),
+  list(page = "problems", label = "Problem Sets", icon = "clipboard"),
+  list(page = "learn", label = "Learn", icon = "book"),
   list(group = "Tools"),
   list(page = "planner", label = "Design Planner", icon = "map"),
   list(page = "report", label = "Report", icon = "file", badge = "report-count"),
-  list(page = "learn", label = "Learn", icon = "book"),
   list(page = "team", label = "About the team", icon = "users")
 )
 
@@ -29,22 +33,22 @@ PAGE_CRUMB <- list(
   home = c("StatDesign Studio", "Home"), advisor = c("StatDesign Studio", "Test Advisor"),
   data = c("StatDesign Studio", "Data Studio"), desc = c("Explore", "Descriptive statistics"),
   one = c("Compare", "One sample"), two = c("Compare", "Two samples"), k = c("Compare", "k samples"),
-  problems = c("Design of experiments", "Problem Sets"), crd = c("Design of experiments", "CRD"), rcbd = c("Design of experiments", "RCBD"),
+  problems = c("Practice", "Problem Sets"), crd = c("Design of experiments", "CRD"), rcbd = c("Design of experiments", "RCBD"),
   lsd = c("Design of experiments", "Latin Square"), glsd = c("Design of experiments", "Graeco-Latin Square"), fact = c("Design of experiments", "Factorial"), twok = c("Design of experiments", "2^k Factorial"),
-  planner = c("Tools", "Design Planner"), report = c("Tools", "Report"), learn = c("Tools", "Learn"),
-  team = c("StatDesign Studio", "About the team")
+  planner = c("Tools", "Design Planner"), report = c("Tools", "Report"), learn = c("Practice", "Learn"),
+  team = c("Tools", "About the team")
 )
 
 nav_js <- function(page) sprintf("Shiny.setInputValue('nav', '%s', {priority: 'event'}); return false;", page)
 
 sidebar_ui <- function() {
   items <- lapply(NAV, function(n) {
-    if (!is.null(n$group)) return(div(class = "glab", n$group))
+    if (!is.null(n$group)) return(div(class = "glab", n$group, if (!is.null(n$tag)) span(class = "glab-tag", n$tag)))
     tags$a(class = paste("nav-item", if (n$page == "home") "on"), href = "#", `data-page` = n$page,
            onclick = nav_js(n$page), icon(n$icon), span(n$label),
            if (!is.null(n$badge)) span(class = "ct", id = n$badge, style = "display:none", "0"))
   })
-  div(class = "side", id = "side",
+  div(class = "side", id = "side", role = "navigation", `aria-label` = "Main menu",
       div(class = "brand", div(class = "logo", icon("bar", 22, 2.4)),
           div(div(class = "bname", "StatDesign Studio"), div(class = "bsub", "Experimental design, no code"))),
       items,
@@ -54,22 +58,22 @@ sidebar_ui <- function() {
 
 topbar_ui <- function() {
   div(class = "top",
-      tags$button(class = "ib menu-btn", onclick = "document.querySelector('.app').classList.toggle('nav-open')", icon("menu", 17)),
+      tags$button(class = "ib menu-btn", `aria-label` = "Open the menu", onclick = "document.querySelector('.app').classList.toggle('nav-open')", icon("menu", 17)),
       div(class = "crumb", id = "crumb", span("StatDesign Studio"), icon("chev", 14), tags$b("Home")),
       div(class = "sp"),
       div(class = "search-wrap",
           selectizeInput("jump", NULL, choices = NULL, width = "100%",
                          options = list(placeholder = "Search analyses, tests, help",
                                         onInitialize = I("function() { this.setValue(''); }")))),
-      tags$button(class = "btn-k bs bsm tour-btn", id = "tour-btn", title = "A guided tour of this page and of the whole app", onclick = "StatTour.menu(); return false;",
+      tags$button(class = "btn-k bs bsm tour-btn", id = "tour-btn", `data-tip` = "Guided tour", `aria-label` = "Guided tour", onclick = "StatTour.menu(); return false;",
                   icon("compass", 15), span(class = "tour-lbl", "Guided tour")),
-      tags$button(class = "btn-k bs bsm", id = "open-share-btn", title = "Open an analysis that someone shared with you", onclick = "Shiny.setInputValue('open_share_ui', Math.random(), {priority: 'event'}); return false;",
+      tags$button(class = "btn-k bs bsm", id = "open-share-btn", `data-tip` = "Open a shared analysis", `aria-label` = "Open a shared analysis", onclick = "Shiny.setInputValue('open_share_ui', Math.random(), {priority: 'event'}); return false;",
                   icon("link", 15), span(class = "tour-lbl", "Open shared analysis")),
-      tags$button(class = "btn-k bs bsm lang-btn", id = "lang-btn", title = "English / العربية", onclick = "SDSLang.toggle(); return false;", "العربية"),
-      tags$button(class = "ib", title = "Light or dark", onclick = "toggleTheme()", icon("moon", 17)),
-      tags$button(class = "ib", title = "Help", onclick = "Shiny.setInputValue('help', Math.random())", icon("help", 17)),
-      downloadButton("save_project", label = tagList(icon("save", 15), "Save project"), icon = NULL,
-                     class = "btn-k bs bsm"))
+      tags$button(class = "btn-k bs bsm lang-btn", id = "lang-btn", `data-tip` = "English / العربية", `aria-label` = "Language", onclick = "SDSLang.toggle(); return false;", "العربية"),
+      tags$button(class = "ib", `data-tip` = "Light or dark", `aria-label` = "Light or dark theme", onclick = "toggleTheme()", icon("moon", 17)),
+      tags$button(class = "ib", `data-tip` = "Help", `aria-label` = "Help", onclick = "Shiny.setInputValue('help', Math.random())", icon("help", 17)),
+      downloadButton("save_project", label = tagList(icon("save", 15), span(class = "save-lbl", "Save project")), icon = NULL,
+                     class = "btn-k bp bsm", `data-tip` = "Save your datasets and settings"))
 }
 
 page_head <- function(title, sub = NULL, ...) {

@@ -57,7 +57,7 @@
   function overview() {
     return [
       { title: 'Welcome to StatDesign Studio', text: 'This short tour shows you around. Each step draws a box around the part of the screen it explains. Press <b>Next</b> (or the → key) to continue, <b>Back</b> (←) to go back, and <b>Esc</b> to leave. You can start a tour again at any time from the <b>Guided tour</b> button at the top of every page.' },
-      { t: '#side', place: 'right', title: 'The sidebar: everything is here', text: 'Home, the Test Advisor and Data Studio are at the top. Below are <b>Explore</b>, <b>Compare</b> (one, two and k sample tests), <b>Design of experiments</b> (Problem Sets, CRD, RCBD, Latin and Graeco-Latin squares, Factorial) and <b>Tools</b> (Design Planner, Report, Learn). Click any item to open that page.' },
+      { t: '#side', place: 'right', title: 'The sidebar: everything is here', text: 'The menu follows what you want to do. <b>Start</b>: Home, the Test Advisor and Data Studio. <b>Explore</b> and <b>Compare</b> (one, two and k sample tests) and <b>Design of experiments</b> (CRD, RCBD, Latin and Graeco-Latin squares, Factorial, 2^k Factorial) are the analyses; the ones tagged <b>5-step</b> all walk through the same five steps. <b>Practice</b>: Problem Sets and Learn. <b>Tools</b>: Design Planner, Report and About the team. Click any item to open that page.' },
       { t: '.side a.nav-item[data-page="advisor"]', place: 'right', title: 'Not sure which test? Ask the Advisor', text: 'Answer three short questions and the Test Advisor tells you which analysis fits your data and opens it for you.' },
       { t: '.side a.nav-item[data-page="data"]', place: 'right', title: 'Bring your data in once', text: '<b>Data Studio</b> is where data enters the app: upload an Excel or CSV file, type or paste it, or load a class example. Every analysis page then lets you pick from your datasets.' },
       { t: '.side a.nav-item[data-page="problems"]', place: 'right', title: 'Problem Sets: solve the course exercises', text: 'The textbook exercises of Chapters 2 to 6 with their full data, solved step by step, plus your own problems. This is the best place to learn the hypothesis-testing process.' },
@@ -76,10 +76,10 @@
   // ---------- one page at a time ----------
   var PAGE_TOURS = {
     home: function () { return [
-      { t: '.hero', place: 'bottom', title: 'Home', text: 'The two big buttons start the most common jobs: <b>Start with your data</b> opens Data Studio, and <b>Try the RCBD example</b> opens a ready-made analysis so you can see what the app produces.' },
+      { t: '.hero', place: 'bottom', title: 'Home', text: 'Two buttons start the most common jobs: <b>Start with your data</b> opens Data Studio, and <b>Practise with course problems</b> opens the Problem Sets. The panel on the right lists the 5 steps that every analysis follows.' },
       { t: '.tm-aims', place: 'right', title: 'Aim and objectives', text: 'What the app is for: planning, analysing and reporting designed experiments correctly, step by step, without writing code.' },
       { t: '.tm-home', place: 'left', title: 'The project team', text: 'Click any name to open the <b>About the team</b> page with the photos and departments of Group 4.' },
-      { t: '.tab-pane.active .grid.g2 a.acard', place: 'bottom', title: 'Analysis cards', text: 'Each card opens an analysis: the designs under <b>Design of experiments</b> (including Factorial), and descriptive statistics and the one, two and k sample tests under <b>Explore and compare</b>.' },
+      { t: '.tab-pane.active a.acard', place: 'bottom', title: 'Analysis cards', text: 'Each card opens an analysis: the designs under <b>Design of experiments</b> (including Factorial), and descriptive statistics and the one, two and k sample tests under <b>Explore and compare</b>.' },
       { t: '#home_ds', place: 'left', title: 'Your datasets', text: 'Datasets you upload or open appear here. They are kept for the session; use <b>Save project</b> to keep them.' },
       { t: '.tab-pane.active .btn-k.bgh.bsm', place: 'left', title: 'Class examples', text: 'Datasets from the course R scripts. <b>Open</b> loads one and takes you to the matching analysis.' }
     ]; },

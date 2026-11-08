@@ -39,6 +39,7 @@ upload_tab_ui <- function(ns) {
           uiOutput(ns("fileinfo")),
           uiOutput(ns("sheetpick"))),
       div(class = "col",
+          uiOutput(ns("upload_help")),
           uiOutput(ns("preview")),
           uiOutput(ns("upload_actions"))))
 }
@@ -106,6 +107,17 @@ data_studio_server <- function(id, store, goto, open_project) {
     })
     observeEvent(store$ds_tab, { if (!is.null(store$ds_tab)) { tab(store$ds_tab); updateTabsetPanel(session, "tabs", selected = store$ds_tab); store$ds_tab <- NULL } })
 
+    # Before any data are in, say what to do and give a one-click way to try the app.
+    output$upload_help <- renderUI({
+      if (length(store$datasets)) return(NULL)
+      go <- function(k) sprintf("Shiny.setInputValue('%s', '%s', {priority: 'event'})", ns("tab"), k)
+      kcard(class = "ds-start", div(class = "hrow", ico_box("spark", "io", 20), div(h2(class = "ct", "No data yet? Start here"), span(class = "small", "Your data stay in this session and are shared by every analysis."))),
+            div(class = "ds-opts",
+                tags$button(class = "ds-opt", onclick = go("examples"), icon("flask", 18), div(tags$b("Try a class example"), span("One click loads a real dataset from the course."))),
+                tags$button(class = "ds-opt", onclick = go("paste"), icon("copy", 18), div(tags$b("Paste from Excel"), span("Copy the cells, including the header row."))),
+                tags$button(class = "ds-opt", onclick = go("edit"), icon("edit", 18), div(tags$b("Type the values"), span("A small table you fill in by hand.")))),
+            p(class = "small", style = "margin:12px 0 0", "After that, pick an analysis in the menu. It reads your columns and walks you through the 5 steps."))
+    })
     output$tabbar <- renderUI({
       div(class = "ktabs", lapply(DS_TABS, function(t)
         tags$button(class = paste("ktab", if (tab() == t$key) "on"),

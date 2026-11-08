@@ -59,7 +59,7 @@ In automatic mode each page recommends the test whose assumptions hold and expla
 
 ## What is in stage 6
 
-**Problem Sets** (sidebar, first item under Design of experiments): 30 exercises from the course problem sheets, each with its full statement and complete dataset, solved with the step-by-step hypothesis-testing process taught in the course.
+**Problem Sets** (sidebar, under Practice): 30 exercises from the course problem sheets, each with its full statement and complete dataset, solved with the step-by-step hypothesis-testing process taught in the course.
 
 - **Grouped by chapter** (tabs Chapter 2, Chapter 3, Custom Problem) and then in collapsible categories:
   - Chapter 2: **One sample**, **Two sample** and **K sample**, each split into **Parametric** and **Non-parametric** (two-sample problems also say independent or paired). Chapter 2 has no k-sample problem; that group points to Chapter 3.
@@ -125,6 +125,17 @@ The problem sheets supplied are Montgomery Chapter 2 (Simple Comparative Experim
 - **Download solution (PDF)** at the end of every analysis (problems and analysis pages), offered only once the student has been through the steps: the statement, the data and every step with its numbers, tables and plots.
 - **Edit data.** In Problem Sets press **Edit data** on step 1 to change a value, add or delete a row, then **Apply** (the steps restart on your values) or **Reset data**.
 - **English and Arabic.** The button at the top switches the menus, instructions, step texts, results sentences, tables, chart labels, the guided tour and the Learn guides to Arabic (right-to-left layout and Arabic statistical terms). The PDF solutions and the Word, PDF and HTML reports follow the language chosen. The statements of the textbook problems, the data, your own names and the formulas stay as written. The dictionary is in `R/i18n*.R` (one file per area) and the switch in `www/i18n.js`.
+
+## What is new in stage 12: a redesigned interface
+
+- **Task-led menu.** The sidebar is grouped by what you want to do: Start (Home, Test Advisor, Data Studio), Explore, Compare and Design of experiments (the analyses, tagged **5-step**: every one of them walks through the same five steps), Practice (Problem Sets, Learn) and Tools.
+- **A calmer top bar.** Search (press **/**), then icon buttons with tooltips (guided tour, open a shared analysis, language, theme, help) and one primary action, Save project.
+- **A new home page.** It leads with the five steps every analysis follows and four ways in (my data, I am not sure which test, practise, learn), then the analyses, your datasets and the class examples; the aim and the team come last.
+- **A clearer set-up for every analysis.** Data first (with a one-click way to try the app), what each column is, an optional question folded away, a sticky **Start the 5 steps** button and the five steps listed beside it.
+- **The 5-step process is drawn as such.** In every analysis, steps 2 to 6 sit inside a bracket labelled **5-step process** with a progress line; set-up, post-hoc and the assumption checks sit outside it. **Back/Next stay in view** while a long step scrolls (Alt+arrows also work), and the calculation behind a result is folded under "How the statistic is computed".
+- **Problem Sets.** A compact filter bar with Group by chips, a result count, a Reset button, and a **Completed / In progress** chip on every problem you have worked on.
+- **Quality.** Inter and Poppins type, a consistent spacing, elevation and focus system, motion that respects "reduce motion", a busy bar while the app computes, skip link and landmarks, dark mode and Arabic right-to-left layouts refined, and phone layouts for the steps.
+- **Speed.** The ten analysis servers start the first time a page is opened (the first screen no longer waits for all of them), and the classification of the 115 course problems is kept in `data/class_cache.rds` (rebuild it with `Rscript tools/build_class_cache.R` after changing the engine or the problems).
 
 ## What is new in stage 11
 

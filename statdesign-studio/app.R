@@ -55,8 +55,9 @@ ui <- page(
   title = "StatDesign Studio",
   tags$head(
     tags$link(rel = "preconnect", href = "https://fonts.googleapis.com"),
-    tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&family=Cairo:wght@400;500;600;700&display=swap"),
+    tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&family=Cairo:wght@400;500;600;700&display=swap"),
     tags$link(rel = "stylesheet", href = "app.css"),
+    tags$link(rel = "stylesheet", href = "design.css"),
     tags$link(rel = "icon", href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23DAC961'/%3E%3Cpath d='M12 18V10M17 18V6M7 18v-4' stroke='%2300573F' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"),
     tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"),
     tags$script(src = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js", defer = NA),
@@ -66,11 +67,12 @@ ui <- page(
     tags$script(src = "share.js"),
     tags$script(src = "tour.js")
   ),
+  tags$a(class = "skip-link", href = "#main-content", "Skip to the content"),
   div(class = "app",
       sidebar_ui(),
-      div(class = "main",
+      div(class = "main", role = "main",
           topbar_ui(),
-          div(class = "content",
+          div(class = "content", id = "main-content", tabindex = "-1",
               tabsetPanel(
                 id = "pages", type = "hidden",
                 tabPanelBody("home", home_ui()),
@@ -102,6 +104,7 @@ server <- function(input, output, session) {
   # ---------- Navigation ----------
   show_page <- function(page) {
     if (!page %in% PAGES) return()
+    if (page %in% LAZY_PAGES) srv_get(page)
     updateTabsetPanel(session, "pages", selected = page)
     session$sendCustomMessage("nav", list(page = page, crumb = PAGE_CRUMB[[page]]))
   }
@@ -131,23 +134,30 @@ server <- function(input, output, session) {
   # The analysis pages run the same five-step process as the Problem Sets, on the student's own data.
   crumb <- function(cr) session$sendCustomMessage("crumb", list(crumb = cr))
   PAGE_MODES <- c("one", "two", "k", "crd", "rcbd", "lsd", "glsd", "fact", "twok")
-  pages <- stats::setNames(lapply(PAGE_MODES, function(m) problems_server(m, store, show_crumb = crumb, mode = m, lang = function() input$lang)), PAGE_MODES)
+  # Each analysis page (and the Problem Sets) is started the first time it is opened, not when the app loads:
+  # building all ten of them at once made every student wait several seconds for the first screen.
+  srv <- new.env()
+  srv_get <- function(name) {
+    if (is.null(srv[[name]])) srv[[name]] <- if (identical(name, "problems"))
+      problems_server("problems", store, show_crumb = crumb, lang = function() input$lang,
+        open_design = function(df, title) {
+          ds <- new_dataset(title, df, source = "Problem Sets")
+          store$datasets[[ds$id]] <- ds; store$active <- ds$id; store$grid_rev <- store$grid_rev + 1
+          goto(list(page = "rcbd", dataset = ds$id, t = Sys.time()))
+        })
+      else problems_server(name, store, show_crumb = crumb, mode = name, lang = function() input$lang)
+    srv[[name]]
+  }
+  LAZY_PAGES <- c(PAGE_MODES, "problems")
 
   desc <- desc_server("desc", store)
-  advisor_server("advisor", goto, function(page, m) pages[[page]]$set_method(m))
-
-  problems <- problems_server("problems", store, show_crumb = function(cr) session$sendCustomMessage("crumb", list(crumb = cr)), lang = function() input$lang,
-    open_design = function(df, title) {
-      ds <- new_dataset(title, df, source = "Problem Sets")
-      store$datasets[[ds$id]] <- ds; store$active <- ds$id; store$grid_rev <- store$grid_rev + 1
-      goto(list(page = "rcbd", dataset = ds$id, t = Sys.time()))
-    })
+  advisor_server("advisor", goto, function(page, m) srv_get(page)$set_method(m))
   planner <- planner_server("planner")
   report_server("report", store, lang = function() input$lang)
   add_example <- function(ex) {
     ds <- example_dataset(ex); store$datasets[[ds$id]] <- ds; store$active <- ds$id; store$grid_rev <- store$grid_rev + 1; ds$id
   }
-  learn <- learn_server("learn", show = function(k) session$sendCustomMessage("crumb", list(crumb = c("Tools", "Learn", LEARN[[k]]$nav))),
+  learn <- learn_server("learn", show = function(k) session$sendCustomMessage("crumb", list(crumb = c("Practice", "Learn", LEARN[[k]]$nav))),
     open_example = function(o) {
       id <- if (!is.null(o$ex)) add_example(o$ex) else {
         d <- CLASS_EXAMPLES$crd$data
@@ -160,8 +170,8 @@ server <- function(input, output, session) {
   observe(session$sendCustomMessage("badge", list(id = "report-count", n = length(store$pins))))
 
   # Ask Professor Riaz: each page tells the assistant what it is showing.
-  ai_fns <- c(lapply(pages, `[[`, "ai"),
-              list(desc = desc$ai, planner = planner$ai, learn = learn$ai, problems = problems$ai,
+  ai_fns <- c(lapply(stats::setNames(LAZY_PAGES, LAZY_PAGES), function(m) function(...) srv_get(m)$ai(...)),
+              list(desc = desc$ai, planner = planner$ai, learn = learn$ai,
                    report = function(full) {
                      pins <- store$pins
                      list(label = sprintf("your report (%d item%s)", length(pins), if (length(pins) == 1) "" else "s"), kind = "general",
@@ -172,8 +182,8 @@ server <- function(input, output, session) {
 
   observeEvent(goto(), {
     g <- goto()
-    if (!is.null(g$paired) && g$page == "two") pages$two$set_paired(g$paired)
-    if (!is.null(g$dataset) && g$page %in% names(pages)) pages[[g$page]]$use_dataset(g$dataset)
+    if (!is.null(g$paired) && g$page == "two") srv_get("two")$set_paired(g$paired)
+    if (!is.null(g$dataset) && g$page %in% PAGE_MODES) srv_get(g$page)$use_dataset(g$dataset)
     show_page(g$page)
   })
 
@@ -184,7 +194,7 @@ server <- function(input, output, session) {
     textAreaInput("share_code", NULL, rows = 4, width = "100%", placeholder = "Or paste the code here (it starts with SDS1:)"),
     footer = tagList(modalButton("Cancel"), actionButton("share_open", "Open", class = "btn-k bp")))))
   open_shared <- function(x) {
-    target <- if (identical(x$page, "problems")) problems else pages[[x$page]]
+    target <- if (x$page %in% LAZY_PAGES) srv_get(x$page)
     if (is.null(target)) { showNotification("This analysis belongs to a page this version does not have.", type = "error"); return() }
     removeModal(); show_page(x$page); target$restore(x)
   }
