@@ -546,3 +546,18 @@ ps_plot_fact_normal <- function(st, meta) {
     labs(x = "Effect estimate (coded −1, +1)", y = "Normal score", subtitle = "Dashed line: noise · Labelled points: effects that stand out (Lenth)") +
     theme_sds() + theme(plot.subtitle = element_text(colour = INK, size = 10.5))
 }
+
+# The Q-Q plot used in class for an unreplicated 2^k design: the absolute effects against normal quantiles
+# (R's qqnorm of abs(effects)), every point labelled with its effect. The effects that leave the small ones
+# at the bottom are the ones that matter; the small ones go into the error.
+ps_plot_fact_qq <- function(st, meta) {
+  ce <- ps_fact_contrasts(st, meta); a <- abs(ce$effect); q <- stats::qqnorm(a, plot.it = FALSE)
+  dd <- data.frame(x = q$x, y = q$y, code = ce$code, stringsAsFactors = FALSE); dd <- dd[order(dd$y), ]
+  dd$vj <- ifelse(seq_len(nrow(dd)) %% 2 == 0, -0.9, 1.9)   # alternate above and below so the labels of the small effects stay readable
+  big <- dd$y >= stats::quantile(dd$y, 0.75)
+  ggplot(dd, aes(x, y)) + geom_point(aes(colour = big), size = 2.8) + scale_colour_manual(values = c(`FALSE` = PETROL, `TRUE` = GREEN), guide = "none") +
+    geom_text(aes(label = code, vjust = vj), size = 3.3, colour = INK, check_overlap = FALSE) +
+    scale_x_continuous(expand = ggplot2::expansion(mult = 0.1)) + scale_y_continuous(expand = ggplot2::expansion(mult = c(0.08, 0.12))) +
+    labs(x = "Theoretical quantiles", y = "Sample quantiles (absolute effects)", subtitle = "Active effects stand away from the small ones · the rest go into the error") +
+    theme_sds() + theme(plot.subtitle = element_text(colour = INK, size = 10.5))
+}

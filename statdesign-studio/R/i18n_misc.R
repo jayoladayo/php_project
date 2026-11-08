@@ -2,6 +2,9 @@
 
 ar_part_misc <- function() {
 ar_add(
+  "Normal Q-Q plot of the effects (as in class)" = "الرسم الاحتمالي الطبيعي Q-Q للآثار (كما في الحصة)", "Theoretical quantiles" = "الكميات النظرية", "Sample quantiles (absolute effects)" = "كميات العيّنة (القيم المطلقة للآثار)",
+  "Active effects stand away from the small ones · the rest go into the error" = "الآثار النشطة تبتعد عن الصغيرة · والباقي يذهب إلى الخطأ",
+  "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the interactions pooled into the error in step 5. The first plot shows the signed effects with the line through the small ones; the Q-Q plot below is the one used in class (absolute effects, every point labelled)." = "عند وجود مشاهدة واحدة لكل توليفة لا يوجد خطأ خالص. في الرسمين تكون الآثار التي تبتعد عن الصغيرة حقيقية، وتسلك الصغيرة سلوك الضجيج: وهي التفاعلات التي تُدمج في الخطأ في الخطوة 5. يعرض الرسم الأول الآثار بإشاراتها مع الخط المار بالصغيرة؛ أما رسم Q-Q أدناه فهو المستخدم في الحصة (القيم المطلقة للآثار، وكل نقطة مسمّاة).",
   "2^k Factorial" = "العاملي 2^k", "2² to 2⁵" = "من 2² إلى 2⁵", "Pooled error if unreplicated" = "خطأ مدمج عند غياب التكرار",
   "Two-level designs with two to five factors, replicated or with one observation per combination." = "تصاميم بمستويين وبعاملين إلى خمسة عوامل، مكرَّرة أو بمشاهدة واحدة لكل توليفة.",
   "2^k Factorial: two-level designs with two to five factors" = "العاملي 2^k: تصاميم بمستويين وبعاملين إلى خمسة عوامل",

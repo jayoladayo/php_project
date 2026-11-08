@@ -690,7 +690,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
               p(class = "small", style = "margin:0", "Each effect is the average response at the high level minus the average at the low level (for an interaction, the same contrast of the product of the coded levels, −1 and +1). The sum of squares of an effect is N × (effect/2)², and the % contribution is its share of the total of all effects."),
               tbl(data.frame(Effect = sprintf("%s (%s)", ce$label, ce$code), `Effect estimate` = ps_fmt(ce$effect, 5), `Sum of squares` = ps_fmt(ce$ss, 6), `% contribution` = sprintf("%.2f", ce$pct), check.names = FALSE)),
               plot_box("pl_fnorm", "Normal probability plot of the effects", 340),
-              p(class = "small", style = "margin:0", if (isTRUE(cur$st$pool)) "With one observation per combination there is no pure error. Effects that fall off the line through the small ones are real; the points near the line behave like noise, which is why the higher-order interactions can be pooled into the error in step 5."
+              plot_box("pl_fqq", "Normal Q-Q plot of the effects (as in class)", 340),
+              p(class = "small", style = "margin:0", if (isTRUE(cur$st$pool)) "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the interactions pooled into the error in step 5. The first plot shows the signed effects with the line through the small ones; the Q-Q plot below is the one used in class (absolute effects, every point labelled)."
                                                       else "A quick look before the tests: effects far from the line stand out. Step 5 tests every effect against the pure error of the replicates."))
         }
         return(tagList(facts, data_block(m, "The data"),
@@ -984,6 +985,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     output$pl_fmain <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_fact_main(cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_finter <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_fact_inter(cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_fnorm <- renderPlot({ req(ps_is_fact(cur$kind), ps_fact_2level(cur$st)); ps_plot_fact_normal(cur$st, cur$meta) }, bg = "transparent", res = 88)
+    output$pl_fqq <- renderPlot({ req(ps_is_fact(cur$kind), ps_fact_2level(cur$st)); ps_plot_fact_qq(cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_fbox <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_data(cur$kind, cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_box <- renderPlot({ ps_plot_data(cur$kind, cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_rvf <- renderPlot({ ps_plot_rvf(asm()$ind_fit) }, bg = "transparent", res = 88)

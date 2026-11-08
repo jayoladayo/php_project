@@ -61,6 +61,7 @@ ps_solution_blocks <- function(m, s = NULL, test = NULL, ph = NULL, lang = "en")
       add("tbl", df = data.frame(Effect = sprintf("%s (%s)", ce$label, ce$code), `Effect estimate` = ps_fmt(ce$effect, 5), `Sum of squares` = ps_fmt(ce$ss, 6), `% contribution` = sprintf("%.2f", ce$pct), check.names = FALSE),
           caption = tr("Effect estimates of the 2^k design"), widths = c(.4, .2, .2, .2))
       add("plot", plot = ps_plot_fact_normal(st, m), h = 70, caption = tr("Normal probability plot of the effects"))
+      add("plot", plot = ps_plot_fact_qq(st, m), h = 70, caption = tr("Normal Q-Q plot of the effects (as in class)"))
     }
   }
 

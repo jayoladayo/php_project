@@ -147,6 +147,14 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
         "x1 <- w[[paste0(\"y.\", levels(dat$treatment)[1])]]; x2 <- w[[paste0(\"y.\", levels(dat$treatment)[2])]]", "dif <- x1 - x2",
         "shapiro.test(dif)   # normality of the differences")
   }
+  if (kind == "fact" && ps_fact_2level(st)) {
+    fs <- intersect(c("A", "B", "C", "D", "E"), names(dd))
+    add("# Effects of the 2^k design (low = -1, high = +1) and the normal Q-Q plot of the effects used in class",
+        sprintf("cd <- data.frame(y = dat$y, %s)", paste(sprintf("%s = ifelse(as.integer(dat$%s) == 2, 1, -1)", fs, fs), collapse = ", ")),
+        sprintf("fit_all <- lm(y ~ %s, data = cd)   # every effect, the interactions up to the highest order", paste(fs, collapse = " * ")),
+        "effects <- 2 * coef(fit_all)[-1]; round(effects, 4)   # effect = (mean at +) - (mean at -)",
+        "qq <- qqnorm(abs(effects)); text(qq$x, qq$y, labels = names(effects), pos = 4, cex = 0.7)   # the effects that stand away from the small ones are active")
+  }
   if (kind == "k") {
     need("levene")
     add("tapply(dat$y, dat$treatment, mean); tapply(dat$y, dat$treatment, sd)", "levene(dat$y, dat$treatment)          # equal group variances (Levene, median)",
