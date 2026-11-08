@@ -43,6 +43,10 @@ PS_TYPE_DESC <- c(
   "Non-parametric" = "A rank test is the answer: normality or another assumption fails.")
 PS_TYPE_ORDER <- c("One sample", "Two sample · independent", "Two sample · paired", "CRD", "RCBD", "Latin square", "Graeco-Latin square",
                    "Two-factor factorial (CRD)", "Three-factor factorial (CRD)", "Four-factor factorial (CRD)", "Five-factor factorial (CRD)", "Factorial in blocks (RCBD)", "Factorial in a Latin square (LSD)", "Factorial in a Graeco-Latin square (GLSD)")
+PS_REP_ORDER <- c("Replicated", "No replicate")
+PS_TYPE_DESC <- c(PS_TYPE_DESC,
+  "Replicated" = "Every treatment combination is observed more than once, so every effect is tested against the pure error of the replicates.",
+  "No replicate" = "One observation per treatment combination: there is no pure error. With two factors the interaction is checked with Tukey's test for nonadditivity; with three or more factors the higher-order interactions are pooled into the error.")
 PS_PH_ORDER <- c("Tukey HSD", "Fisher LSD", "Bonferroni", "Scheffé", "Dunnett", "Games-Howell", "Dunn", "Nemenyi", "Wilcoxon", "None", "Not applicable")
 
 ps_alt_choices <- function(kind) {
@@ -88,6 +92,12 @@ PS_MODES <- list(
               sub = "Factorial designs: every factor and every interaction is tested; CRD, RCBD, LSD or GLSD ANOVA first, then the rank test of the layout if an assumption fails.",
               need = "A factorial design needs a Response and at least Factor A and Factor B, with every combination of levels observed more than once (or in blocks)."))
 
+PS_MODES$twok <- list(title = "2^k Factorial", kinds = "fact",
+  roles = c("response", "treatment", "factorB", "factorC", "factorD", "factorE"),
+  labels = list(treatment = "Factor A (two levels)", factorB = "Factor B (two levels)", factorC = "Factor C (two levels, optional)", factorD = "Factor D (two levels, optional)", factorE = "Factor E (two levels, optional)"),
+  sub = "Two-level factorial designs (2² to 2⁵): every factor and every interaction is tested, replicated or with one observation per combination, then the Kruskal-Wallis test if an assumption fails.",
+  need = "A 2^k design needs a Response and two to five factor columns, each with exactly two levels (low and high), with every combination of levels observed: once for an unreplicated design, or more than once for a replicated one.")
+
 problems_ui <- function(id, mode = NULL) {
   ns <- NS(id); md <- if (!is.null(mode)) PS_MODES[[mode]]
   show_role <- function(k) is.null(md) || k %in% md$roles
@@ -106,7 +116,8 @@ problems_ui <- function(id, mode = NULL) {
               div(class = "ps-filter", selectInput(ns("f_type"), "Problem type", c("All problem types" = ""), width = "100%")),
               div(class = "ps-filter", selectInput(ns("f_family"), "Test type", c("Parametric and non-parametric" = "", "Parametric" = "param", "Non-parametric" = "nonpar"), width = "100%")),
               div(class = "ps-filter", selectInput(ns("f_ph"), "Post-hoc", c("All post-hoc types" = ""), width = "100%")),
-              div(class = "ps-filter", selectInput(ns("f_group"), "Group by", c("Problem type" = "type", "Test type" = "family", "Post-hoc" = "posthoc", "No grouping" = "none"), width = "100%"))))),
+              uiOutput(ns("f_rep_ui"), class = "ps-filter"),
+              div(class = "ps-filter", selectInput(ns("f_group"), "Group by", c("Problem type" = "type", "Test type" = "family", "Post-hoc" = "posthoc", "Replication" = "rep", "No grouping" = "none"), width = "100%"))))),
       uiOutput(ns("cards")))),
     # ---------- One problem, step by step ----------
     tabPanelBody("detail",
@@ -216,7 +227,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       if (k == "custom") return(p(class = "small", style = "margin:12px 0 0", "Write or paste your own problem, enter or upload the data, and work through the same steps."))
       ch <- PS_CHAPTERS[[k]]
       div(style = "margin-top:12px", h3(class = "ct", ch$title), p(class = "small", style = "margin:4px 0 0",
-          paste(ch$blurb, "Filter by problem type, test type and post-hoc, and choose how the problems are grouped. Click a heading to collapse it.")))
+          paste(ch$blurb, "Filter by problem type, test type, post-hoc and (for factorial designs) replication, and choose how the problems are grouped. Click a heading to collapse it.")))
     })
     # The filter choices list only what the chapter holds.
     observeEvent(input$cat, {
@@ -226,6 +237,14 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       updateSelectInput(session, "f_type", choices = c("All problem types" = "", stats::setNames(ty, ty)), selected = "")
       updateSelectInput(session, "f_ph", choices = c("All post-hoc types" = "", stats::setNames(ph, ph)), selected = "")
       updateSelectInput(session, "f_family", selected = "")
+      updateSelectInput(session, "f_group", selected = if (identical(k, "ch6")) "rep" else "type")   # the 2^k problems are first sorted into replicated and no-replicate
+    })
+    # The Replication filter appears for the chapters that hold factorial problems.
+    output$f_rep_ui <- renderUI({
+      k <- input$cat %||% "ch2"; if (k == "custom") return(NULL)
+      rp <- intersect(PS_REP_ORDER, vapply(lapply(ps_by_chapter(k), ps_classify), `[[`, "", "rep"))
+      if (!length(rp)) return(NULL)
+      selectInput(ns("f_rep"), "Replication", c("All problems" = "", stats::setNames(rp, rp)), width = "100%")
     })
     card <- function(p, cl, cur_id) {
       tags$a(class = paste("kcard acard ps-card", if (identical(cur_id, p$id)) "on"), href = "#",
@@ -237,6 +256,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
                  span(class = "chip", icon("layers", 12), cl$type),
                  span(class = paste("chip", if (cl$family == "nonpar") "np"), icon("wand", 12), if (cl$family == "nonpar") "Non-parametric" else "Parametric"),
                  span(class = "chip", icon("flask", 12), cl$test),
+                 if (!identical(cl$rep, "Not applicable")) span(class = paste("chip", if (cl$rep == "No replicate") "np"), icon("cross", 12), cl$rep),
                  if (!cl$posthoc %in% c("Not applicable")) span(class = "chip", icon("columns", 12), if (cl$posthoc == "None") "No post-hoc" else paste("Post-hoc:", cl$posthoc))))
     }
     group_box <- function(title, n, desc, body) {
@@ -261,22 +281,23 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       ps <- ps_by_chapter(k)
       q <- tolower(trimws(input$q %||% ""))
       cls <- lapply(ps, ps_classify)
-      ft <- input$f_type %||% ""; ff <- input$f_family %||% ""; fp <- input$f_ph %||% ""; gb <- input$f_group %||% "type"
+      ft <- input$f_type %||% ""; ff <- input$f_family %||% ""; fp <- input$f_ph %||% ""; fr <- input$f_rep %||% ""; gb <- input$f_group %||% "type"
       hit <- vapply(seq_along(ps), function(i) {
         c <- cls[[i]]
-        (!nzchar(q) || grepl(q, tolower(paste(ps[[i]]$id, ps[[i]]$title, paste(ps[[i]]$statement, collapse = " "), c$test, c$type, c$posthoc)), fixed = TRUE)) &&
-          (!nzchar(ft) || c$type == ft) && (!nzchar(ff) || c$family == ff) && (!nzchar(fp) || c$posthoc == fp)
+        (!nzchar(q) || grepl(q, tolower(paste(ps[[i]]$id, ps[[i]]$title, paste(ps[[i]]$statement, collapse = " "), c$test, c$type, c$posthoc, c$rep)), fixed = TRUE)) &&
+          (!nzchar(ft) || c$type == ft) && (!nzchar(ff) || c$family == ff) && (!nzchar(fp) || c$posthoc == fp) && (!nzchar(fr) || c$rep == fr)
       }, TRUE)
       if (!any(hit)) return(kcard(div(class = "empty", ico_box("search", "io", 24), h2(class = "ct", "No problems match"), p(class = "sub", "Change a filter or the search, or choose All."))))
       grid_of <- function(idx) div(class = "grid g3", lapply(idx, function(i) card(ps[[i]], cls[[i]], cur_id)))
       if (gb == "none") return(div(class = "col ps-groups", grid_of(which(hit))))
       key <- vapply(cls, function(c) switch(gb, type = c$type, family = if (c$family == "nonpar") "Non-parametric" else "Parametric",
-                                           posthoc = c$posthoc), "")
-      ord <- switch(gb, type = PS_TYPE_ORDER, family = c("Parametric", "Non-parametric"), posthoc = PS_PH_ORDER)
+                                           posthoc = c$posthoc, rep = c$rep), "")
+      ord <- switch(gb, type = PS_TYPE_ORDER, family = c("Parametric", "Non-parametric"), posthoc = PS_PH_ORDER, rep = c(PS_REP_ORDER, "Not applicable"))
       groups <- intersect(ord, unique(key[hit]))
       div(class = "col ps-groups", lapply(groups, function(g) {
         idx <- which(hit & key == g)
-        group_box(switch(gb, posthoc = if (g == "None") "No post-hoc (H0 not rejected)" else if (g == "Not applicable") "No post-hoc (one or two samples)" else paste("Post-hoc:", g), g),
+        group_box(switch(gb, posthoc = if (g == "None") "No post-hoc (H0 not rejected)" else if (g == "Not applicable") "No post-hoc (one or two samples)" else paste("Post-hoc:", g),
+                            rep = if (g == "Not applicable") "Not a factorial design" else if (g == "No replicate") "No replicate (one observation per combination)" else g, g),
                   length(idx), if (!is.na(PS_TYPE_DESC[g])) unname(PS_TYPE_DESC[g]), grid_of(idx))
       }))
     })
@@ -1404,7 +1425,9 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     })
     # An analysis page accepts only its own layouts: the message says what the chosen columns form instead.
     mode_wrong <- function(kind, st) {
-      if (is.null(md) || is.na(kind) || kind %in% md$kinds) return(NULL)
+      if (is.null(md) || is.na(kind)) return(NULL)
+      if (kind %in% md$kinds && !(identical(mode, "twok") && !isTRUE(ps_fact_2level(st)))) return(NULL)
+      if (identical(mode, "twok") && identical(kind, "fact")) return(sprintf("This page analyses 2^k factorial designs, but at least one of the factors you chose has more than two levels. %s Use the Factorial page for factors with three or more levels.", md$need))
       extra <- if (identical(mode, "two") && identical(kind, "k")) sprintf(" Your Group column has %d levels: use the k samples or CRD page.", st$ntrt %||% 0)
                else if (identical(mode, "two") && identical(kind, "rcbd")) " For paired data every pair needs exactly one observation per group."
                else if (mode %in% c("k", "crd") && identical(kind, "two")) " Two groups are compared on the Two samples page."
@@ -1520,6 +1543,9 @@ ps_guess_roles_mode <- function(df, mode, paired = FALSE) {
     lsd = , glsd = { out$row <- take("^row|^lot|^batch"); out$column <- take("^col|^operator|^day"); out$treatment <- take("treat|letter|latin|method|fertili|formul|catalyst")
                      if (mode == "glsd") out$greek <- take("greek|^workplace|^catalyst")
                      for (k in c("row", "column", "treatment", if (mode == "glsd") "greek")) if (!nzchar(out[[k]])) out[[k]] <- nextcol() },
+    twok = { cand <- pool[vapply(pool, function(cn) { u <- unique(trimws(as.character(df[[cn]]))); length(u[!is.na(u) & nzchar(u)]) == 2 }, TRUE)]
+             cand <- cand[!grepl("rep|run|order|block", tolower(cand))]
+             fk <- c("treatment", "factorB", "factorC", "factorD", "factorE"); for (i in seq_len(min(5, length(cand)))) out[[fk[i]]] <- cand[i] },
     fact = { out$treatment <- nextcol(); out$factorB <- nextcol()
              rest <- pool[!grepl("rep|block", tolower(pool))]
              if (length(rest) && length(unique(df[[rest[1]]])) <= 5) out$factorC <- ""   # a third factor is left to the student

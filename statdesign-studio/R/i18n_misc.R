@@ -2,6 +2,23 @@
 
 ar_part_misc <- function() {
 ar_add(
+  "2^k Factorial" = "العاملي 2^k", "2² to 2⁵" = "من 2² إلى 2⁵", "Pooled error if unreplicated" = "خطأ مدمج عند غياب التكرار",
+  "Two-level designs with two to five factors, replicated or with one observation per combination." = "تصاميم بمستويين وبعاملين إلى خمسة عوامل، مكرَّرة أو بمشاهدة واحدة لكل توليفة.",
+  "2^k Factorial: two-level designs with two to five factors" = "العاملي 2^k: تصاميم بمستويين وبعاملين إلى خمسة عوامل",
+  "Two-level factorial designs (2² to 2⁵): every factor and every interaction is tested, replicated or with one observation per combination, then the Kruskal-Wallis test if an assumption fails." = "التصاميم العاملية بمستويين (من 2² إلى 2⁵): يُختبر كل عامل وكل تفاعل، بتكرار أو بمشاهدة واحدة لكل توليفة، ثم اختبار كروسكال-واليس إذا فشل أحد الافتراضات.",
+  "A 2^k design needs a Response and two to five factor columns, each with exactly two levels (low and high), with every combination of levels observed: once for an unreplicated design, or more than once for a replicated one." = "يحتاج تصميم 2^k إلى عمود استجابة وإلى عمودين حتى خمسة أعمدة للعوامل، لكل منها مستويان بالضبط (منخفض ومرتفع)، مع مشاهدة كل توليفة من المستويات: مرة واحدة في التصميم غير المكرَّر، أو أكثر من مرة في المكرَّر.",
+  "Factor A (two levels)" = "العامل A (مستويان)", "Factor B (two levels)" = "العامل B (مستويان)", "Factor C (two levels, optional)" = "العامل C (مستويان، اختياري)",
+  "Factor D (two levels, optional)" = "العامل D (مستويان، اختياري)", "Factor E (two levels, optional)" = "العامل E (مستويان، اختياري)",
+  "Replication" = "التكرار", "All problems" = "كل المسائل", "Replicated" = "مكرَّرة", "No replicate" = "بلا تكرار", "Not a factorial design" = "ليس تصميمًا عامليًا",
+  "No replicate (one observation per combination)" = "بلا تكرار (مشاهدة واحدة لكل توليفة)",
+  "Every treatment combination is observed more than once, so every effect is tested against the pure error of the replicates." = "تُشاهَد كل توليفة من المعالجات أكثر من مرة، فيُختبر كل أثر مقابل الخطأ الخالص للمكررات.",
+  "One observation per treatment combination: there is no pure error. With two factors the interaction is checked with Tukey's test for nonadditivity; with three or more factors the higher-order interactions are pooled into the error." = "مشاهدة واحدة لكل توليفة من المعالجات: لا يوجد خطأ خالص. ومع عاملين يُفحص التفاعل باختبار توكي لعدم الجمعية؛ ومع ثلاثة عوامل فأكثر تُدمج التفاعلات العليا في الخطأ.",
+  "Filter by problem type, test type, post-hoc and (for factorial designs) replication, and choose how the problems are grouped. Click a heading to collapse it." = "رشّح حسب نوع المسألة ونوع الاختبار والاختبار البعدي و(للتصاميم العاملية) التكرار، واختر طريقة تجميع المسائل. انقر على عنوان لطيّه.",
+  "This page analyses 2^k factorial designs, but at least one of the factors you chose has more than two levels." = "تحلل هذه الصفحة التصاميم العاملية 2^k، لكن لأحد العوامل التي اخترتها أكثر من مستويين.",
+  "Use the Factorial page for factors with three or more levels." = "استخدم صفحة العاملي للعوامل ذات ثلاثة مستويات فأكثر."
+)
+
+ar_add(
   "Each sum of squares comes from the ANOVA decomposition of the effect means (the main effects and the interactions listed below); SS_E = SS_T − (the other sums of squares)" = "ينتج كل مجموع مربعات من تحليل التباين لمتوسطات الآثار (الآثار الرئيسية والتفاعلات المدرجة أدناه)؛ و SS_E = SS_T − (مجاميع المربعات الأخرى)",
   "Chapter 6" = "الفصل 6", "Four-factor factorial (CRD)" = "عاملي بأربعة عوامل (CRD)", "Five-factor factorial (CRD)" = "عاملي بخمسة عوامل (CRD)",
   "Four-factor ANOVA" = "تحليل تباين بأربعة عوامل", "Five-factor ANOVA" = "تحليل تباين بخمسة عوامل",

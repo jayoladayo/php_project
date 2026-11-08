@@ -735,8 +735,10 @@ ps_type_of <- function(kind, st) {
 ps_classify <- function(p) {
   if (!is.null(.ps_class_cache[[p$id]])) return(.ps_class_cache[[p$id]])
   st <- ps_structure(p$data, p$roles); kind <- ps_kind(st, p)
-  out <- list(kind = kind, type = ps_type_of(kind, st), family = "param", test = "", posthoc = "Not applicable")
+  out <- list(kind = kind, type = ps_type_of(kind, st), family = "param", test = "", posthoc = "Not applicable", rep = "Not applicable")
   if (is.na(kind)) return(out)
+  # Factorial layouts: replicated, or one observation per combination (the interaction or the higher-order interactions then replace the pure error)
+  if (ps_is_fact(kind)) out$rep <- if (isTRUE(st$unrep) || isTRUE(st$pool)) "No replicate" else "Replicated"
   s <- ps_default_settings(p, kind)
   info <- tryCatch(ps_info(kind, st, p, s), error = function(e) NULL)
   if (!ps_multi(kind)) {

@@ -33,7 +33,7 @@ options(shiny.maxRequestSize = 50 * 1024^2)
 # categories and filters open instantly.
 invisible(lapply(PROBLEMS, ps_classify))
 
-PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "fact", "planner", "report", "learn", "team")
+PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "fact", "twok", "planner", "report", "learn", "team")
 
 JUMP_CHOICES <- c(
   "Home" = "home", "Test Advisor" = "advisor", "Data Studio: upload a file" = "data",
@@ -42,6 +42,7 @@ JUMP_CHOICES <- c(
   "Problem Sets: Chapter 2 to 6 exercises, custom problems" = "problems",
   "CRD: Completely Randomized Design" = "crd", "RCBD: Randomized Complete Block Design" = "rcbd",
   "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd", "Factorial designs: two- and three-factor, interactions" = "fact",
+  "2^k Factorial: two-level designs with two to five factors" = "twok",
   "Design Planner: randomised layouts" = "planner", "Report builder" = "report", "Learn: method guides" = "learn",
   "About the team (Group 4), aim and objectives" = "team")
 
@@ -85,6 +86,7 @@ ui <- page(
                 tabPanelBody("lsd", problems_ui("lsd", "lsd")),
                 tabPanelBody("glsd", problems_ui("glsd", "glsd")),
                 tabPanelBody("fact", problems_ui("fact", "fact")),
+                tabPanelBody("twok", problems_ui("twok", "twok")),
                 tabPanelBody("planner", planner_ui("planner")),
                 tabPanelBody("report", report_ui("report")),
                 tabPanelBody("learn", learn_ui("learn")),
@@ -128,7 +130,7 @@ server <- function(input, output, session) {
   data_studio_server("data", store, goto, open_project)
   # The analysis pages run the same five-step process as the Problem Sets, on the student's own data.
   crumb <- function(cr) session$sendCustomMessage("crumb", list(crumb = cr))
-  PAGE_MODES <- c("one", "two", "k", "crd", "rcbd", "lsd", "glsd", "fact")
+  PAGE_MODES <- c("one", "two", "k", "crd", "rcbd", "lsd", "glsd", "fact", "twok")
   pages <- stats::setNames(lapply(PAGE_MODES, function(m) problems_server(m, store, show_crumb = crumb, mode = m, lang = function() input$lang)), PAGE_MODES)
 
   desc <- desc_server("desc", store)

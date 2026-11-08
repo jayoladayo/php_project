@@ -7,10 +7,10 @@
   var T = window.StatTour = {};
   var S = { steps: [], i: 0, on: false, token: 0, menuOpen: false };
   // every analysis page runs the same five-step process as the Problem Sets
-  var PSP = ['problems', 'one', 'two', 'k', 'crd', 'rcbd', 'lsd', 'glsd', 'fact'];
+  var PSP = ['problems', 'one', 'two', 'k', 'crd', 'rcbd', 'lsd', 'glsd', 'fact', 'twok'];
   function isPS(pg) { return PSP.indexOf(pg) >= 0; }
   var PAGE_NAME = { home: 'Home', advisor: 'Test Advisor', data: 'Data Studio', desc: 'Descriptive statistics', one: 'One sample', two: 'Two samples', k: 'k samples',
-                    problems: 'Problem Sets', crd: 'CRD', rcbd: 'RCBD', lsd: 'Latin Square', glsd: 'Graeco-Latin Square', fact: 'Factorial', planner: 'Design Planner',
+                    problems: 'Problem Sets', crd: 'CRD', rcbd: 'RCBD', lsd: 'Latin Square', glsd: 'Graeco-Latin Square', fact: 'Factorial', twok: '2^k Factorial', planner: 'Design Planner',
                     report: 'Report', learn: 'Learn', team: 'About the team' };
 
   // ---------- helpers ----------
@@ -219,6 +219,7 @@
     glsd: 'Row\tColumn\tTreatment\tGreek\tY\n1\t1\tA\ta\t10.4\n1\t2\tB\tb\t13.1\n1\t3\tC\tc\t15.2\n1\t4\tD\td\t17.1\n2\t1\tB\td\t12.9\n2\t2\tA\tc\t11.6\n2\t3\tD\tb\t17.9\n2\t4\tC\ta\t15.8\n3\t1\tC\tb\t15.1\n3\t2\tD\ta\t18.3\n3\t3\tA\td\t12.4\n3\t4\tB\tc\t14.6\n4\t1\tD\tc\t18.4\n4\t2\tC\td\t16.9\n4\t3\tB\ta\t15.2\n4\t4\tA\tb\t12.7',
     fact: 'Temperature\tPressure\tY\nlo\tx\t10.4\nlo\tx\t10.9\nlo\ty\t12.6\nlo\ty\t12.9\nlo\tz\t14.2\nlo\tz\t14.8\nhi\tx\t13.5\nhi\tx\t13.9\nhi\ty\t15.7\nhi\ty\t16.2\nhi\tz\t17.4\nhi\tz\t17.8'
   };
+  DEMO_DATA.twok = 'Temperature	Pressure	Time	Y\nlow	low	low	17.3\nhigh	low	low	18.6\nlow	high	low	21.2\nhigh	high	low	22.9\nlow	low	high	11.5\nhigh	low	high	24.7\nlow	high	high	15.1\nhigh	high	high	28.8\nlow	low	low	17.4\nhigh	low	low	18.5\nlow	high	low	21.0\nhigh	high	low	23.3\nlow	low	high	10.8\nhigh	low	high	25.1\nlow	high	high	14.6\nhigh	high	high	29.2';
   DEMO_DATA.crd = DEMO_DATA.k; DEMO_DATA.rcbd = DEMO_DATA.rcbd.replace('14.4\tT2\tB4', '14.4\nT2\tB4');
   function psModeDemo(pg) {
     var name = PAGE_NAME[pg], single = pg === 'one' || pg === 'two', last = single ? 6 : 8;

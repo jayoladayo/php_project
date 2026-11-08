@@ -17,6 +17,7 @@ NAV <- list(
   list(page = "lsd", label = "Latin Square", icon = "grid"),
   list(page = "glsd", label = "Graeco-Latin Square", icon = "grid4"),
   list(page = "fact", label = "Factorial", icon = "cross"),
+  list(page = "twok", label = "2^k Factorial", icon = "cross"),
   list(group = "Tools"),
   list(page = "planner", label = "Design Planner", icon = "map"),
   list(page = "report", label = "Report", icon = "file", badge = "report-count"),
@@ -29,7 +30,7 @@ PAGE_CRUMB <- list(
   data = c("StatDesign Studio", "Data Studio"), desc = c("Explore", "Descriptive statistics"),
   one = c("Compare", "One sample"), two = c("Compare", "Two samples"), k = c("Compare", "k samples"),
   problems = c("Design of experiments", "Problem Sets"), crd = c("Design of experiments", "CRD"), rcbd = c("Design of experiments", "RCBD"),
-  lsd = c("Design of experiments", "Latin Square"), glsd = c("Design of experiments", "Graeco-Latin Square"), fact = c("Design of experiments", "Factorial"),
+  lsd = c("Design of experiments", "Latin Square"), glsd = c("Design of experiments", "Graeco-Latin Square"), fact = c("Design of experiments", "Factorial"), twok = c("Design of experiments", "2^k Factorial"),
   planner = c("Tools", "Design Planner"), report = c("Tools", "Report"), learn = c("Tools", "Learn"),
   team = c("StatDesign Studio", "About the team")
 )
