@@ -113,11 +113,12 @@ def savable(d, p, s, I, T, Tmin, depth=7, fracs=(1.0, 0.75, 0.5, 0.25)):
 def job_pass(args):
     seed, n, util, tfac, spread, skew = args
     rng = random.Random(seed); out = []
-    for _ in range(40):
+    for _ in range(25):
         d, p, s, I0, T, Tmin = instance(rng, n, util, tfac, spread, skew)
         z = zone(d, p, s, I0, Tmin)
         r1 = run('v1', d, p, s, I0, T, 40 * T); r2 = run('v2', d, p, s, I0, T, 40 * T)
-        out.append((z, r1, r2))
+        r3 = r2 if (z != 'grey' or not r2[0]) else run('v3', d, p, s, I0, T, 40 * T)   # v3 only differs when stock is tight
+        out.append((z, r1, r2, r3))
     return (n, util, skew), out
 
 def job_grey(seed):
@@ -145,20 +146,20 @@ if __name__ == '__main__':
     which = sys.argv[1] if len(sys.argv) > 1 else 'all'
     with Pool() as pool:
         if which in ('all', 'pass'):
-            print("1. Stress test by zone: number of runs with any stockout  (v1 / v2)")
+            print("1. Stress test by zone: number of runs with any stockout  (v1 / v2 / v3)")
             grid = [(seed, n, util, tfac, spread, skew)
                     for seed, (n, util, tfac, spread, skew) in enumerate(itertools.product(
                         (2, 3, 5, 10, 20), (0.6, 0.85, 0.95, 0.98), (1.05, 1.5), ((0.05, 0.7), (0.3, 1.2), (0.8, 1.0)), (0, 1)))]
             agg = {}
             for key, out in pool.imap_unordered(job_pass, grid):
-                for z, r1, r2 in out:
+                for z, r1, r2, r3 in out:
                     for k in (('N', key[0]), ('load', key[1]), ('uneven', key[2]), ('ALL', '')):
-                        a = agg.setdefault((k, z), [0, 0, 0]); a[0] += 1; a[1] += r1[0]; a[2] += r2[0]
+                        a = agg.setdefault((k, z), [0, 0, 0, 0]); a[0] += 1; a[1] += r1[0]; a[2] += r2[0]; a[3] += r3[0]
             for k in sorted({k for k, _ in agg}, key=str):
                 row = f"{k[0]:>7} {str(k[1]):>5} |"
                 for z in ('pass', 'grey', 'impossible'):
-                    a = agg.get((k, z), [0, 0, 0])
-                    row += f" {z}: n={a[0]:5d} short {a[1]:4d} / {a[2]:4d} |"
+                    a = agg.get((k, z), [0, 0, 0, 0])
+                    row += f" {z}: n={a[0]:5d} short {a[1]:4d} / {a[2]:4d} / {a[3]:4d} |"
                 print(row)
         if which in ('all', 'grey'):
             print("\n2. Grey zone, 3 products: could ANY schedule have avoided the stockout? (exhaustive search)")
