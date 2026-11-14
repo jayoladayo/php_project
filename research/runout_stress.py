@@ -117,7 +117,7 @@ def job_pass(args):
         d, p, s, I0, T, Tmin = instance(rng, n, util, tfac, spread, skew)
         z = zone(d, p, s, I0, Tmin)
         r1 = run('v1', d, p, s, I0, T, 40 * T); r2 = run('v2', d, p, s, I0, T, 40 * T)
-        r3 = r2 if (z != 'grey' or not r2[0]) else run('v3', d, p, s, I0, T, 40 * T)   # v3 only differs when stock is tight
+        r3 = r2 if (z != 'grey' or not r2[0] or n > 3) else run('v3', d, p, s, I0, T, 40 * T)   # v3 only differs when stock is tight
         out.append((z, r1, r2, r3))
     return (n, util, skew), out
 
@@ -130,17 +130,17 @@ def job_grey(seed):
     return out
 
 def job_noise(args):
-    seed, noise, safety_mult = args
+    seed, noise, safety_mult, tfac = args
     rng = random.Random(seed); bad = tot = 0; inv = 0.0
     for _ in range(25):
         n = rng.choice([3, 5, 10]); util = rng.choice([0.6, 0.85])
-        d, p, s, I0, T, Tmin = instance(rng, n, util, 1.5, (0.5, 1.2), 0)
+        d, p, s, I0, T, Tmin = instance(rng, n, util, tfac, (0.5, 1.2), 0)
         safety = safety_mult * noise * T
         I0s = [I0[i] + d[i] * safety for i in range(n)]                # the safety stock is held on top
         if zone(d, p, s, I0, Tmin) != 'pass': continue
         r = run('v2', d, p, s, I0s, T, 40 * T, safety=safety, noise=noise, seed=seed)
         tot += 1; bad += r[0]; inv += r[3] / (sum(T * (1 - d[i] / p[i]) / 2 for i in range(n)) / n)
-    return (noise, safety_mult), bad, tot, inv
+    return (noise, safety_mult, tfac), bad, tot, inv
 
 if __name__ == '__main__':
     which = sys.argv[1] if len(sys.argv) > 1 else 'all'
@@ -170,7 +170,7 @@ if __name__ == '__main__':
         if which in ('all', 'noise'):
             print("\n3. Uncertain demand (rate varies +/- x%), v2 with a safety time = mult * x * cycle")
             agg = {}
-            for key, bad, tot, inv in pool.imap_unordered(job_noise, [(sd, nz, sm) for sd in range(12) for nz in (0.1, 0.2, 0.3) for sm in (0, 0.5, 1.0, 1.5)]):
+            for key, bad, tot, inv in pool.imap_unordered(job_noise, [(sd, nz, sm, tf) for sd in range(12) for nz in (0.1, 0.2, 0.3) for sm in (0, 0.5, 1.0) for tf in (1.5, 3.0)]):
                 a = agg.setdefault(key, [0, 0, 0.0]); a[0] += tot; a[1] += bad; a[2] += inv
             for key in sorted(agg):
-                a = agg[key]; print(f"   demand +/-{int(key[0]*100):2d}%  safety mult {key[1]:3.1f}: runs short {100*a[1]/a[0]:5.1f}%   stock vs ideal {a[2]/a[0]:4.2f}   (n={a[0]})")
+                a = agg[key]; print(f"   demand +/-{round(key[0]*100):2d}%  safety mult {key[1]:3.1f}  cycle {key[2]:3.1f}x minimum: runs short {100*a[1]/a[0]:5.1f}%   stock vs ideal {a[2]/a[0]:4.2f}   (n={a[0]})")
