@@ -7,10 +7,10 @@
   var T = window.StatTour = {};
   var S = { steps: [], i: 0, on: false, token: 0, menuOpen: false };
   // every analysis page runs the same five-step process as the Problem Sets
-  var PSP = ['problems', 'one', 'two', 'k', 'crd', 'rcbd', 'lsd', 'glsd', 'fact', 'twok'];
+  var PSP = ['problems', 'one', 'two', 'k', 'crd', 'rcbd', 'lsd', 'glsd', 'fact', 'twok', 'split'];
   function isPS(pg) { return PSP.indexOf(pg) >= 0; }
   var PAGE_NAME = { home: 'Home', advisor: 'Test Advisor', data: 'Data Studio', desc: 'Descriptive statistics', one: 'One sample', two: 'Two samples', k: 'k samples',
-                    problems: 'Problem Sets', crd: 'CRD', rcbd: 'RCBD', lsd: 'Latin Square', glsd: 'Graeco-Latin Square', fact: 'Factorial', twok: '2^k Factorial', planner: 'Design Planner',
+                    problems: 'Problem Sets', crd: 'CRD', rcbd: 'RCBD', lsd: 'Latin Square', glsd: 'Graeco-Latin Square', fact: 'Factorial', twok: '2^k Factorial', split: 'Split-Plot', planner: 'Design Planner',
                     report: 'Report', learn: 'Learn', team: 'About the team' };
 
   // ---------- helpers ----------
@@ -130,7 +130,7 @@
   // ---------- Problem Sets ----------
   function psListTour() { return [
     { t: '.page-head', place: 'bottom', title: 'Problem Sets', text: 'Exercises from the course problem sheets with their full data, each solved with the step-by-step hypothesis-testing process.' },
-    { t: '#problems-cat', place: 'bottom', title: 'Choose a chapter', text: '<b>Chapter 2</b> one- and two-sample problems, <b>Chapter 3</b> one-way ANOVA, <b>Chapter 4</b> blocked designs, <b>Chapter 5</b> factorial designs, <b>Chapter 6</b> 2<sup>k</sup> factorial designs, or <b>Custom Problem</b> for your own.' },
+    { t: '#problems-cat', place: 'bottom', title: 'Choose a chapter', text: '<b>Chapter 2</b> one- and two-sample problems, <b>Chapter 3</b> one-way ANOVA, <b>Chapter 4</b> blocked designs, <b>Chapter 5</b> factorial designs, <b>Chapter 6</b> 2<sup>k</sup> factorial designs, <b>Chapter 7</b> split-plot designs, or <b>Custom Problem</b> for your own.' },
     { t: '.ps-search', place: 'bottom', title: 'Search', text: 'Find a problem by its number, topic or test.' },
     { t: '.ps-filters', place: 'bottom', title: 'Filters and grouping', text: 'Narrow the list by <b>problem type</b>, <b>test type</b> (parametric or non-parametric) and <b>post-hoc</b> method, and choose how the problems are grouped. Click a group heading to collapse it.' },
     { t: '.ps-card', place: 'right', title: 'A problem card', text: 'The card shows the problem number, its title, the design, and tags for the test and post-hoc the steps will use. <b>Click a card to open the problem.</b>' },
@@ -220,6 +220,7 @@
     fact: 'Temperature\tPressure\tY\nlo\tx\t10.4\nlo\tx\t10.9\nlo\ty\t12.6\nlo\ty\t12.9\nlo\tz\t14.2\nlo\tz\t14.8\nhi\tx\t13.5\nhi\tx\t13.9\nhi\ty\t15.7\nhi\ty\t16.2\nhi\tz\t17.4\nhi\tz\t17.8'
   };
   DEMO_DATA.twok = 'Temperature	Pressure	Time	Y\nlow	low	low	17.3\nhigh	low	low	18.6\nlow	high	low	21.2\nhigh	high	low	22.9\nlow	low	high	11.5\nhigh	low	high	24.7\nlow	high	high	15.1\nhigh	high	high	28.8\nlow	low	low	17.4\nhigh	low	low	18.5\nlow	high	low	21.0\nhigh	high	low	23.3\nlow	low	high	10.8\nhigh	low	high	25.1\nlow	high	high	14.6\nhigh	high	high	29.2';
+  DEMO_DATA.split = 'Day\tMix\tMethod\tY\n1\t1\tBrushing\t64.5\n1\t1\tSpraying\t68.3\n1\t1\tRolling\t70.3\n1\t2\tBrushing\t66.3\n1\t2\tSpraying\t69.5\n1\t2\tRolling\t73.1\n2\t1\tBrushing\t65.2\n2\t1\tSpraying\t69.2\n2\t1\tRolling\t71.2\n2\t2\tBrushing\t65.0\n2\t2\tSpraying\t70.3\n2\t2\tRolling\t72.8\n3\t1\tBrushing\t66.2\n3\t1\tSpraying\t69.0\n3\t1\tRolling\t70.8\n3\t2\tBrushing\t66.5\n3\t2\tSpraying\t69.0\n3\t2\tRolling\t74.2';
   DEMO_DATA.crd = DEMO_DATA.k; DEMO_DATA.rcbd = DEMO_DATA.rcbd.replace('14.4\tT2\tB4', '14.4\nT2\tB4');
   function psModeDemo(pg) {
     var name = PAGE_NAME[pg], single = pg === 'one' || pg === 'two', last = single ? 6 : 8;

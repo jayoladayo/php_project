@@ -36,7 +36,7 @@ ar_add(
   "About this project" = "حول هذا المشروع", "The aim of the app and the team behind it" = "هدف التطبيق والفريق الذي يقف وراءه",
   "Completely Randomised (CRD)" = "العشوائي الكامل (CRD)", "Randomised Complete Block (RCBD)" = "القطاعات العشوائية الكاملة (RCBD)"
 )
-ar_tpl("Chapters 2 to 6 with their complete data, solved step by step (%d problems)." = "الفصول من 2 إلى 6 ببياناتها الكاملة، محلولة خطوة بخطوة ($1 مسألة).")
+ar_tpl("Chapters 2 to 7 with their complete data, solved step by step (%d problems)." = "الفصول من 2 إلى 7 ببياناتها الكاملة، محلولة خطوة بخطوة ($1 مسألة).")
 
 ar_add(
   "Start" = "ابدأ", "Practice" = "تدرّب", "5-step" = "5 خطوات", "Guided tour" = "جولة إرشادية",
@@ -185,4 +185,33 @@ ar_tpl(
 ar_rx("([^:]+): ([^:=,]+) = (-?[0-9.]+(?:e-?[0-9]+)?), (p [=<>≥] [-0-9.e ]+)\\.", "$1: $2 = $3، $4.")
 # The rejection-region sentence of the decision step.
 ar_rx("Reject H0 if (.+?)\\. (The test statistic is|The .+? gives the standard normal equivalent) (\\S+) = (-?[0-9.e]+), which (falls in|is not in) the rejection region\\.", "نرفض H0 إذا $1. $2 $3 = $4، وهي $5 منطقة الرفض.")
+
+# Chapter 7 and the Split-Plot page
+ar_add(
+  "Chapter 7" = "الفصل 7", "Split-Plot" = "القطع المنشقة", "Split-plot" = "القطع المنشقة", "Split-plot ANOVA" = "تحليل تباين القطع المنشقة", "Split-plot ANOVA (F test)" = "تحليل تباين القطع المنشقة (اختبار F)",
+  "Rank-transform ANOVA (split-plot)" = "تحليل تباين الرتب (القطع المنشقة)", "Rank-transform" = "تحويل الرتب",
+  "Whole-plot and subplot error" = "خطأ القطعة الكاملة وخطأ القطعة الفرعية", "Rank-transform fallback" = "البديل: تحويل الرتب",
+  "Hard-to-change whole-plot factors and easy-to-change subplot factors, tested against two errors." = "عوامل القطعة الكاملة صعبة التغيير وعوامل القطعة الفرعية سهلة التغيير، وتُختبر بخطأين.",
+  "Split-plot designs: whole-plot factors (hard to change) and subplot factors (changed inside a whole plot), each effect tested against the error of its own stratum, then the rank-transform ANOVA if an assumption fails." = "تصاميم القطع المنشقة: عوامل القطعة الكاملة (صعبة التغيير) وعوامل القطعة الفرعية (تتغير داخل القطعة الكاملة)، ويُختبر كل أثر مقابل خطأ طبقته، ثم تحليل تباين الرتب إذا فشل أحد الافتراضات.",
+  "Chapter 7: Split-Plot Designs" = "الفصل 7: تصاميم القطع المنشقة",
+  "Whole-plot factors (hard to change: a level is set once for a whole plot)" = "عوامل القطعة الكاملة (صعبة التغيير: يُضبط المستوى مرة واحدة لقطعة كاملة)",
+  "The factors you leave unticked are the subplot factors, changed within each whole plot. Tick at least one whole-plot factor and leave at least one subplot factor." = "العوامل غير المعلَّمة هي عوامل القطعة الفرعية وتتغير داخل كل قطعة كاملة. علّم عاملاً واحداً على الأقل للقطعة الكاملة واترك عاملاً واحداً على الأقل للقطعة الفرعية.",
+  "The whole-plot factor is random (a sample of levels from a larger population)" = "عامل القطعة الكاملة عشوائي (عيّنة من مستويات مجتمع أكبر)",
+  "Choose at least two factor columns, then say which are the whole-plot factors." = "اختر عمودين للعوامل على الأقل، ثم حدّد أيها عوامل القطعة الكاملة.",
+  "Whole-plot error" = "خطأ القطعة الكاملة", "Subplot error" = "خطأ القطعة الفرعية", "Replicates (blocks)" = "المكررات (الكتل)", "Whole plot" = "قطعة كاملة", "Subplot" = "قطعة فرعية", "Stratum" = "الطبقة",
+  "Whole-plot factors" = "عوامل القطعة الكاملة", "Subplot factors" = "عوامل القطعة الفرعية", "Errors" = "الأخطاء",
+  "Which effects go into the error?" = "أي الآثار تدخل في الخطأ؟",
+  "Pool the interactions of three or more factors in each stratum" = "ادمج التفاعلات من ثلاثة عوامل فأكثر في كل طبقة",
+  "Error df (whole plot · subplot)" = "درجات حرية الخطأ (قطعة كاملة · قطعة فرعية)",
+  "Whole-plot order (as run)" = "ترتيب القطع الكاملة (كما نُفذت)",
+  "Split-plot experiments (Montgomery, Chapter 14): hard-to-change whole-plot factors and easy-to-change subplot factors, with a whole-plot error and a subplot error. The problems with data are included." = "تجارب القطع المنشقة (مونتغمري، الفصل 14): عوامل القطعة الكاملة صعبة التغيير وعوامل القطعة الفرعية سهلة التغيير، مع خطأ للقطعة الكاملة وخطأ للقطعة الفرعية. أُدرجت المسائل المرفقة ببياناتها.",
+  "Whole-plot factors (hard to change) and subplot factors (changed inside each whole plot): two errors, the whole-plot error and the subplot error. Rank-transform ANOVA if an assumption fails." = "عوامل القطعة الكاملة (صعبة التغيير) وعوامل القطعة الفرعية (تتغير داخل كل قطعة كاملة): خطآن هما خطأ القطعة الكاملة وخطأ القطعة الفرعية. تحليل تباين الرتب إذا فشل أحد الافتراضات.",
+  "Each whole-plot effect is tested against the whole-plot error and each subplot effect against the subplot error." = "يُختبر كل أثر للقطعة الكاملة مقابل خطأ القطعة الكاملة، وكل أثر للقطعة الفرعية مقابل خطأ القطعة الفرعية.",
+  "A split-plot has two error terms. The whole-plot factors are tested against the whole-plot error (blocks × whole-plot treatments) and the subplot factors and their interactions with the whole-plot factors against the subplot error (the within-whole-plot residual)." = "للقطع المنشقة حدّا خطأ. تُختبر عوامل القطعة الكاملة مقابل خطأ القطعة الكاملة (الكتل × معالجات القطعة الكاملة)، وعوامل القطعة الفرعية وتفاعلاتها مع عوامل القطعة الكاملة مقابل خطأ القطعة الفرعية (البواقي داخل القطعة الكاملة).",
+  "Breusch-Godfrey (lag 1, whole-plot residuals)" = "بروش-غودفري (الفجوة 1، بواقي القطع الكاملة)",
+  "Factor C (optional)" = "العامل C (اختياري)", "Factor D (optional)" = "العامل D (اختياري)", "Factor E (optional)" = "العامل E (اختياري)",
+  "Replicate or block (leave (none) for a 2^k with one observation per combination)" = "المكرر أو الكتلة (اتركه (بلا) لتصميم 2^k بمشاهدة واحدة لكل توليفة)",
+  "A split-plot needs a Response, two or more factor columns (tick below which of them are the whole-plot factors; the others are subplot factors) and, for a replicated design, a Block (replicate) column with every combination once per block. An unreplicated 2^k split-plot has no Block and exactly two levels per factor." = "تحتاج القطع المنشقة إلى عمود استجابة وعمودين للعوامل أو أكثر (علّم أدناه أيها عوامل القطعة الكاملة؛ والبقية عوامل القطعة الفرعية)، وللتصميم المكرر عمود كتلة (مكرر) تظهر فيه كل توليفة مرة واحدة في كل كتلة. أما تصميم 2^k المنشق غير المكرر فلا كتلة فيه وعواملُه بمستويين بالضبط.",
+  "This page analyses split-plot designs, but the columns you chose form" = "تحلل هذه الصفحة تصاميم القطع المنشقة، لكن الأعمدة التي اخترتها تشكل"
+)
 }

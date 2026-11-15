@@ -8,7 +8,7 @@
 PS_BLOCK_KINDS <- c("rcbd", "latin", "glsd")
 # Chapter 5: factorial designs, in a completely randomized layout, in blocks (RCBD), or in a
 # Latin or Graeco-Latin square (R/problem_factorial.R).
-PS_FACT_KINDS <- c("fact", "factb", "factl", "factg")
+PS_FACT_KINDS <- c("fact", "factb", "factl", "factg", "split")   # "split": split-plot designs (R/problem_split.R)
 PS_MULTI_KINDS <- c("k", PS_BLOCK_KINDS, PS_FACT_KINDS)
 ps_multi <- function(kind) length(kind) == 1 && !is.na(kind) && kind %in% PS_MULTI_KINDS
 ps_is_fact <- function(kind) length(kind) == 1 && !is.na(kind) && kind %in% PS_FACT_KINDS
@@ -16,13 +16,14 @@ ps_is_fact <- function(kind) length(kind) == 1 && !is.na(kind) && kind %in% PS_F
 ps_param_name <- function(kind, test = "anova") switch(kind,
   k = if (identical(test, "welch")) "Welch ANOVA" else "CRD ANOVA (F test)",
   rcbd = "RCBD ANOVA (F test)", latin = "LSD ANOVA (F test)", glsd = "GLSD ANOVA (F test)",
-  fact = "CRD ANOVA (F test)", factb = "RCBD ANOVA (F test)", factl = "LSD ANOVA (F test)", factg = "GLSD ANOVA (F test)")
+  fact = "CRD ANOVA (F test)", factb = "RCBD ANOVA (F test)", factl = "LSD ANOVA (F test)", factg = "GLSD ANOVA (F test)",
+  split = "Split-plot ANOVA (F test)")
 ps_model_name <- function(kind) switch(kind, k = "one-way (CRD)", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square",
-                                       fact = "factorial CRD", factb = "factorial RCBD", factl = "factorial Latin square", factg = "factorial Graeco-Latin square")
-ps_np_test <- function(kind) switch(kind, k = "kw", rcbd = "friedman", fact = "kwf", factb = "friedmanf", factl = , factg = "quadef", "quade")
+                                       fact = "factorial CRD", factb = "factorial RCBD", factl = "factorial Latin square", factg = "factorial Graeco-Latin square", split = "split-plot")
+ps_np_test <- function(kind) switch(kind, k = "kw", rcbd = "friedman", fact = "kwf", factb = "friedmanf", factl = , factg = "quadef", split = "splitrank", "quade")
 ps_np_name <- function(kind) switch(kind, k = "Kruskal-Wallis test", rcbd = "Friedman test", fact = "Kruskal-Wallis test (factorial)",
-                                    factb = "Friedman test (factorial RCBD)", "Quade's test")
-ps_np_short <- function(kind) switch(kind, k = "Kruskal-Wallis", rcbd = "Friedman", fact = "Kruskal-Wallis", factb = "Friedman", "Quade")
+                                    factb = "Friedman test (factorial RCBD)", split = "Rank-transform ANOVA (split-plot)", "Quade's test")
+ps_np_short <- function(kind) switch(kind, k = "Kruskal-Wallis", rcbd = "Friedman", fact = "Kruskal-Wallis", factb = "Friedman", split = "Rank-transform", "Quade")
 
 ps_block_terms <- function(kind) switch(kind, rcbd = c("treatment", "block"),
   latin = c("treatment", "row", "column"), glsd = c("treatment", "row", "column", "greek"))
@@ -31,6 +32,7 @@ ps_block_formula <- function(kind) stats::as.formula(paste("y ~", paste(ps_block
 
 # The fitted model whose residuals are checked: the observed data only (no estimated values).
 ps_model_fit <- function(kind, st, d = st$d) {
+  if (identical(kind, "split") && "block" %in% st$facs) return(stats::lm(ps_split_formula(st), data = d))   # the subplot residuals (the whole plots are a factor)
   if (ps_is_fact(kind)) return(stats::lm(ps_fact_formula(kind, st), data = d))
   if (kind %in% PS_BLOCK_KINDS) stats::lm(ps_block_formula(kind), data = d) else stats::lm(y ~ treatment, data = d)
 }

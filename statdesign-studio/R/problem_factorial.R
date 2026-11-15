@@ -12,7 +12,7 @@
 
 PS_FACT_ROLES <- PS_FACT_KEYS
 
-ps_fact_nuis <- function(kind) switch(kind, fact = character(0), factb = "block", factl = c("row", "column"), factg = c("row", "column", "greek"))
+ps_fact_nuis <- function(kind) switch(kind, fact = , split = character(0), factb = "block", factl = c("row", "column"), factg = c("row", "column", "greek"))
 
 # Right-hand side of the factorial model. One observation per combination: with two factors only the
 # main effects (the interaction is Tukey's one-df test); with three or more the main effects and the
@@ -31,6 +31,7 @@ ps_fact_formula <- function(kind, st) stats::as.formula(paste("y ~", paste(c(ps_
 
 # Which factorial layout the data form, or NA when it cannot be analysed.
 ps_fact_kind <- function(st) {
+  if (isTRUE(st$split)) return(ps_split_kind(st))
   d <- st$d; f <- st$ffacs; has <- function(k) k %in% st$facs
   if (any(vapply(f, function(r) nlevels(d[[r]]) < 2, TRUE))) return(NA_character_)
   if (any(table(d[f]) == 0)) return(NA_character_)
@@ -49,6 +50,7 @@ ps_fact_effects_all <- function(st, meta) {
   out <- lapply(ix, function(i) list(code = paste(codes[i], collapse = ""), roles = f[i],
                                      term = if (isTRUE(st$cpool)) paste0(".", codes[i], collapse = ":") else paste(f[i], collapse = ":"),
                                      label = if (is.null(meta)) paste(codes[i], collapse = "") else paste(vapply(f[i], function(r) ucfirst(ps_lab(meta, r)), ""), collapse = " × "), main = length(i) == 1))
+  if (isTRUE(st$split)) out <- lapply(out, function(e) { e$stratum <- ps_split_stratum_of(st, e$roles); e })
   stats::setNames(out, vapply(out, `[[`, "", "code"))
 }
 # The effects that are tested. A 2^k design with one observation per combination tests the effects that are not
@@ -65,9 +67,10 @@ ps_fact_effects <- function(st, meta) {
 # the codes of the effects of a 2^k design, in textbook order
 ps_fact_codes <- function(k) { codes <- LETTERS[seq_len(k)]; vapply(unlist(lapply(seq_len(k), function(j) utils::combn(codes, j, simplify = FALSE)), recursive = FALSE), paste, "", collapse = "") }
 # the fixed rule: the interactions of three or more factors
-ps_fact_pool_rule <- function(st) { cd <- ps_fact_codes(length(st$ffacs)); cd[nchar(cd) >= 3] }
+ps_fact_pool_rule <- function(st) { if (isTRUE(st$split)) return(ps_split_pool_rule(st)); cd <- ps_fact_codes(length(st$ffacs)); cd[nchar(cd) >= 3] }
 # the suggestion read from the plot: the effects that sit with the small ones (Lenth's margin of error)
 ps_fact_pool_suggest <- function(st) {
+  if (isTRUE(st$split)) return(ps_split_pool_suggest(st))
   ce <- ps_fact_contrasts(st, NULL); len <- ps_lenth(ce$effect)
   p <- ce$code[abs(ce$effect) <= len$me]
   if (length(p) < 1 || length(p) >= nrow(ce)) p <- ps_fact_pool_rule(st)
@@ -75,6 +78,7 @@ ps_fact_pool_suggest <- function(st) {
 }
 # the student's choice (settings s$pool_sel) replaces the suggestion; at least one effect must stay in the error and one be tested
 ps_fact_set_pool <- function(st, s) {
+  if (isTRUE(st$split) && isTRUE(st$cpool)) return(ps_split_set_pool(st, s))
   if (isTRUE(st$cpool)) {
     sel <- intersect(as.character(unlist(s[["pool_sel"]])), ps_fact_codes(length(st$ffacs)))
     if (length(sel) >= 1 && length(sel) < 2^length(st$ffacs) - 1) st$pool_codes <- sel
@@ -128,7 +132,8 @@ ps_fact_model_text <- function(kind, st) {
           else if (n == 3) "yᵢⱼₖₗ = μ + αᵢ + βⱼ + γₖ + (αβ)ᵢⱼ + (αγ)ᵢₖ + (βγ)ⱼₖ + (αβγ)ᵢⱼₖ + εᵢⱼₖₗ"
           else sprintf("y = μ + %s + all the interactions (two-factor up to the %d-factor interaction) + ε", mainsum, n)
   switch(kind, fact = core, factb = paste(core, "plus a block effect"), factl = paste(core, "plus row and column effects"),
-         factg = paste(core, "plus row, column and Greek-letter effects"))
+         factg = paste(core, "plus row, column and Greek-letter effects"),
+         split = if (isTRUE(st$cpool)) core else "yᵢⱼₖ = μ + τᵢ (block) + αⱼ (whole-plot factor) + (τα)ᵢⱼ (whole-plot error) + βₖ (subplot factor) + (αβ)ⱼₖ + εᵢⱼₖ (subplot error)")
 }
 
 ps_info_fact <- function(kind, st, meta, s) {
@@ -140,9 +145,12 @@ ps_info_fact <- function(kind, st, meta, s) {
                    if (all(lv == 2)) sprintf(" (a 2^%d design: every factor has a low and a high level)", nf) else ""),
     factb = sprintf("Factorial design in %d blocks (RCBD): every combination of the factor levels appears once in each block.", nlevels(d$block)),
     factl = sprintf("Factorial design in a Latin square: the %d factors are crossed and the treatment combinations are placed by row and column.", nf),
-    factg = sprintf("Factorial design in a Graeco-Latin square: the %d factors are crossed and the combinations are placed by row, column and Greek letter.", nf))
+    factg = sprintf("Factorial design in a Graeco-Latin square: the %d factors are crossed and the combinations are placed by row, column and Greek letter.", nf),
+    split = sprintf("Split-plot design: %d whole-plot %s (hard to change: a level is set once for a whole plot) and %d subplot %s (changed within each whole plot). There are two errors: the whole-plot error and the subplot error.",
+                    length(st$wp), if (length(st$wp) == 1) "factor" else "factors", length(st$sp), if (length(st$sp) == 1) "factor" else "factors"))
   fl <- vapply(seq_along(f), function(i) sprintf("%s · %s: %d levels (%s)", LETTERS[i], flab(f[i]), lv[i], ps_list(levels(d[[f[i]]]), 6)), "")
-  reps <- if (isTRUE(st$pool)) "1 observation per combination (unreplicated): there is no pure error, so some effects must be put into the error. Choose them below, from the plots."
+  reps <- if (identical(kind, "split") && "block" %in% st$facs) sprintf("%d replicates (blocks): in each one every whole-plot treatment is run once, and each whole plot is split into %d subplots", nlevels(d$block), prod(lv[match(st$sp, f)]))
+          else if (isTRUE(st$pool)) "1 observation per combination (unreplicated): there is no pure error, so some effects must be put into the error. Choose them below, from the plots."
           else if (isTRUE(st$unrep)) "1 observation per combination: there is no replicate, so the interaction cannot be separated from error."
           else if (kind == "factb") sprintf("%d (one per block)", nlevels(d$block))
           else if (length(r) == 1) sprintf("%d per combination (balanced)", r) else sprintf("%d to %d per combination (unbalanced; sequential sums of squares)", min(r), max(r))
@@ -151,15 +159,22 @@ ps_info_fact <- function(kind, st, meta, s) {
                c("Factors", paste(fl, collapse = "; ")),
                c("Treatment combinations", sprintf("%s = %d", paste(lv, collapse = " × "), ncell)), c("Replicates", reps))
   if (length(nuis)) rows[[length(rows) + 1]] <- c("Blocking factors", paste(vapply(nuis, function(k) sprintf("%s: %d levels", flab(k), nlevels(d[[k]])), ""), collapse = "; "))
+  if (identical(kind, "split")) {
+    rows[[length(rows) + 1]] <- c("Whole-plot factors", paste(vapply(st$wp, function(r) sprintf("%s (%s)", flab(r), LETTERS[match(r, f)]), ""), collapse = ", "))
+    rows[[length(rows) + 1]] <- c("Subplot factors", paste(vapply(st$sp, function(r) sprintf("%s (%s)", flab(r), LETTERS[match(r, f)]), ""), collapse = ", "))
+    rows[[length(rows) + 1]] <- c("Errors", if ("block" %in% st$facs) "Whole-plot error = blocks × whole-plot treatments (tests the whole-plot factors). Subplot error = the within-whole-plot residual (tests the subplot factors and their interactions with the whole-plot factors)."
+                                          else "No pure error: in each stratum, the effects put into the error (chosen below) form that stratum's error.")
+  }
   rows[[length(rows) + 1]] <- c("Observations", as.character(st$n))
   rows[[length(rows) + 1]] <- c("Model", ps_fact_model_text(kind, st))
+  if (isTRUE(meta$random_wp)) rows[[length(rows) + 1]] <- c("Whole-plot factor is", "Random: a sample from a larger population, so a subplot main effect is tested against its interaction with the whole-plot factor.")
   if (isTRUE(meta$random_blocks)) rows[[length(rows) + 1]] <- c("Blocks are", "Random: a sample from a larger population of blocks, so the block variance component is estimated.")
   rows[[length(rows) + 1]] <- c("Population distribution", "Not stated. Normality, constant variance (Breusch-Pagan) and independence of the residuals are checked after the test (assumption checks).")
   facts <- data.frame(What = vapply(rows, `[`, "", 1), Information = vapply(rows, `[`, "", 2), stringsAsFactors = FALSE)
   list(facts = facts, normality = NULL, independence = NULL, equal_var = NULL, stated = FALSE, family_auto = "param", family = "param",
        family_reason = sprintf("The parametric test (%s) is always run first, for the main effect of each factor and for their interaction%s. If an assumption check fails afterwards, the %s is used.",
                                ps_param_name(kind), if (nf > 2) "s" else "", ps_np_name(kind)),
-       suggest = "anova", suggest_reason = "Every effect is tested against the error mean square of the factorial model.", sigma_known = FALSE)
+       suggest = "anova", suggest_reason = if (identical(kind, "split")) "Each whole-plot effect is tested against the whole-plot error and each subplot effect against the subplot error." else "Every effect is tested against the error mean square of the factorial model.", sigma_known = FALSE)
 }
 
 # ---------- The tests ----------
@@ -179,10 +194,13 @@ ps_run_fact <- function(kind, test, st, meta, s) {
   out <- list(kind = kind, test = test, settings = s, alpha = a, conf = 1 - a, alt = "greater", ref = NA, levels = levels(d$treatment),
               control = meta$control, ef = ef, ffacs = st$ffacs, d = d, unrep = isTRUE(st$unrep), pool = isTRUE(st$pool), pooled = if (isTRUE(st$cpool)) st$pool_codes, flabs = ps_fact_flabs(st, meta),
               resp = ps_lab(meta, "response"), unit = meta$labels$unit %||% "")
-  out <- if (test == "anova") ps_fact_anova(out, kind, st, meta) else ps_fact_rank(out, kind, test, st, meta)
+  if (identical(kind, "split")) { out$wp <- st$wp; out$sp <- st$sp; out$random_wp <- isTRUE(meta$random_wp) }
+  out <- if (identical(kind, "split")) { if (test == "anova") ps_split_anova(out, kind, st, meta) else ps_split_rank(out, kind, test, st, meta) }
+         else if (test == "anova") ps_fact_anova(out, kind, st, meta) else ps_fact_rank(out, kind, test, st, meta)
   eff <- out$effects; best <- eff[which.min(eff$p), ]
+  ft <- test %in% c("anova", "splitrank")   # tests that are F tests (the rank-transform ANOVA is an F test on the ranks)
   out$p <- best$p; out$reject <- any(eff$p < a)
-  out$dist <- if (test == "anova") "F" else "chisq"; out$df1 <- best$df; out$df2 <- if (test == "anova") best$df2 else NA
+  out$dist <- if (ft) "F" else "chisq"; out$df1 <- best$df; out$df2 <- if (ft) best$df2 else NA
   out$summary_msg <- paste0(if (test == "anova") paste0(ps_param_name(kind), ": ") else paste0(ps_np_short(kind), ": "),
                             paste(sprintf("%s %s", eff$code, ps_pe(eff$p)), collapse = ";  "), ".")
   out
@@ -332,13 +350,13 @@ ps_fact_rank <- function(out, kind, test, st, meta) {
 
 ps_fact_effect_res <- function(res, code) {
   e <- res$effects[res$effects$code == code, ]
-  r <- res; anova_t <- identical(res$test, "anova")
-  name <- if (anova_t) sprintf("F test for %s", e$label) else sprintf("%s for %s", ps_np_short(res$kind), e$label)
-  r$t <- mk_test(res$test, name, if (anova_t) "param" else "nonpar", if (anova_t) "F" else res$stat_name, e$stat, e$p, NULL, NA,
+  r <- res; anova_t <- res$test %in% c("anova", "splitrank")
+  name <- if (identical(res$test, "anova")) sprintf("F test for %s", e$label) else sprintf("%s for %s", ps_np_short(res$kind), e$label)
+  r$t <- mk_test(res$test, name, if (identical(res$test, "anova")) "param" else "nonpar", if (anova_t) "F" else res$stat_name, e$stat, e$p, NULL, NA,
                  df = if (anova_t) sprintf("%d, %s", e$df, format(e$df2)) else e$df, dist = if (anova_t) "F" else "chisq")
   r$dist <- r$t$dist; r$df1 <- e$df; r$df2 <- if (anova_t) e$df2 else NA; r$t$df1 <- e$df; r$t$df2 <- r$df2
   r$p <- e$p; r$reject <- e$p < res$alpha
-  ph <- if (anova_t && e$main) res$ph_main[[code]] else NULL
+  ph <- if (identical(res$test, "anova") && e$main) res$ph_main[[code]] else NULL
   r$ci_tab <- if (!is.null(ph)) ph$methods$tukey else NULL; r$ci_name <- "Tukey"
   r
 }
@@ -390,10 +408,19 @@ ps_fact_families <- function(res, code) {
 ps_fact_within_label <- function(res, others, combo) if (!length(others)) NULL else paste(vapply(others, function(r) sprintf("%s = %s", res$flabs[[r]], as.character(combo[[r]])), ""), collapse = ", ")
 ps_fact_subset <- function(d, others, combo) if (!length(others)) d else d[Reduce(`&`, lapply(others, function(r) d[[r]] == combo[[r]])), , drop = FALSE]
 
+# Split-plot: the error of one family of comparisons. A whole-plot factor compared within whole-plot factors only uses the
+# whole-plot error; anything that involves a subplot factor uses the subplot error.
+ps_split_family_error <- function(res, fm) {
+  an <- res$an
+  if (isTRUE(res$split) && fm$w %in% res$wp && all(fm$others %in% res$wp)) list(ms = an$wp$ms, df = an$wp$df, which = "whole-plot error")
+  else if (isTRUE(res$split)) list(ms = an$sp$ms, df = an$sp$df, which = "subplot error")
+  else list(ms = an$mse, df = an$dfe, which = "error")
+}
+
 ps_fact_posthoc <- function(res, code, method) {
-  a <- res$alpha; conf <- res$conf; e <- res$ef[[code]]; d <- res$d
-  if (res$test == "anova") {
-    an <- res$an; fams <- ps_fact_families(res, code); note <- NULL
+  a <- res$alpha; conf <- res$conf; e <- res$ef[[code]]; d <- if (identical(res$test, "splitrank")) res$d_rank else res$d
+  if (res$test %in% c("anova", "splitrank")) {
+    an <- res$an; split_rank <- identical(res$test, "splitrank"); fams <- ps_fact_families(res, code); note <- NULL
     ctrl <- res$control; ctrl_role <- if (!is.null(ctrl)) { h <- res$ffacs[vapply(res$ffacs, function(r) ctrl %in% levels(d[[r]]), TRUE)]; if (length(h)) h[1] else NULL }
     blocks <- lapply(fams, function(fm) {
       w <- fm$w; use <- method; fb <- FALSE
@@ -403,22 +430,24 @@ ps_fact_posthoc <- function(res, code, method) {
         within <- ps_fact_within_label(res, fm$others, combo)
         if (use == "dunnett") {
           lev <- levels(dsub[[w]]); mn <- tapply(dsub$y, dsub[[w]], mean); n <- tapply(dsub$y, dsub[[w]], length)
-          tab <- ps_dunnett_family(lev, mn, n, ctrl, an$mse, an$dfe, a, conf)
+          er <- ps_split_family_error(res, fm); tab <- ps_dunnett_family(lev, mn, n, ctrl, er$ms, er$df, a, conf)
           f <- ps_fact_ph_format(tab, mn, NULL, conf, a, "dunnett", within = if (!is.null(within)) rep(within, nrow(tab)))
           f$groups <- data.frame(Level = lev, Mean = ps_fmt(mn[lev]), `Compared with the control` = ifelse(lev == ctrl, "Control", ifelse(lev %in% tab$j[tab$p < a], "Differs from the control", "Same as the control")), check.names = FALSE)
           if (!is.null(within)) f$groups <- cbind(Within = rep(within, nrow(f$groups)), f$groups)
         } else {
-          ph <- posthoc_all(res$fit, dsub, w, an$mse, an$dfe, a, conf, dunnett = FALSE)
+          er <- ps_split_family_error(res, fm)
+          ph <- posthoc_all(res$fit, dsub, w, er$ms, er$df, a, conf, dunnett = FALSE)
           tab <- ph$methods[[use]]; mn <- stats::setNames(ph$means$mean, ph$means$level)
-          f <- ps_fact_ph_format(tab, mn, ph$letters[[use]], conf, a, use, within = if (!is.null(within)) rep(within, nrow(tab)), centre_name = "Mean")
+          f <- ps_fact_ph_format(tab, mn, ph$letters[[use]], conf, a, use, within = if (!is.null(within)) rep(within, nrow(tab)), centre_name = if (split_rank) "Mean rank" else "Mean")
         }
         if (!is.null(within)) f$raw$pair <- paste0(f$raw$pair, "  [", within, "]")
         f
       })
       tabs <- do.call(rbind, lapply(parts, function(p) p$table)); raw <- do.call(rbind, lapply(parts, function(p) p$raw))
       grp <- do.call(rbind, lapply(parts, function(p) { g <- p$groups; names(g) <- names(parts[[1]]$groups); g }))
-      list(title = if (length(fm$others)) sprintf("%s compared within each combination of %s", res$flabs[[w]], paste(res$flabs[fm$others], collapse = " × "))
-                   else sprintf("Levels of %s", res$flabs[[w]]), table = tabs, groups = grp, raw = raw, fallback = fb, role = w)
+      list(title = paste0(if (length(fm$others)) sprintf("%s compared within each combination of %s", res$flabs[[w]], paste(res$flabs[fm$others], collapse = " × "))
+                   else sprintf("Levels of %s", res$flabs[[w]]), if (isTRUE(res$split)) { er <- ps_split_family_error(res, fm); sprintf(" (%s, df = %d)", er$which, er$df) } else ""),
+           table = tabs, groups = grp, raw = raw, fallback = fb, role = w)
     })
     return(list(code = code, label = e$label, main = e$main, blocks = blocks, method = method))
   }

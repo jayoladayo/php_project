@@ -16,7 +16,8 @@ PS_KIND_LABEL <- c(one = "One sample", variance = "One sample (variance)", two =
                    paired = "Two dependent (paired) samples", k = "k independent samples",
                    rcbd = "Randomized complete block design", latin = "Latin square", glsd = "Graeco-Latin square",
                    fact = "Factorial design (CRD)", factb = "Factorial design in blocks (RCBD)",
-                   factl = "Factorial design in a Latin square", factg = "Factorial design in a Graeco-Latin square")
+                   factl = "Factorial design in a Latin square", factg = "Factorial design in a Graeco-Latin square",
+                   split = "Split-plot design")
 # Problem type, as used for the categories and filters of the list.
 PS_TYPE <- c(one = "One sample", variance = "One sample", two = "Two sample · independent", paired = "Two sample · paired",
              k = "CRD", rcbd = "RCBD", latin = "Latin square", glsd = "Graeco-Latin square")
@@ -104,6 +105,8 @@ ps_structure <- function(df, roles) {
       for (j in seq_along(st$ffacs)) st$d[[paste0(".", LETTERS[j])]] <- ifelse(as.integer(st$d[[st$ffacs[j]]]) == 2L, 1, -1)
       st$cpool <- TRUE; st$pool_codes <- ps_fact_pool_suggest(st)
     }
+    # Split-plot (Chapter 7): the problem or the student names the whole-plot factors.
+    if (length(roles$wp %||% character(0))) st <- ps_split_prepare(st, roles)
   }
   if (all(c("treatment", "block") %in% st$facs)) {
     tab <- table(d$treatment, d$block); st$nblk <- nlevels(d$block)
@@ -134,6 +137,7 @@ ps_kind <- function(st, meta) {
 
 ps_kind_problem <- function(kind, st) {
   if (length(st$errors)) return(paste(st$errors, collapse = " "))
+  if (isTRUE(st$split)) return("A split-plot needs at least one whole-plot factor and one subplot factor (tick the whole-plot factors in What each column is), every combination of the factor levels exactly once in each replicate (the Block column), or a 2^k design with one observation per combination and no Block. Check the factor columns and the Block.")
   if ("factorB" %in% st$facs) return("A factorial design needs every combination of the factor levels to appear, with replicates: at least two observations per combination, or two blocks. Check the Factor A, Factor B (and C) columns, or add replicates.")
   if ("block" %in% st$facs && !isTRUE(st$complete)) return("Every treatment must appear in every block (a complete block design). Incomplete block designs such as the BIBD are not covered by the course, so this layout is not analysed. Fill in or remove the incomplete blocks.")
   if ("block" %in% st$facs) return("Every block needs at least two observations.")
@@ -228,7 +232,7 @@ ps_test_choices <- function(kind, s) {
     rcbd = c(anova = ps_param_name("rcbd"), friedman = "Friedman test"),
     stats::setNames(c(ps_param_name(kind), ps_np_name(kind)), c("anova", ps_np_test(kind))))
 }
-PS_NONPAR_TESTS <- c("wilcox", "sign", "mw", "wsr", "kw", "friedman", "quade", "kwf", "friedmanf", "quadef")
+PS_NONPAR_TESTS <- c("wilcox", "sign", "mw", "wsr", "kw", "friedman", "quade", "kwf", "friedmanf", "quadef", "splitrank")
 
 # The note shown under the test selector when the student picks a test other than the suggested one.
 # For the multi-group designs `a` is the assumption check of the suggested parametric model, so the
@@ -543,6 +547,7 @@ ps_posthoc_choices <- function(test, kind = "k", control = NULL) switch(test,
   kwf = c(dunn = "Dunn test (Holm adjustment)", dunnbonf = "Dunn test (Bonferroni adjustment)"),
   friedmanf = c(nemenyi = "Nemenyi test", wilcox = "Wilcoxon signed-rank test (Bonferroni adjustment)"),
   quadef = c(dunn = "Dunn test on the ranked residuals (Holm adjustment)", wilcoxrs = "Wilcoxon rank-sum test on the ranked residuals (Bonferroni adjustment)"),
+  splitrank = c(tukey = "Tukey HSD on the ranks", lsd = "Fisher LSD on the ranks", bonferroni = "Bonferroni on the ranks"),
   character(0))
 
 # The method suggested first: the one the problem asks for, Dunnett when it names a control, else Tukey.
@@ -600,9 +605,12 @@ ps_assumptions <- function(kind, st, s, test = "anova") {
   normal_ok <- is.na(sw$p) || sw$p >= a
   ntab <- data.frame(Sample = nm, n = length(res), `Shapiro-Wilk W` = ps_fmt(sw$W, 4), `Shapiro-Wilk p` = ps_p(sw$p),
                      `Anderson-Darling p` = if (is.null(ad)) "n < 8" else ps_p(ad$p.value), Result = if (normal_ok) "Normal" else "Not normal", check.names = FALSE)
-  bg <- tryCatch(lmtest::bgtest(fit, order = 1), error = function(e) NULL)
+  # Split-plot: the subplots of a whole plot share its error, so their residuals are correlated by design. Independence is checked on the
+  # whole-plot residuals, in the order the whole plots were run.
+  ord_fit <- if (identical(kind, "split")) ps_split_wp_fit(st) else fit
+  bg <- tryCatch(lmtest::bgtest(ord_fit, order = 1), error = function(e) NULL)
   bg_p <- if (is.null(bg)) NA else bg$p.value
-  itab <- data.frame(Test = "Breusch-Godfrey (lag 1)", Statistic = sprintf("LM = %s", if (is.null(bg)) "—" else ps_fmt(unname(bg$statistic), 4)),
+  itab <- data.frame(Test = if (identical(kind, "split")) "Breusch-Godfrey (lag 1, whole-plot residuals)" else "Breusch-Godfrey (lag 1)", Statistic = sprintf("LM = %s", if (is.null(bg)) "—" else ps_fmt(unname(bg$statistic), 4)),
                      df = if (is.null(bg)) "—" else format(unname(bg$parameter)), `p-value` = ps_p(bg_p),
                      Result = if (is.na(bg_p)) "Not available" else if (bg_p < a) "Dependent" else "Independent", check.names = FALSE)
   welch <- identical(kind, "k") && identical(test, "welch")
@@ -618,7 +626,8 @@ ps_assumptions <- function(kind, st, s, test = "anova") {
   indep_ok <- is.na(bg_p) || bg_p >= a
   failed <- c(Normality = !normal_ok, `Constant variance` = isFALSE(var_ok), Independence = !indep_ok)
   list(normality = ntab, normal_ok = normal_ok, independence = itab, indep_ok = indep_ok, variance = vtab, var_ok = var_ok, welch = welch,
-       all_ok = !any(failed), failed = names(failed)[failed], targets = stats::setNames(list(res), nm), ind_fit = fit,
+       all_ok = !any(failed), failed = names(failed)[failed], targets = stats::setNames(list(res), nm), ind_fit = fit, ord_fit = ord_fit,
+       ord_label = if (identical(kind, "split")) "Whole-plot order (as run)" else "Observation order (as recorded)",
        p = c(normality = sw$p, variance = bp_p, independence = bg_p))
 }
 
@@ -707,11 +716,11 @@ ps_plot_data <- function(kind, st, meta) {
   plot_box_by(d$y, d$treatment, ylab)
 }
 
-ps_plot_order <- function(fit) {
+ps_plot_order <- function(fit, xlab = "Observation order (as recorded)") {
   r <- stats::residuals(fit)
   ggplot(data.frame(i = seq_along(r), r = r), aes(i, r)) + geom_hline(yintercept = 0, colour = RED, linetype = "dashed") +
     geom_line(colour = GREEN, linewidth = .7) + geom_point(colour = GREEN, size = 2.4) +
-    labs(x = "Observation order (as recorded)", y = "Residuals") + theme_sds()
+    labs(x = xlab, y = "Residuals") + theme_sds()
 }
 
 ps_plot_rvf <- function(fit) {
@@ -754,7 +763,8 @@ ps_nfac_word <- function(n) c("One-factor", "Two-factor", "Three-factor", "Four-
 ps_type_of <- function(kind, st) {
   if (is.na(kind)) return("Other")
   if (ps_is_fact(kind)) return(switch(kind, fact = sprintf("%s factorial (CRD)", ps_nfac_word(length(st$ffacs))),
-                                      factb = "Factorial in blocks (RCBD)", factl = "Factorial in a Latin square (LSD)", factg = "Factorial in a Graeco-Latin square (GLSD)"))
+                                      factb = "Factorial in blocks (RCBD)", factl = "Factorial in a Latin square (LSD)", factg = "Factorial in a Graeco-Latin square (GLSD)",
+                                      split = "Split-plot"))
   unname(PS_TYPE[kind])
 }
 ps_classify <- function(p) {
@@ -775,7 +785,7 @@ ps_classify <- function(p) {
     res <- tryCatch(ps_run_test(kind, test, st, p, s), error = function(e) NULL)
     asm <- tryCatch(ps_assumptions(kind, st, s, test), error = function(e) NULL)
     pname <- sub(" \\(F test\\)$", "", ps_param_name(kind, test))
-    if (ps_is_fact(kind)) pname <- sprintf("%s ANOVA", ps_nfac_word(length(st$ffacs)))
+    if (ps_is_fact(kind)) pname <- if (identical(kind, "split")) "Split-plot ANOVA" else sprintf("%s ANOVA", ps_nfac_word(length(st$ffacs)))
     if (!is.null(asm) && !asm$all_ok) {
       npt <- ps_np_test(kind); rn <- tryCatch(ps_run_test(kind, npt, st, p, s), error = function(e) NULL)
       out$family <- "nonpar"; out$test <- sprintf("%s, then %s", pname, ps_np_short(kind))

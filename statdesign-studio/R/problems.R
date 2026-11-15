@@ -19,7 +19,10 @@ PS_CHAPTERS <- list(
              blurb = "Two- and three-factor factorial experiments: main effects and interactions, in a completely randomized layout or in blocks."),
   ch6 = list(key = "ch6", num = 6, label = "Chapter 6 problems", icon = "grid4",
              title = "Chapter 6: The 2^k Factorial Design",
-             blurb = "Two-level factorial experiments with two to five factors, replicated or with one observation per combination (you then choose which effects go into the error).")
+             blurb = "Two-level factorial experiments with two to five factors, replicated or with one observation per combination (you then choose which effects go into the error)."),
+  ch7 = list(key = "ch7", num = 7, label = "Chapter 7 problems", icon = "layers",
+             title = "Chapter 7: Split-Plot Designs",
+             blurb = "Split-plot experiments (Montgomery, Chapter 14): hard-to-change whole-plot factors and easy-to-change subplot factors, with a whole-plot error and a subplot error. The problems with data are included.")
 )
 
 # ---------- Builders for the three textbook layouts ----------
@@ -102,12 +105,12 @@ ps_square <- function(row_name, col_name, trt_name, resp_name, rows, cols, L, V,
 
 prob <- function(id, chapter, title, statement, parts, data, roles, labels, settings = list(), target = "mean",
                  random = FALSE, tags = character(0), covers = NULL, note = NULL, source = NULL,
-                 control = NULL, design = NULL, random_blocks = FALSE, scaled_t = FALSE) {
+                 control = NULL, design = NULL, random_blocks = FALSE, scaled_t = FALSE, random_wp = FALSE) {
   list(id = id, chapter = chapter, num = id, title = title, statement = statement, parts = parts,
        data = data$long, display = data$wide, roles = roles, labels = labels,
        settings = modifyList(list(alpha = 0.05, conf = 0.95, alt = "two.sided"), settings),
        target = target, random = random, tags = tags, covers = covers, note = note,
-       control = control, design = design, random_blocks = random_blocks, scaled_t = scaled_t,
+       control = control, design = design, random_blocks = random_blocks, scaled_t = scaled_t, random_wp = random_wp,
        source = source %||% sprintf("Problem %s, Montgomery, Design and Analysis of Experiments, Chapter %d.", id, chapter))
 }
 
@@ -1146,7 +1149,78 @@ PROBLEMS_CH6 <- list(
        note = paste(NOREP6, CTR6), tags = c(TG6, "2^3", "no replicate"))
 )
 
-PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3, PROBLEMS_CH4, PROBLEMS_CH5, PROBLEMS_CH6)
+
+# ---------- Chapter 7: split-plot designs (Montgomery, Chapter 14) ----------
+# Whole-plot factors are set once for a whole plot; the subplot factors change inside it. roles$wp names the whole-plot
+# factors, so the steps run the split-plot analysis (two errors). The rows are in the order the runs were made.
+TG7 <- c("split-plot", "whole plot", "subplot")
+NOTE7 <- "The whole-plot factor is tested against the whole-plot error and the subplot factor and the interaction against the subplot error, so the ANOVA has two error lines."
+
+# 14.19 Normalizing steel: temperature is the whole-plot factor, time the subplot factor, the four shifts are the replicates.
+D1419 <- local({
+  g <- expand.grid(Temperature = c("1500", "1600"), Time = c("10", "20", "30"), Shift = as.character(1:4), stringsAsFactors = FALSE)
+  g$Strength <- c(63, 89, 54, 91, 61, 62, 50, 80, 52, 72, 59, 69, 48, 73, 74, 81, 71, 69, 54, 88, 48, 92, 59, 64)
+  long <- g[order(g$Shift, g$Temperature, as.integer(g$Time)), c("Shift", "Temperature", "Time", "Strength")]; rownames(long) <- NULL
+  names(long) <- c("Shift", "Temperature (°F)", "Time (min)", "Strength")
+  wide <- do.call(rbind, lapply(as.character(1:4), function(sh) { x <- g[g$Shift == sh, ]
+    data.frame(Shift = sh, `Time (min)` = c("10", "20", "30"), `1500 °F` = format(x$Strength[x$Temperature == "1500"]), `1600 °F` = format(x$Strength[x$Temperature == "1600"]), check.names = FALSE) }))
+  list(long = long, wide = wide)
+})
+# 14.20 and 14.21 Paint pigment: each mix (whole plot) is applied by three methods (subplots); the three days are the replicates.
+D1420 <- local({
+  g <- expand.grid(Mix = as.character(1:4), Method = c("Brushing", "Spraying", "Rolling"), Day = as.character(1:3), stringsAsFactors = FALSE)
+  g$Reflectance <- c(64.5, 66.3, 74.1, 66.5, 68.3, 69.5, 73.8, 70.0, 70.3, 73.1, 78.0, 72.3, 65.2, 65.0, 73.8, 64.8, 69.2, 70.3, 74.5, 68.3, 71.2, 72.8, 79.1, 71.5,
+                     66.2, 66.5, 72.3, 67.7, 69.0, 69.0, 75.4, 68.6, 70.8, 74.2, 80.1, 72.4)
+  long <- g[order(g$Day, g$Mix, match(g$Method, c("Brushing", "Spraying", "Rolling"))), c("Day", "Mix", "Method", "Reflectance")]; rownames(long) <- NULL
+  names(long) <- c("Day", "Mix", "Application method", "Reflectance (%)")
+  wide <- do.call(rbind, lapply(as.character(1:3), function(dy) do.call(rbind, lapply(c("Brushing", "Spraying", "Rolling"), function(me) { x <- g[g$Day == dy & g$Method == me, ]
+    out <- data.frame(Day = dy, `Application method` = me, check.names = FALSE); for (m in 1:4) out[[paste("Mix", m)]] <- format(x$Reflectance[x$Mix == as.character(m)]); out }))))
+  list(long = long, wide = wide)
+})
+# 14.26 Paper-making plasma experiment (Table P14.4): a 2^5 run as a split plot, A to D whole-plot, E subplot (listed in run order).
+D1426 <- local({
+  std <- c(5, 21, 2, 18, 10, 26, 14, 30, 11, 27, 3, 19, 13, 29, 6, 22, 16, 32, 9, 25, 15, 31, 1, 17, 8, 24, 7, 23, 4, 20, 12, 28)
+  A <- c("-1", "-1", "+1", "+1", "+1", "+1", "+1", "+1", "-1", "-1", "-1", "-1", "-1", "-1", "+1", "+1", "+1", "+1", "-1", "-1", "-1", "-1", "-1", "-1", "+1", "+1", "-1", "-1", "+1", "+1", "+1", "+1")
+  B <- c("-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "+1", "+1", "+1", "+1", "-1", "-1", "-1", "-1", "+1", "+1", "-1", "-1", "+1", "+1", "-1", "-1", "+1", "+1", "+1", "+1", "+1", "+1", "+1", "+1")
+  C <- c("+1", "+1", "-1", "-1", "-1", "-1", "+1", "+1", "-1", "-1", "-1", "-1", "+1", "+1", "+1", "+1", "+1", "+1", "-1", "-1", "+1", "+1", "-1", "-1", "+1", "+1", "+1", "+1", "-1", "-1", "-1", "-1")
+  D <- c("Oxygen", "Oxygen", "Oxygen", "Oxygen", "SiCl4", "SiCl4", "SiCl4", "SiCl4", "SiCl4", "SiCl4", "Oxygen", "Oxygen", "SiCl4", "SiCl4", "Oxygen", "Oxygen", "SiCl4", "SiCl4", "SiCl4", "SiCl4", "SiCl4", "SiCl4", "Oxygen", "Oxygen", "Oxygen", "Oxygen", "Oxygen", "Oxygen", "Oxygen", "Oxygen", "SiCl4", "SiCl4")
+  E <- rep(c("E1", "E2"), 16)
+  y <- c(37.6, 43.5, 41.2, 38.2, 56.8, 56.2, 47.5, 43.2, 25.6, 33.0, 55.8, 62.9, 13.3, 23.7, 47.2, 44.8, 49.5, 48.2, 5.0, 18.1, 11.3, 23.9, 48.6, 57.0, 48.7, 44.4, 47.2, 54.6, 53.5, 51.3, 41.8, 37.8)
+  long <- data.frame(`Run` = 1:32, `Pressure (A)` = A, `Power (B)` = B, `Gas flow (C)` = C, `Gas type (D)` = D, `Paper type (E)` = E, `Contact angle` = y, check.names = FALSE, stringsAsFactors = FALSE)
+  wide <- data.frame(`Standard order` = std, long, check.names = FALSE, stringsAsFactors = FALSE)
+  list(long = long, wide = wide)
+})
+LV7 <- list(treatment = c("-1", "+1"), factorB = c("-1", "+1"), factorC = c("-1", "+1"), factorD = c("Oxygen", "SiCl4"), factorE = c("E1", "E2"))
+
+PROBLEMS_CH7 <- list(
+  prob("14.19", 7, "Normalizing steel: temperature and time",
+       "Steel is normalized by heating above the critical temperature, soaking, and then air cooling. This process increases the strength of the steel, refines the grain, and homogenizes the structure. An experiment is performed to determine the effect of temperature and heat treatment time on the strength of normalized steel. Two temperatures and three times are selected. The experiment is performed by heating the oven to a randomly selected temperature and inserting three specimens. After 10 minutes one specimen is removed, after 20 minutes the second is removed, and after 30 minutes the final specimen is removed. Then the temperature is changed to the other level and the process is repeated. Four shifts are required to collect the data, which are shown below.",
+       "Analyze the data and draw conclusions, assuming both factors are fixed.",
+       D1419, roles = list(response = "Strength", treatment = "Temperature (°F)", factorB = "Time (min)", block = "Shift", wp = "Temperature (°F)", levels = list(treatment = c("1500", "1600"), factorB = c("10", "20", "30"))),
+       labels = list(response = "strength", unit = "", treatment = "temperature", factorB = "time", block = "shift"),
+       note = paste("The oven temperature is set once and three specimens are run in it, so temperature is the whole-plot factor (each shift runs both temperatures) and time, changed inside each oven load, is the subplot factor. The four shifts are the replicates.", NOTE7), tags = c(TG7, "fixed factors", "replicated")),
+  prob("14.20", 7, "Paint pigment dispersion: mixes and application methods",
+       "An experiment is designed to study pigment dispersion in paint. Four different mixes of a particular pigment are studied. The procedure consists of preparing a particular mix and then applying that mix to a panel by three application methods (brushing, spraying, and rolling). The response measured is the percentage reflectance of pigment. Three days are required to run the experiment, and the data obtained follow.",
+       "Analyze the data and draw conclusions, assuming that mixes and application methods are fixed.",
+       D1420, roles = list(response = "Reflectance (%)", treatment = "Mix", factorB = "Application method", block = "Day", wp = "Mix", levels = list(treatment = as.character(1:4), factorB = c("Brushing", "Spraying", "Rolling"))),
+       labels = list(response = "percentage reflectance", unit = "%", treatment = "mix", factorB = "application method", block = "day"),
+       note = paste("Each mix is prepared once and then applied by the three methods, so the mix is the whole-plot factor and the application method is the subplot factor. The three days are the replicates.", NOTE7), tags = c(TG7, "fixed factors", "replicated")),
+  prob("14.21", 7, "Paint pigment dispersion: random mixes",
+       "Repeat Problem 14.20, assuming that the mixes are random and the application methods are fixed.",
+       "The data are those of Problem 14.20 (four mixes of a pigment, each applied by brushing, spraying and rolling, on three days).",
+       D1420, roles = list(response = "Reflectance (%)", treatment = "Mix", factorB = "Application method", block = "Day", wp = "Mix", levels = list(treatment = as.character(1:4), factorB = c("Brushing", "Spraying", "Rolling"))),
+       labels = list(response = "percentage reflectance", unit = "%", treatment = "mix", factorB = "application method", block = "day"), random_wp = TRUE,
+       note = paste("These are the data of Problem 14.20 with the mixes random. A subplot main effect is then tested against its interaction with the random whole-plot factor (the application method against Mix × Method); the other tests keep their error terms.", NOTE7), tags = c(TG7, "random whole-plot factor", "replicated")),
+  prob("14.26", 7, "Paper-making experiment: a 2⁵ factorial run as a split plot",
+       "An article in Quality Engineering (“Quality Quandaries: Two-Level Factorials Run as Split-Plot Experiments,” Bisgaard et al., Vol. 8, No. 4, pp. 705–708, 1996) describes a 2⁵ factorial experiment in a plasma process focused on making paper more susceptible to ink. Four of the factors (A–D) are difficult to change from run to run, so the experimenters set up the reactor at the eight sets of conditions specified by the low and high levels of those factors, and then processed the two paper types (factor E) together. The placement of the paper specimens in the reactor (right versus left) was randomized. This produces a split-plot design with A–D as the whole-plot factors and factor E as the subplot factor. The data from this experiment are shown in Table P14.4.",
+       "Analyze the data from this experiment and draw conclusions.",
+       D1426, roles = list(response = "Contact angle", treatment = "Pressure (A)", factorB = "Power (B)", factorC = "Gas flow (C)", factorD = "Gas type (D)", factorE = "Paper type (E)",
+                           wp = c("Pressure (A)", "Power (B)", "Gas flow (C)", "Gas type (D)"), levels = LV7),
+       labels = list(response = "contact angle", unit = "", treatment = "pressure", factorB = "power", factorC = "gas flow", factorD = "gas type", factorE = "paper type"),
+       note = paste("There is one observation per combination, so there is no pure error. In step 4 you choose, in each stratum, the effects that go into its error: the whole-plot effects (A to D and their interactions) form one error and the effects that contain E form the other. Gas type is coded Oxygen = −1 and SiCl4 = +1, and paper type E1 = −1 and E2 = +1.", NOTE7), tags = c(TG7, "2^5", "no replicate"))
+)
+
+PROBLEMS <- c(PROBLEMS_CH2, PROBLEMS_CH3, PROBLEMS_CH4, PROBLEMS_CH5, PROBLEMS_CH6, PROBLEMS_CH7)
 names(PROBLEMS) <- vapply(PROBLEMS, `[[`, "", "id")
 
 ps_by_chapter <- function(ch) Filter(function(p) p$chapter == PS_CHAPTERS[[ch]]$num, PROBLEMS)

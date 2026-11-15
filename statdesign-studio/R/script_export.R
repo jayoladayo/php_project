@@ -67,6 +67,7 @@ ps_solution_script <- function(m, s = NULL, test = NULL, ph = NULL, hyp = NULL) 
   if (is.na(kind)) stop(ps_kind_problem(kind, st))
   s <- s %||% ps_default_settings(m, kind)
   st <- ps_fact_set_pool(st, s)   # the effects the student put into the error (one observation per combination)
+  if (identical(kind, "split")) return(ps_split_script(m, st, s, test %||% ps_info(kind, st, m, s)$suggest, ph, hyp))
   info <- ps_info(kind, st, m, s); multi <- ps_multi(kind); fact <- ps_is_fact(kind)
   test <- test %||% info$suggest
   rank_first <- multi && test %in% PS_NONPAR_TESTS

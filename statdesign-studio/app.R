@@ -33,16 +33,17 @@ options(shiny.maxRequestSize = 50 * 1024^2)
 # categories and filters open instantly.
 invisible(lapply(PROBLEMS, ps_classify))
 
-PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "fact", "twok", "planner", "report", "learn", "team")
+PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "fact", "twok", "split", "planner", "report", "learn", "team")
 
 JUMP_CHOICES <- c(
   "Home" = "home", "Test Advisor" = "advisor", "Data Studio: upload a file" = "data",
   "Descriptive statistics" = "desc", "One sample tests" = "one", "Two sample tests (t-test, Mann-Whitney)" = "two",
   "k samples (one-way ANOVA, Kruskal-Wallis)" = "k",
-  "Problem Sets: Chapter 2 to 6 exercises, custom problems" = "problems",
+  "Problem Sets: Chapter 2 to 7 exercises, custom problems" = "problems",
   "CRD: Completely Randomized Design" = "crd", "RCBD: Randomized Complete Block Design" = "rcbd",
   "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd", "Factorial designs: two- and three-factor, interactions" = "fact",
   "2^k Factorial: two-level designs with two to five factors" = "twok",
+  "Split-Plot: whole-plot and subplot factors, two errors" = "split",
   "Design Planner: randomised layouts" = "planner", "Report builder" = "report", "Learn: method guides" = "learn",
   "About the team (Group 4), aim and objectives" = "team")
 
@@ -89,6 +90,7 @@ ui <- page(
                 tabPanelBody("glsd", problems_ui("glsd", "glsd")),
                 tabPanelBody("fact", problems_ui("fact", "fact")),
                 tabPanelBody("twok", problems_ui("twok", "twok")),
+                tabPanelBody("split", problems_ui("split", "split")),
                 tabPanelBody("planner", planner_ui("planner")),
                 tabPanelBody("report", report_ui("report")),
                 tabPanelBody("learn", learn_ui("learn")),
@@ -133,7 +135,7 @@ server <- function(input, output, session) {
   data_studio_server("data", store, goto, open_project)
   # The analysis pages run the same five-step process as the Problem Sets, on the student's own data.
   crumb <- function(cr) session$sendCustomMessage("crumb", list(crumb = cr))
-  PAGE_MODES <- c("one", "two", "k", "crd", "rcbd", "lsd", "glsd", "fact", "twok")
+  PAGE_MODES <- c("one", "two", "k", "crd", "rcbd", "lsd", "glsd", "fact", "twok", "split")
   # Each analysis page (and the Problem Sets) is started the first time it is opened, not when the app loads:
   # building all ten of them at once made every student wait several seconds for the first screen.
   srv <- new.env()

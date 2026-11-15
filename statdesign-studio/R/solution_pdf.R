@@ -155,6 +155,7 @@ np_about_txt <- function(kind) switch(kind, k = "compares the groups through the
   rcbd = "ranks the responses within each block", fact = "ranks all the observations together and tests each effect on the ranks",
   factb = "ranks the combinations within each block and tests each effect on the rank sums",
   factl = , factg = "removes the blocking factors, ranks the residuals and tests each effect on the ranks",
+  split = "ranks all the observations together and repeats the split-plot analysis on the ranks, each effect against the error of its own stratum",
   "removes the blocking factors and compares the treatments through the ranks of the residuals")
 sol_tr <- function(x, lang = "en") if (identical(lang, "ar")) ar_text(x) else x
 

@@ -39,10 +39,11 @@ PS_TYPE_DESC <- c(
   "Factorial in blocks (RCBD)" = "A factorial experiment with each replicate run as a block (RCBD ANOVA). Friedman if an assumption fails.",
   "Factorial in a Latin square (LSD)" = "A factorial experiment with row and column blocking (LSD ANOVA). Quade's test if an assumption fails.",
   "Factorial in a Graeco-Latin square (GLSD)" = "A factorial experiment with row, column and Greek-letter blocking (GLSD ANOVA). Quade's test if an assumption fails.",
+  "Split-plot" = "Whole-plot factors (hard to change) and subplot factors (changed inside each whole plot): two errors, the whole-plot error and the subplot error. Rank-transform ANOVA if an assumption fails.",
   "Parametric" = "The parametric test is the answer: its assumptions hold.",
   "Non-parametric" = "A rank test is the answer: normality or another assumption fails.")
 PS_TYPE_ORDER <- c("One sample", "Two sample · independent", "Two sample · paired", "CRD", "RCBD", "Latin square", "Graeco-Latin square",
-                   "Two-factor factorial (CRD)", "Three-factor factorial (CRD)", "Four-factor factorial (CRD)", "Five-factor factorial (CRD)", "Factorial in blocks (RCBD)", "Factorial in a Latin square (LSD)", "Factorial in a Graeco-Latin square (GLSD)")
+                   "Two-factor factorial (CRD)", "Three-factor factorial (CRD)", "Four-factor factorial (CRD)", "Five-factor factorial (CRD)", "Factorial in blocks (RCBD)", "Factorial in a Latin square (LSD)", "Factorial in a Graeco-Latin square (GLSD)", "Split-plot")
 PS_REP_ORDER <- c("Replicated", "No replicate")
 PS_TYPE_DESC <- c(PS_TYPE_DESC,
   "Replicated" = "Every treatment combination is observed more than once, so every effect is tested against the pure error of the replicates.",
@@ -98,6 +99,12 @@ PS_MODES$twok <- list(title = "2^k Factorial", kinds = "fact",
   sub = "Two-level factorial designs (2² to 2⁵): every factor and every interaction is tested, replicated or with one observation per combination, then the Kruskal-Wallis test if an assumption fails.",
   need = "A 2^k design needs a Response and two to five factor columns, each with exactly two levels (low and high), with every combination of levels observed: once for an unreplicated design, or more than once for a replicated one.")
 
+PS_MODES$split <- list(title = "Split-Plot", kinds = "split",
+  roles = c("response", "treatment", "factorB", "factorC", "factorD", "factorE", "block"),
+  labels = list(treatment = "Factor A", factorB = "Factor B", factorC = "Factor C (optional)", factorD = "Factor D (optional)", factorE = "Factor E (optional)", block = "Replicate or block (leave (none) for a 2^k with one observation per combination)"),
+  sub = "Split-plot designs: whole-plot factors (hard to change) and subplot factors (changed inside a whole plot), each effect tested against the error of its own stratum, then the rank-transform ANOVA if an assumption fails.",
+  need = "A split-plot needs a Response, two or more factor columns (tick below which of them are the whole-plot factors; the others are subplot factors) and, for a replicated design, a Block (replicate) column with every combination once per block. An unreplicated 2^k split-plot has no Block and exactly two levels per factor.")
+
 problems_ui <- function(id, mode = NULL) {
   ns <- NS(id); md <- if (!is.null(mode)) PS_MODES[[mode]]
   show_role <- function(k) is.null(md) || k %in% md$roles
@@ -109,7 +116,7 @@ problems_ui <- function(id, mode = NULL) {
                 btn(ns("new_custom"), "Create custom problem", "plus", "bp", "bsm")),
       uiOutput(ns("resume")),
       kcard(class = "ps-toolbar", div(class = "hrow", style = "align-items:center",
-                div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Chapter 6" = "ch6", "Custom Problem" = "custom"), "ch2")),
+                div(seg_input(ns("cat"), c("Chapter 2" = "ch2", "Chapter 3" = "ch3", "Chapter 4" = "ch4", "Chapter 5" = "ch5", "Chapter 6" = "ch6", "Chapter 7" = "ch7", "Custom Problem" = "custom"), "ch2")),
                 div(class = "ml ps-search", textInput(ns("q"), NULL, placeholder = "Search by number, topic or test"))),
             uiOutput(ns("cat_blurb")),
             conditionalPanel("input.cat != 'custom'", ns = ns, div(class = "ps-filters",
@@ -181,6 +188,7 @@ problems_ui <- function(id, mode = NULL) {
                             if (show_role("row")) selectInput(ns("c_row"), rlab("row", "Row (Latin square)"), NULL),
                             if (show_role("column")) selectInput(ns("c_column"), rlab("column", "Column (Latin square)"), NULL),
                             if (show_role("greek")) selectInput(ns("c_greek"), rlab("greek", "Greek letter (Graeco-Latin)"), NULL)),
+                        uiOutput(ns("c_wp_ui")),
                         if (is.null(md) || length(intersect(md$roles, "treatment"))) uiOutput(ns("c_control_ui")),
                         if (is.null(md) || identical(mode, "one")) checkboxInput(ns("c_variance"), "The question is about a variance, not a mean (one sample)", FALSE))),
               uiOutput(ns("c_check")),
@@ -246,7 +254,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       updateSelectInput(session, "f_type", choices = c("All problem types" = "", stats::setNames(ty, ty)), selected = "")
       updateSelectInput(session, "f_ph", choices = c("All post-hoc types" = "", stats::setNames(ph, ph)), selected = "")
       updateSelectInput(session, "f_family", selected = "")
-      updateRadioButtons(session, "f_group", selected = if (identical(k, "ch6")) "rep" else "type")   # the 2^k problems are first sorted into replicated and no-replicate
+      updateRadioButtons(session, "f_group", selected = if (k %in% c("ch6", "ch7")) "rep" else "type")   # the 2^k problems are first sorted into replicated and no-replicate
     })
     # The Replication filter appears for the chapters that hold factorial problems.
     output$f_rep_ui <- renderUI({
@@ -726,16 +734,20 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       sel <- isolate(ps_fact_set_pool(st, cur$s)$pool_codes)
       div(class = "kcard soft ps-card-s", style = "margin-top:6px",
           h3(class = "ct", "Which effects go into the error?"),
-          p(class = "small", style = "margin:4px 0 10px", "With no replicate the error has to come from the effects that behave like noise. Tick the effects to put into the error: the ones sitting with the small points on the Q-Q plot. They are not tested in step 5; the others are tested against them. The ticks start from the plots' suggestion (Lenth's rule)."),
-          div(class = "ps-poolgrid", checkboxGroupInput(ns(kid("pool_sel")), NULL, choices = stats::setNames(ce$code, sprintf("%s · %s", ce$code, ce$label)), selected = sel, width = "100%")),
+          p(class = "small", style = "margin:4px 0 10px", if (isTRUE(st$split)) "A split-plot has two errors and with no replicate neither has replicates, so each is built from effects that behave like noise. Tick the effects to put into the error: the whole-plot effects (no E) form the whole-plot error and the subplot effects (those with E) form the subplot error, and each effect is tested against the error of its own stratum. At least one effect must stay in each error and one be tested in each stratum. The ticks start from the plots' suggestion (Lenth's rule, applied stratum by stratum)."
+              else "With no replicate the error has to come from the effects that behave like noise. Tick the effects to put into the error: the ones sitting with the small points on the Q-Q plot. They are not tested in step 5; the others are tested against them. The ticks start from the plots' suggestion (Lenth's rule)."),
+          div(class = "ps-poolgrid", checkboxGroupInput(ns(kid("pool_sel")), NULL, choices = stats::setNames(ce$code, if (isTRUE(st$split)) sprintf("%s · %s  (%s)", ce$code, ce$label, ifelse(ce$code %in% ps_split_strata_codes(st)$sp, "subplot", "whole plot")) else sprintf("%s · %s", ce$code, ce$label)), selected = sel, width = "100%")),
           div(class = "hrow", style = "gap:14px;flex-wrap:wrap",
               actionLink(ns(kid("pool_plot")), tagList(icon("wand", 14), " Use the plot's suggestion"), class = "small ps-link"),
-              actionLink(ns(kid("pool_rule")), tagList(icon("layers", 14), " Pool the interactions of three or more factors"), class = "small ps-link")),
+              actionLink(ns(kid("pool_rule")), tagList(icon("layers", 14), if (isTRUE(st$split)) " Pool the interactions of three or more factors in each stratum" else " Pool the interactions of three or more factors"), class = "small ps-link")),
           uiOutput(ns("pool_sum")))
     })
     output$pool_sum <- renderUI({
       req(cur$key, isTRUE(cur$st$cpool)); st <- ps_fact_set_pool(cur$st, cur$s); pc <- st$pool_codes; allc <- ps_fact_codes(length(st$ffacs))
       tested <- setdiff(allc, pc)
+      if (isTRUE(st$split)) { sc <- ps_split_strata_codes(st)
+        return(note(kind = "i", ic = "info", sprintf("Whole-plot error: %s (df = %d). Subplot error: %s (df = %d). Tested in step 5: %s.", paste(intersect(pc, sc$wp), collapse = ", "), length(intersect(pc, sc$wp)),
+                                                      paste(intersect(pc, sc$sp), collapse = ", "), length(intersect(pc, sc$sp)), paste(tested, collapse = ", ")))) }
       note(kind = "i", ic = "info", sprintf("Into the error: %s (error df = %d). Tested in step 5: %s.", paste(pc, collapse = ", "), length(pc), paste(tested, collapse = ", ")))
     })
     pool_set <- function(codes) updateCheckboxGroupInput(session, kid("pool_sel"), selected = codes)
@@ -751,7 +763,9 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
           ce <- ps_fact_contrasts(cur$st, m)
           div(class = "col", style = "gap:8px", h3(class = "ct", sprintf("Effect estimates of the 2%s design", c("²", "³", "⁴", "⁵")[min(max(nf - 1, 1), 4)])),
               p(class = "small", style = "margin:0", "Each effect is the average response at the high level minus the average at the low level (for an interaction, the same contrast of the product of the coded levels, −1 and +1). The sum of squares of an effect is N × (effect/2)², and the % contribution is its share of the total of all effects."),
-              tbl(data.frame(Effect = sprintf("%s (%s)", ce$label, ce$code), `Effect estimate` = ps_fmt(ce$effect, 5), `Sum of squares` = ps_fmt(ce$ss, 6), `% contribution` = sprintf("%.2f", ce$pct), check.names = FALSE)),
+              tbl({ x <- data.frame(Effect = sprintf("%s (%s)", ce$label, ce$code), `Effect estimate` = ps_fmt(ce$effect, 5), `Sum of squares` = ps_fmt(ce$ss, 6), `% contribution` = sprintf("%.2f", ce$pct), check.names = FALSE)
+                    if (isTRUE(cur$st$split)) x <- cbind(x[1], Stratum = ifelse(ce$code %in% ps_split_strata_codes(cur$st)$sp, "Subplot", "Whole plot"), x[-1])
+                    x }),
               plot_box("pl_fnorm", "Normal probability plot of the effects", 340),
               plot_box("pl_fqq", "Normal Q-Q plot of the effects (as in class)", 340),
               p(class = "small", style = "margin:0", if (isTRUE(cur$st$pool)) "With one observation per combination there is no pure error. In both plots the effects that stand away from the small ones are real, and the small ones behave like noise: those are the effects to put into the error. The first plot shows the signed effects with the line through the small ones; the Q-Q plot is the one used in class (absolute effects, every point labelled). Choose the effects for the error just below."
@@ -835,17 +849,20 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       div(style = "max-width:520px", selectInput(ns(kid(id)), label, ch, selected = pick %||% codes[1], width = "100%"))
     }
     result_fact_ui <- function(r, stale_flag, choice_note = NULL) {
-      m <- cur$meta; vc <- if (isTRUE(m$random_blocks)) r$varcomp; anova_t <- identical(r$test, "anova"); eff <- r$effects; sg <- eff$code[eff$p < r$alpha]
+      m <- cur$meta; vc <- if (isTRUE(m$random_blocks)) r$varcomp; anova_t <- r$test %in% c("anova", "splitrank"); eff <- r$effects; sg <- eff$code[eff$p < r$alpha]
       tile <- function(label, value, sub = NULL) div(class = "ps-tile", div(class = "ps-tl", label), div(class = "ps-tv", value), if (!is.null(sub)) div(class = "ps-ts", sub))
       tagList(choice_note,
         if (stale_flag) note(kind = "i", ic = "info", "The settings changed after this result was computed. Press Run test to update it."),
         div(class = "grid g4", style = "margin-top:4px",
             tile("Test", r$t$name), tile("Effects tested", as.character(nrow(eff)), paste(eff$code, collapse = ", ")),
             tile("Significant effects", if (length(sg)) paste(sg, collapse = ", ") else "None", sprintf("at α = %s", format(r$alpha))),
-            tile(if (anova_t) "Error df" else "Statistic", if (anova_t) as.character(r$an$dfe) else sprintf("%s per effect", r$stat_name), if (anova_t) sprintf("MS_E = %s", ps_fmt(r$an$mse, 5)) else "χ² distribution")),
+            if (identical(r$kind, "split")) tile("Error df (whole plot · subplot)", sprintf("%d · %d", r$an$wp$df, r$an$sp$df), sprintf("MS = %s · %s%s", ps_fmt(r$an$wp$ms, 5), ps_fmt(r$an$sp$ms, 5), if (anova_t) "" else " (on the ranks)"))
+            else tile(if (anova_t) "Error df" else "Statistic", if (anova_t) as.character(r$an$dfe) else sprintf("%s per effect", r$stat_name), if (anova_t) sprintf("MS_E = %s", ps_fmt(r$an$mse, 5)) else "χ² distribution")),
         tags$details(class = "ps-calc", tags$summary(icon("chev", 14), "How the statistics are computed", span(class = "small", "show the calculation")), div(class = "am-formula", lapply(r$formula, div))),
         if (!is.null(r$anova_df)) div(class = "col", style = "gap:6px", h3(class = "ct", "ANOVA table"), tbl(r$anova_df),
-            p(class = "small", style = "margin:0", if (length(r$pooled)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the %d effects you put into the error in step 4 (%s), which are taken to be noise; every other effect is tested against it.", r$an$dfe, paste(r$pooled, collapse = ", "))
+            p(class = "small", style = "margin:0", if (identical(r$kind, "split") && length(r$pooled)) sprintf("There is one observation per combination, so there is no pure error. Each stratum has its own error line, which pools the effects you put into that error in step 4 (%s); every whole-plot effect is tested against the whole-plot error and every effect that contains a subplot factor against the subplot error.", paste(r$pooled, collapse = ", "))
+                                                  else if (identical(r$kind, "split")) "A split-plot has two error terms. The whole-plot factors are tested against the whole-plot error (blocks × whole-plot treatments) and the subplot factors and their interactions with the whole-plot factors against the subplot error (the within-whole-plot residual)."
+                                                  else if (length(r$pooled)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the %d effects you put into the error in step 4 (%s), which are taken to be noise; every other effect is tested against it.", r$an$dfe, paste(r$pooled, collapse = ", "))
                                                   else if (isTRUE(r$pool)) sprintf("There is one observation per combination, so there is no pure error. The error line pools the three-factor and higher interactions (%d df), which are assumed negligible; every main effect and two-factor interaction is tested against it.", r$an$dfe)
                                                   else if (isTRUE(r$unrep)) "There is one observation per combination, so there is no pure error: the error line is the interaction, and the interaction itself is tested below with Tukey's test for nonadditivity."
                                                   else if (identical(r$kind, "factb")) "Each replicate is a block: the block effect is removed from the error. The test of interest is each factor and each interaction."
@@ -1031,7 +1048,8 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
                                                                     if (ps_is_fact(kind)) "the fitted values; with a term for every combination and two replicates, the usual version would reject whatever the data" else "the model terms", format(al)))),
             div(class = "grid g2", plot_box("pl_rvf", "Residuals versus fitted values"), plot_box("pl_box", "Spread of each treatment"))),
         sec("Independence", a$indep_ok, tbl(a$independence),
-            p(class = "small", if (ps_is_fact(kind)) "H0: the residuals are independent (no correlation between consecutive observations). The observations are listed replicate by replicate: every combination once, then the next replicate." else "H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed)."),
+            p(class = "small", if (identical(kind, "split")) "H0: the whole-plot residuals are independent (no correlation between consecutive whole plots). The subplots of one whole plot share its error, so they are correlated by design; independence is checked on the whole plots, in the order they are listed."
+              else if (ps_is_fact(kind)) "H0: the residuals are independent (no correlation between consecutive observations). The observations are listed replicate by replicate: every combination once, then the next replicate." else "H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed)."),
             plot_box("pl_ord", "Residuals in the order listed", 210)),
         if (isTRUE(rank_first())) final_card(
             if (a$all_ok) "The assumptions hold: the ANOVA was also valid" else sprintf("%s failed: the rank test was the right choice", paste(a$failed, collapse = " and ")),
@@ -1046,7 +1064,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     })
     output$pl_qq <- renderPlot({ a <- asm(); plot_qq_vec(a$targets[[1]], "Residuals") }, bg = "transparent", res = 88)
     output$pl_hist <- renderPlot({ a <- asm(); plot_hist(a$targets[[1]], "Residuals") }, bg = "transparent", res = 88)
-    output$pl_ord <- renderPlot({ ps_plot_order(asm()$ind_fit) }, bg = "transparent", res = 88)
+    output$pl_ord <- renderPlot({ ps_plot_order(asm()$ord_fit %||% asm()$ind_fit, asm()$ord_label %||% "Observation order (as recorded)") }, bg = "transparent", res = 88)
     output$pl_fmain <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_fact_main(cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_finter <- renderPlot({ req(ps_is_fact(cur$kind)); ps_plot_fact_inter(cur$st, cur$meta) }, bg = "transparent", res = 88)
     output$pl_fnorm <- renderPlot({ req(ps_is_fact(cur$kind), ps_fact_2level(cur$st)); ps_plot_fact_normal(cur$st, cur$meta) }, bg = "transparent", res = 88)
@@ -1259,7 +1277,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     observeEvent(input$edit_this, {
       m <- cur$meta; req(m)
       open_editor(list(title = sprintf("Problem %s (edited)", m$id), statement = paste(c(m$statement, m$parts), collapse = "\n"),
-                       data = m$data, roles = m$roles, target = m$target, settings = m$settings, labels = m$labels, control = m$control))
+                       data = m$data, roles = m$roles, target = m$target, settings = m$settings, labels = m$labels, control = m$control, random_wp = m$random_wp))
       showNotification(sprintf("Problem %s copied into the editor. Change anything, then press Continue to the steps.", m$id), type = "message")
     })
     observeEvent(input$edit_back, view("list"))
@@ -1343,7 +1361,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       m <- isolate(cur$meta); req(m)
       sv <- isolate(list(s = cur$s, h0 = cur$h0, h1 = cur$h1, hs0 = cur$hs0, hs1 = cur$hs1, h0n = cur$h0n, h1n = cur$h1n, hs0n = cur$hs0n, hs1n = cur$hs1n,
                          fh = cur$fh, fhn = cur$fhn, test = cur$test, test_user = cur$test_user, ph = cur$ph, step = cur$step, seen = cur$seen))
-      meta <- if (identical(m$id, "custom")) m[intersect(c("title", "statement", "parts", "roles", "labels", "settings", "target", "control", "random_blocks", "design"), names(m))]
+      meta <- if (identical(m$id, "custom")) m[intersect(c("title", "statement", "parts", "roles", "labels", "settings", "target", "control", "random_blocks", "design", "random_wp"), names(m))]
       sm <- tryCatch(ps_share_summary(m, sv$s, sv$test), error = function(e) NULL)
       list(app = "StatDesign Studio", kind = "analysis", version = 1, saved = format(Sys.time(), "%Y-%m-%d %H:%M"), from = name, note = note,
            page = if (is.null(mode)) "problems" else mode, problem_id = m$id, title = prob_label(m), edited = isTRUE(m$edited),
@@ -1390,6 +1408,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
                   data = df, display = df, roles = roles, labels = as.list(mt$labels), settings = as.list(mt$settings), target = mt$target %||% "mean",
                   source = "Shared analysis", control = mt$control)
         if (!is.null(mt$random_blocks)) m$random_blocks <- isTRUE(mt$random_blocks)
+        if (!is.null(mt$random_wp)) m$random_wp <- isTRUE(mt$random_wp)
         if (!is.null(mt$design)) m$design <- mt$design
         custom(m); if (!is.null(mode)) { load_data(df, roles); updateTextInput(session, "c_title", value = m$title) }
         memo[["custom"]] <- memo_new; cur$id <- NULL; open_problem("custom", step = step)
@@ -1474,11 +1493,30 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       paras <- strsplit(txt, "\n\\s*\n")[[1]]; paras <- trimws(paras[nzchar(trimws(paras))])
       roles <- croles()
       same <- !is.null(seed) && identical(vapply(names(role_ids), function(k) seed$roles[[k]] %||% "", ""), vapply(names(role_ids), function(k) roles[[k]] %||% "", ""))
+      wp <- wp_chosen(); if (length(wp)) roles$wp <- wp
       ctrl <- input$c_control %||% ""; lv <- if (nzchar(roles$treatment)) unique(trimws(as.character(df[[roles$treatment]]))) else character(0)
       list(id = "custom", chapter = 0, num = "Custom", title = trimws(input$c_title %||% ""), statement = if (length(paras)) paras else "No statement was entered.",
            parts = character(0), data = df, display = df, roles = roles, labels = if (same) seed$labels %||% list() else list(), settings = s,
            target = if (isTRUE(input$c_variance)) "variance" else "mean", source = "Your own problem",
-           control = if (nzchar(ctrl) && ctrl != NO_ROLE && ctrl %in% lv) ctrl else NULL)
+           control = if (nzchar(ctrl) && ctrl != NO_ROLE && ctrl %in% lv) ctrl else NULL, random_wp = length(wp) > 0 && isTRUE(input$c_random_wp))
+    })
+    # Split-plot: which of the chosen factor columns are the whole-plot factors (the others are subplot factors).
+    split_on <- function() identical(mode, "split") || (is.null(mode) && length(ud$ps_seed$roles$wp))
+    wp_chosen <- reactive({
+      if (!split_on()) return(character(0))
+      fcols <- unlist(croles()[c("treatment", "factorB", "factorC", "factorD", "factorE")]); fcols <- unique(fcols[nzchar(fcols)])
+      x <- input$c_wp; if (is.null(x)) return(character(0))
+      intersect(as.character(x), fcols)
+    })
+    output$c_wp_ui <- renderUI({
+      if (!split_on()) return(NULL)
+      fcols <- unlist(croles()[c("treatment", "factorB", "factorC", "factorD", "factorE")]); fcols <- unique(fcols[nzchar(fcols)])
+      if (length(fcols) < 2) return(note(kind = "i", ic = "info", "Choose at least two factor columns, then say which are the whole-plot factors."))
+      seed <- ud$ps_seed$roles$wp; sel <- isolate(input$c_wp); sel <- intersect(if (is.null(sel)) (if (length(seed)) seed else fcols[1]) else sel, fcols)
+      div(class = "kcard soft ps-card-s", style = "padding:12px 14px",
+          checkboxGroupInput(ns("c_wp"), "Whole-plot factors (hard to change: a level is set once for a whole plot)", choices = stats::setNames(fcols, fcols), selected = sel, width = "100%"),
+          p(class = "small", style = "margin:0 0 8px", "The factors you leave unticked are the subplot factors, changed within each whole plot. Tick at least one whole-plot factor and leave at least one subplot factor."),
+          checkboxInput(ns("c_random_wp"), "The whole-plot factor is random (a sample of levels from a larger population)", isTRUE(ud$ps_seed$random_wp)))
     })
     # A control group is chosen only when the problem names one; Dunnett's test then compares every treatment with it.
     output$c_control_ui <- renderUI({
@@ -1494,6 +1532,7 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
     mode_wrong <- function(kind, st) {
       if (is.null(md) || is.na(kind)) return(NULL)
       if (kind %in% md$kinds && !(identical(mode, "twok") && !isTRUE(ps_fact_2level(st)))) return(NULL)
+      if (identical(mode, "split")) return(sprintf("This page analyses split-plot designs, but the columns you chose form %s. %s", tolower(PS_KIND_LABEL[[kind]]), md$need))
       if (identical(mode, "twok") && identical(kind, "fact")) return(sprintf("This page analyses 2^k factorial designs, but at least one of the factors you chose has more than two levels. %s Use the Factorial page for factors with three or more levels.", md$need))
       extra <- if (identical(mode, "two") && identical(kind, "k")) sprintf(" Your Group column has %d levels: use the k samples or CRD page.", st$ntrt %||% 0)
                else if (identical(mode, "two") && identical(kind, "rcbd")) " For paired data every pair needs exactly one observation per group."
@@ -1613,6 +1652,9 @@ ps_guess_roles_mode <- function(df, mode, paired = FALSE) {
     twok = { cand <- pool[vapply(pool, function(cn) { u <- unique(trimws(as.character(df[[cn]]))); length(u[!is.na(u) & nzchar(u)]) == 2 }, TRUE)]
              cand <- cand[!grepl("rep|run|order|block", tolower(cand))]
              fk <- c("treatment", "factorB", "factorC", "factorD", "factorE"); for (i in seq_len(min(5, length(cand)))) out[[fk[i]]] <- cand[i] },
+    split = { out$block <- take("^block|^rep|^day|^shift|^replicate")
+              cand <- pool[!grepl("run|order|std|standard", tolower(pool)) & vapply(pool, function(cn) { u <- unique(trimws(as.character(df[[cn]]))); u <- u[!is.na(u) & nzchar(u)]; length(u) >= 2 && length(u) <= 8 }, TRUE)]
+              cand <- setdiff(cand, out$block); fk <- c("treatment", "factorB", "factorC", "factorD", "factorE"); for (i in seq_len(min(5, length(cand)))) out[[fk[i]]] <- cand[i] },
     fact = { out$treatment <- nextcol(); out$factorB <- nextcol()
              rest <- pool[!grepl("rep|block", tolower(pool))]
              if (length(rest) && length(unique(df[[rest[1]]])) <= 5) out$factorC <- ""   # a third factor is left to the student
