@@ -24,7 +24,7 @@ Each analysis was saved with *Share analysis* (`analysis/*.sdsa`) and pinned to 
 
 ## Insights and possible additions
 - Cutting force replicates to every digit: depth of cut dominates (F = 35.8, p = 0.027).
-- For roughness the paper prints an error SS of 0.010, but its F-values only work with 0.008 (our value is 0.0083); a transcription slip that does not change the conclusion (no factor significant).
+- For roughness the paper prints an error SS of 0.010 and a total of 0.047 (Table 7), but its F-values only work with an error of 0.008 (0.019/0.008 = 2.375, 0.005/0.008 = 0.625, 0.013/0.008 = 1.625). From the paper's own Table 6 data the app gives error SS 0.0083 and total 0.0454, so the printed 0.010 and 0.047 do not come from the data, while 0.008 is the correct error rounded to three decimals. The paper's F-values are also ratios of rounded SS (the data in Table 6 are identical to the CSV), so they differ slightly from the unrounded ones (2.31, 0.64, 1.52). The conclusion (no factor significant) does not change. The stated R-squared values (0.94 for force, 0.95 for roughness) could not be reproduced either: the data give 0.974 and 0.817.
 - With 2 error df the test has very little power; the paper took 3 measurements per run but analysed only the means. Entering the 27 individual measurements would give a proper replicated Latin square.
 - Residuals are borderline non-normal (Shapiro-Wilk p = 0.03), which is common with 9 points; the app offers the rank-based alternative automatically.
 
