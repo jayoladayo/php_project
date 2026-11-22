@@ -65,7 +65,7 @@ PAPER_META <- list(
        tally_note = "Yes, exactly (t = −9.52, df = 17)", finding = "The mean pH, 7.67, is significantly below the 8.5 limit; the 18 values are 9 sites measured in two seasons."),
   list(num = "11", folder = "11_kSample_Bond_Strength_Aging_Adawi2024_MedSciMonit", design = "crd", field = "Health & biology", tally = "partly",
        title = "Artificial aging and the bond strength of a resin composite", who = "Adawi et al.", year = 2024, journal = "Medical Science Monitor",
-       tally_note = "Table 2 gives F = 9.57; the printed F = 13.55 does not follow", finding = "Highly significant either way, but the F in the text cannot be reproduced from the paper's own Table 2 (data rebuilt from means and SDs)."),
+       tally_note = "Table 2's means, SDs and N give F = 9.57; the printed F = 13.55 does not follow", finding = "Highly significant either way. The F in Table 2 disagrees with its own SDs, while the Tukey table agrees with the F (data rebuilt from means and SDs)."),
   list(num = "12", folder = "12_CRD_Broiler_Banana_Peel_Chacrabati2013_BJAS", design = "crd", field = "Agriculture", tally = "yes",
        title = "Banana peel meal with probiotics in broiler diets", who = "Chacrabati et al.", year = 2013, journal = "Bangladesh Journal of Animal Science",
        tally_note = "Yes: everything printed agrees (means, SE, ** significance); no F is printed. Data rebuilt from the means and SEs", finding = "Only the plantain 0.5 % diet differs: about 170 to 200 g lighter birds (data rebuilt from means and SEs)."),

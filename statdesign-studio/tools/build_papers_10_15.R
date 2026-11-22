@@ -84,7 +84,7 @@ r11 <- sdsa(file.path(P, dirs[["p11"]], "analysis", "Adawi2024_bond_strength_k_s
   "Adawi et al. (2024) – shear bond strength after thermocycling aging, 5 groups (data rebuilt from Table 2)",
   "Shear bond strength (MPa) of a veneer ceramic bonded to direct resin nano-hybrid composite was measured in 5 groups of 16 specimens: a control (TC) and four groups aged by thermocycling for 1, 3, 6 and 12 months. The paper prints only each group's mean and SD, so the 16 values of each group were rebuilt to have exactly that mean and SD. Does the mean bond strength differ between the groups? Test at α = 0.05. Source: Medical Science Monitor 30:e945243, Table 2.",
   list(response = "Shear bond strength (MPa)", treatment = "Aging group"), list(response = "shear bond strength", unit = "MPa", treatment = "aging group"), "anova",
-  "The data are rebuilt from the published means and SDs. From Table 2 the app (and an independent calculation) gives F = 9.571 on 4 and 75 df; the F = 13.55 printed in the paper's text does not follow from its own Table 2. Both are highly significant.",
+  "The data are rebuilt from the published means and SDs (N = 16 per group, as in Table 2). From Table 2 the app (and an independent calculation) gives F = 9.571 on 4 and 75 df; the F = 13.55 printed in Table 2 does not follow from its own means and SDs, but the paper's Tukey p-values (Table 3) agree with that F, not with the SDs. Both are highly significant.",
   d11)
 save_out(r11, file.path(P, dirs[["p11"]], "analysis", "StatDesign_app_output_bond_strength.txt"))
 
