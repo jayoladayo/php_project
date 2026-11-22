@@ -29,8 +29,8 @@ Each numbered folder holds one paper and has the same layout:
 | 09 | 2^k (2⁴, 2 replicates) | Pan & Lei 2025, Materials – Al₂O₃ ALD | 2^k Factorial | Yes (to rounding) | Lack of fit F = 82: against pure error every effect is significant |
 | 10 | One sample | Uddin et al. 2023, Heliyon – groundwater pH | One sample | Yes, exactly (t = −9.52, df = 17) | Mean pH 7.67 is significantly below the 8.5 limit |
 | 11 | k samples | Adawi et al. 2024, Medical Science Monitor – bond strength and aging | k samples | Table 2 gives F = 9.57; the printed F = 13.55 does not follow | Significant either way; the printed F is inconsistent with the paper's table (data rebuilt from means and SDs) |
-| 12 | CRD | Chacrabati et al. 2013, Bangladesh J. Animal Science – broiler diets | CRD | Significance (**) agrees; no F printed | Only plantain 0.5 % differs (data rebuilt from means and SEs) |
-| 13 | RCBD | Yadeta 2024, J. Scientific Agriculture – vetch and oats | RCBD | Means and CV 18.68 % reproduce; no F printed | Bonsa oats and the Bonsa + vetch mixture yield most; block structure assumed (data rebuilt) |
+| 12 | CRD | Chacrabati et al. 2013, Bangladesh J. Animal Science – broiler diets | CRD | Yes: everything printed agrees (means, SE, **); no F printed | Only plantain 0.5 % differs (data rebuilt from means and SEs) |
+| 13 | RCBD | Yadeta 2024, J. Scientific Agriculture – vetch and oats | RCBD | Yes: means, CV 18.68 % and P agree; no F printed | Bonsa oats and the Bonsa + vetch mixture yield most; block structure assumed (data rebuilt) |
 | 14 | Latin square | Bacharach, Chance & Middleton 1940, Biochemical Journal – diffusing factor | Latin Square | Yes, all three F ratios (0.172, 1.168, 3.910) | Order of injection has no effect; rabbits differ |
 | 15 | Factorial (3×3×3 CRD) | Chan & Asrah 2026, EKST – fruit shelf life | Factorial | Yes (total SS 2522.1, whole ANOVA table) | Preservative and storage dominate; two interactions |
 
