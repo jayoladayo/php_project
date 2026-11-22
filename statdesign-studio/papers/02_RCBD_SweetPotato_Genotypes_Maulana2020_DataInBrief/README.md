@@ -26,7 +26,8 @@ Each analysis was saved with *Share analysis* (`analysis/*.sdsa`) and pinned to 
 
 ## Insights and possible additions
 - The paper never says so, but its ANOVA (Table 1) and CVs were computed on square-root-transformed yield; on the raw t/ha scale the SS are 30-50 times larger. Anyone re-running the paper must transform first.
-- Data-integrity flag: in the supplement the six check varieties' plot yields are exact square roots of whole numbers (e.g. 7.0711 = sqrt(50), which appears six times), while the MZ clones are plain t/ha values. The checks may already be on a transformed scale, so they are not comparable with the clones.
+- Checked against the paper's text and the supplement: the paper states no transformation (Section 2.4 says only that yields were converted to t/ha; Section 2.5 gives the plain model). The supplement's values are not already transformed: the ANOVA of the values as given is far from Table 1 (genotype SS 4422), and only the square root of every value reproduces it (genotype F 32.27, G×E F 21.17, CV 13.82 %); fourth root, log(y+1) and √(y+0.5) do not. The paper's min, max, average and Table 2 means are the plain t/ha values.
+- Data oddity (separate from the mismatch): the six check varieties are stored at full precision as square roots of whole numbers (41 of 54 plots; 7.0711 = √50 six times), the 17 clones as two-decimal t/ha values. Their size is that of yields in t/ha (mean 13.1 against 11.5 for the clones), so the checks are not on a smaller, transformed scale; where the numbers came from is not explained.
 - At Sumedang genotypes differ strongly (app: F = 23.64, p < 0.0001); the residuals are slightly non-normal (Shapiro-Wilk p = 0.030), which also argues for the square-root scale.
 - Addition: rerun the RCBD on the square-root column (provided in the CSV) and compare the decision; the GxE term is larger than the genotype term, so stability ranking matters more than overall means.
 
