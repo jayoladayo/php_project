@@ -1,0 +1,26 @@
+
+=== Grain yield
+                                                    Source  df           SS         MS         F    p
+                                                     Block   3    16,632.49   5,544.16    365.14 0.00
+                                        Fertilization mode   2   576,142.53 288,071.26 18,972.71 0.00
+                                         Zinc rate (kg/ha)   3 2,456,502.23 818,834.08 53,929.37 0.00
+                                         Iron rate (kg/ha)   3   499,419.15 166,473.05 10,964.11 0.00
+                    Fertilization mode x Zinc rate (kg/ha)   6    95,889.82  15,981.64  1,052.57 0.00
+                    Fertilization mode x Iron rate (kg/ha)   6    21,576.92   3,596.15    236.85 0.00
+                     Zinc rate (kg/ha) x Iron rate (kg/ha)   9   152,749.41  16,972.16  1,117.81 0.00
+Fertilization mode x Zinc rate (kg/ha) x Iron rate (kg/ha)  18    15,286.84     849.27     55.93 0.00
+                                                     Error 141     2,140.87      15.18       NaN  NaN
+                                                     Total 191 3,836,340.24        NaN       NaN  NaN
+  SS Block                                   ours=   16,632.4856   paper=      16632.49   MATCH
+  SS Fertilization mode                      ours=  576,142.5272   paper=     576142.53   MATCH
+  SS Zinc rate (kg/ha)                       ours=2,456,502.2318   paper=    2456502.23   MATCH
+  SS Iron rate (kg/ha)                       ours=  499,419.1493   paper=     499419.15   MATCH
+  SS Fertilization mode x Zinc rate (kg/ha)  ours=   95,889.8199   paper=      95889.82   MATCH
+  SS Fertilization mode x Iron rate (kg/ha)  ours=   21,576.9174   paper=      21576.92   MATCH
+  SS Zinc rate (kg/ha) x Iron rate (kg/ha)   ours=  152,749.4096   paper=     152749.41   MATCH
+  SS Fertilization mode x Zinc rate (kg/ha) x Iron rate (kg/ha) ours=   15,286.8355   paper=      15286.84   MATCH
+  SS Error                                   ours=    2,140.8669   paper=       2140.87   MATCH
+  SS Total                                   ours=3,836,340.2433   paper=    3836340.24   MATCH
+
+CV = 0.23%  (residual SD 3.9 kg/ha on a mean of 1702 kg/ha)
+A field CV near 0.2% is far below the 5-15% usual for grain yield; worth asking the authors how plot yields were obtained.

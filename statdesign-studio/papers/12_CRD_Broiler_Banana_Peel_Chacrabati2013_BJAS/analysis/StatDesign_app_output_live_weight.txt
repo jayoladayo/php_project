@@ -1,0 +1,19 @@
+StatDesign Studio output - Chacrabati et al. (2013) – broiler live weight, completely randomized design with 4 diets (data rebuilt from means and SE)
+Layout: k independent samples. Test: CRD ANOVA (F test). alpha = 0.05
+
+ANOVA table
+ Source df Sum of squares Mean square     F0  P-value
+   Diet  3        108,020    36,006.7 30.351 < 0.0001
+  Error 12         14,236    1,186.34                
+  Total 15        122,256                            
+
+Assumption checks on the residuals
+                               Sample  n Shapiro-Wilk W Shapiro-Wilk p
+ Residuals of the one-way (CRD) model 16         0.9528         0.5351
+ Anderson-Darling p Result
+             0.3975 Normal
+          Test  Statistic df p-value   Result
+ Breusch-Pagan BP = 2.171  3  0.5377 Constant
+                    Test   Statistic df p-value      Result
+ Breusch-Godfrey (lag 1) LM = 0.0688  1  0.7931 Independent
+All assumptions hold: TRUE

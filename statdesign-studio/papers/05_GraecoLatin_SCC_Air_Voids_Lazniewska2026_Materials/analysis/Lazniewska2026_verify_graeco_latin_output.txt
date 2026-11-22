@@ -1,0 +1,86 @@
+
+=== Fresh air content after 5 min A5 (%)
+                           Source  df      SS     MS      F      p
+    AEA dosage (% of cement mass)   4  3.8880 0.9720 0.3299 0.8505
+                      Binder type   4 36.7840 9.1960 3.1215 0.0800
+        Water-to-binder ratio w/b   4 26.7040 6.6760 2.2661 0.1509
+Paste-to-aggregate void ratio phi   4  1.2960 0.3240 0.1100 0.9756
+                            Error   8 23.5680 2.9460    NaN    NaN
+                            Total  24 92.2400    NaN    NaN    NaN
+  SS AEA dosage (% of cement mass)           ours=        3.8880   paper=         3.888   MATCH
+  SS Binder type                             ours=       36.7840   paper=        36.784   MATCH
+  SS Water-to-binder ratio w/b               ours=       26.7040   paper=        26.704   MATCH
+  SS Paste-to-aggregate void ratio phi       ours=        1.2960   paper=         1.296   MATCH
+  SS Error                                   ours=       23.5680   paper=        23.568   MATCH
+
+=== Air loss 5 to 15 min dA (percentage points)
+                           Source  df     SS     MS      F      p
+    AEA dosage (% of cement mass)   4 0.0416 0.0104 0.7176 0.6032
+                      Binder type   4 0.0483 0.0121 0.8335 0.5403
+        Water-to-binder ratio w/b   4 0.2431 0.0608 4.1905 0.0404
+Paste-to-aggregate void ratio phi   4 0.0541 0.0135 0.9321 0.4917
+                            Error   8 0.1160 0.0145    NaN    NaN
+                            Total  24 0.5031    NaN    NaN    NaN
+  SS AEA dosage (% of cement mass)           ours=        0.0416   paper=        0.0416   MATCH
+  SS Binder type                             ours=        0.0483   paper=        0.0483   MATCH
+  SS Water-to-binder ratio w/b               ours=        0.2431   paper=        0.2431   MATCH
+  SS Paste-to-aggregate void ratio phi       ours=        0.0541   paper=        0.0541   MATCH
+  SS Error                                   ours=        0.1160   paper=         0.116   MATCH
+
+=== Hardened total air content A (%)
+                           Source  df       SS     MS      F      p
+    AEA dosage (% of cement mass)   4   1.7105 0.4276 0.1544 0.9556
+                      Binder type   4  37.0583 9.2646 3.3445 0.0687
+        Water-to-binder ratio w/b   4  30.0071 7.5018 2.7082 0.1075
+Paste-to-aggregate void ratio phi   4  10.9905 2.7476 0.9919 0.4645
+                            Error   8  22.1604 2.7700    NaN    NaN
+                            Total  24 101.9268    NaN    NaN    NaN
+  SS AEA dosage (% of cement mass)           ours=        1.7105   paper=         1.711   MATCH
+  SS Binder type                             ours=       37.0583   paper=        37.058   MATCH
+  SS Water-to-binder ratio w/b               ours=       30.0071   paper=        30.007   MATCH
+  SS Paste-to-aggregate void ratio phi       ours=       10.9905   paper=         10.99   MATCH
+  SS Error                                   ours=       22.1604   paper=         22.16   MATCH
+
+=== Spacing factor L (mm)
+                           Source  df     SS     MS      F      p
+    AEA dosage (% of cement mass)   4 0.0048 0.0012 0.2191 0.9204
+                      Binder type   4 0.0332 0.0083 1.5239 0.2832
+        Water-to-binder ratio w/b   4 0.0547 0.0137 2.5076 0.1250
+Paste-to-aggregate void ratio phi   4 0.0223 0.0056 1.0248 0.4502
+                            Error   8 0.0436 0.0054    NaN    NaN
+                            Total  24 0.1586    NaN    NaN    NaN
+  SS AEA dosage (% of cement mass)           ours=        0.0048   paper=        0.0048   MATCH
+  SS Binder type                             ours=        0.0332   paper=        0.0332   MATCH
+  SS Water-to-binder ratio w/b               ours=        0.0547   paper=        0.0547   MATCH
+  SS Paste-to-aggregate void ratio phi       ours=        0.0223   paper=        0.0223   MATCH
+  SS Error                                   ours=        0.0436   paper=        0.0436   MATCH
+
+=== Micropore content A300 (%)
+                           Source  df      SS     MS      F      p
+    AEA dosage (% of cement mass)   4  2.8693 0.7173 1.9370 0.1977
+                      Binder type   4  0.2544 0.0636 0.1718 0.9468
+        Water-to-binder ratio w/b   4  6.0117 1.5029 4.0584 0.0437
+Paste-to-aggregate void ratio phi   4  2.4041 0.6010 1.6229 0.2593
+                            Error   8  2.9626 0.3703    NaN    NaN
+                            Total  24 14.5020    NaN    NaN    NaN
+  SS AEA dosage (% of cement mass)           ours=        2.8693   paper=         2.869   MATCH
+  SS Binder type                             ours=        0.2544   paper=         0.254   MATCH
+  SS Water-to-binder ratio w/b               ours=        6.0117   paper=         6.012   MATCH
+  SS Paste-to-aggregate void ratio phi       ours=        2.4041   paper=         2.404   MATCH
+  SS Error                                   ours=        2.9626   paper=         2.963   MATCH
+
+=== Specific surface of air voids alpha (1/mm)
+                           Source  df       SS      MS      F      p
+    AEA dosage (% of cement mass)   4 122.2997 30.5749 1.7976 0.2226
+                      Binder type   4 156.0951 39.0238 2.2943 0.1476
+        Water-to-binder ratio w/b   4 240.8235 60.2059 3.5397 0.0604
+Paste-to-aggregate void ratio phi   4  65.6940 16.4235 0.9656 0.4763
+                            Error   8 136.0692 17.0087    NaN    NaN
+                            Total  24 720.9815     NaN    NaN    NaN
+  SS AEA dosage (% of cement mass)           ours=      122.2997   paper=         122.3   MATCH
+  SS Binder type                             ours=      156.0951   paper=       156.095   MATCH
+  SS Water-to-binder ratio w/b               ours=      240.8235   paper=       240.823   MATCH
+  SS Paste-to-aggregate void ratio phi       ours=       65.6940   paper=        65.694   MATCH
+  SS Error                                   ours=      136.0692   paper=       136.069   MATCH
+
+Design check (each pair of factors balanced): True

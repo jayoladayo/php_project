@@ -1,0 +1,83 @@
+
+### Marketable bulb yield (t/ha)
+  mean Russet                                ours=       26.5037   paper=          26.5   MATCH
+  mean Red Coach                             ours=       21.8457   paper=         21.84   MATCH
+  mean Jambar                                ours=       24.5715   paper=         24.57   MATCH
+  mean Bombay Red                            ours=       19.8594   paper=         19.86   MATCH
+  mean N = 0                                 ours=       19.0972   paper=         19.09   MATCH
+  mean N = 41                                ours=       22.3974   paper=         22.39   MATCH
+  mean N = 82                                ours=       26.7756   paper=         26.77   MATCH
+  mean N = 123                               ours=       24.5102   paper=         24.51   MATCH
+  CV (%)  [Location + Rep + V x N]           ours=       20.7678   paper=         20.76   MATCH
+  LSD 0.05 for 36-plot means                 ours=        2.2473   paper=          2.25   MATCH
+
+### Total dry bulb yield (t/ha)
+  mean Russet                                ours=       26.9361   paper=         26.93   MATCH
+  mean Red Coach                             ours=       22.3526   paper=         22.35   MATCH
+  mean Jambar                                ours=       25.0891   paper=         25.09   MATCH
+  mean Bombay Red                            ours=       20.4525   paper=        20.453   MATCH
+  mean N = 0                                 ours=       19.6813   paper=         19.68   MATCH
+  mean N = 41                                ours=       22.9107   paper=         22.91   MATCH
+  mean N = 82                                ours=       27.2643   paper=         27.26   MATCH
+  mean N = 123                               ours=       24.9741   paper=         24.97   MATCH
+  CV (%)  [Location + Rep + V x N]           ours=       20.2685   paper=         20.22   MATCH
+  LSD 0.05 for 36-plot means                 ours=        2.2417   paper=          2.24   MATCH
+
+### Average bulb weight (g)
+  mean Russet                                ours=       93.1238   paper=         93.12   MATCH
+  mean Red Coach                             ours=       91.1646   paper=         91.16   MATCH
+  mean Jambar                                ours=       94.2856   paper=         94.28   MATCH
+  mean Bombay Red                            ours=       81.7093   paper=          81.7   MATCH
+  mean N = 0                                 ours=       79.8434   paper=         79.84   MATCH
+  mean N = 41                                ours=       85.8737   paper=         85.87   MATCH
+  mean N = 82                                ours=      101.1835   paper=        101.18   MATCH
+  mean N = 123                               ours=       93.3825   paper=         93.38   MATCH
+  CV (%)  [Location + Rep + V x N]           ours=       10.8551   paper=          8.74   DIFFERS (24.2%)
+  LSD 0.05 for 36-plot means                 ours=        4.5613   paper=          3.68   DIFFERS (23.9%)
+
+### Bulb diameter (mm)
+  mean Russet                                ours=       67.8255   paper=         69.54   DIFFERS (2.5%)
+  mean Red Coach                             ours=       65.8504   paper=         65.85   MATCH
+  mean Jambar                                ours=       67.3133   paper=         68.53   MATCH
+  mean Bombay Red                            ours=       64.5687   paper=         64.56   MATCH
+  mean N = 0                                 ours=       60.4462   paper=         60.44   MATCH
+  mean N = 41                                ours=       63.9961   paper=         63.99   MATCH
+  mean N = 82                                ours=       73.2609   paper=          73.4   MATCH
+  mean N = 123                               ours=       67.8548   paper=         70.66   DIFFERS (4.0%)
+  CV (%)  [Location + Rep + V x N]           ours=       11.9916   paper=         12.22   MATCH
+  LSD 0.05 for 36-plot means                 ours=        3.7140   paper=          3.82   DIFFERS (2.8%)
+
+### Days to physiological maturity (days)
+  mean Russet                                ours=       94.6944   paper=         94.69   MATCH
+  mean Red Coach                             ours=      101.7222   paper=        101.72   MATCH
+  mean Jambar                                ours=      100.9722   paper=        100.97   MATCH
+  mean Bombay Red                            ours=      108.4722   paper=        108.47   MATCH
+  mean N = 0                                 ours=      100.1389   paper=        100.13   MATCH
+  mean N = 41                                ours=      100.5556   paper=        100.55   MATCH
+  mean N = 82                                ours=      100.9444   paper=        100.94   MATCH
+  mean N = 123                               ours=      104.2222   paper=        104.22   MATCH
+  CV (%)  [Location + Rep + V x N]           ours=        5.8307   paper=           5.6   DIFFERS (4.1%)
+  LSD 0.05 for 36-plot means                 ours=        2.7600   paper=          3.27   DIFFERS (15.6%)
+
+=== Marketable yield: paper's pooled model (Location + Rep + Variety x N)
+                         Source  df         SS         MS       F      p
+                       Location   2 2,280.7491 1,140.3746 49.1446 0.0000
+            Replication (block)   2    45.4523    22.7262  0.9794 0.3784
+                        Variety   3   928.3981   309.4660 13.3365 0.0000
+          Nitrogen rate (kg/ha)   3 1,151.2164   383.7388 16.5373 0.0000
+Variety x Nitrogen rate (kg/ha)   9    38.0664     4.2296  0.1823 0.9956
+                          Error 124 2,877.3565    23.2045     NaN    NaN
+                          Total 143 7,321.2389        NaN     NaN    NaN
+
+=== Marketable yield: full combined RCBD (blocks nested in locations, all location interactions)
+                                    Source  df         SS         MS       F      p
+                                  Location   2 2,280.7491 1,140.3746 76.3001 0.0000
+                                   Loc-Rep   6   881.0251   146.8375  9.8246 0.0000
+                                   Variety   3   928.3981   309.4660 20.7057 0.0000
+                     Nitrogen rate (kg/ha)   3 1,151.2164   383.7388 25.6752 0.0000
+           Variety x Nitrogen rate (kg/ha)   9    38.0664     4.2296  0.2830 0.9778
+                        Location x Variety   6   270.7595    45.1266  3.0193 0.0098
+          Location x Nitrogen rate (kg/ha)   6   296.0226    49.3371  3.3010 0.0055
+Location x Variety x Nitrogen rate (kg/ha)  18   129.8690     7.2149  0.4827 0.9594
+                                     Error  90 1,345.1326    14.9459     NaN    NaN
+                                     Total 143 7,321.2389        NaN     NaN    NaN

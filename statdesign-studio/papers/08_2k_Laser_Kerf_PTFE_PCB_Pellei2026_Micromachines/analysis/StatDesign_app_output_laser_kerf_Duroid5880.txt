@@ -1,0 +1,39 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+CRD ANOVA (F test) ★ suggested
+ Run test
+Test
+CRD ANOVA (F test)
+Effects tested
+3
+A, B, C
+Significant effects
+A, B, C
+at α = 0.05
+Error df
+4
+MS_E = 0.0000052218
+How the statistics are computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Aperture A (um) (A)	1	0.0261651	0.0261651	5,010.8	< 0.0001
+Pulse duration B (us) (B)	1	0.303186	0.303186	58,062	< 0.0001
+Number of loops C (C)	1	0.0572732	0.0572732	10,968	< 0.0001
+Error	4	0.0000208871	0.00000522178		
+Total	7	0.386645			
+There is one observation per combination, so there is no pure error. The error line pools the 4 effects you put into the error in step 4 (AB, AC, BC, ABC), which are taken to be noise; every other effect is tested against it.
+Each effect: F test
+EFFECT	F0	DF	F CRITICAL	P-VALUE	RESULT
+Aperture A (um) (A)	5,010.8	1, 4	7.709	< 0.0001	Significant
+Pulse duration B (us) (B)	58,062	1, 4	7.709	< 0.0001	Significant
+Number of loops C (C)	10,968	1, 4	7.709	< 0.0001	Significant
+Back: Information available
+Next: Decision

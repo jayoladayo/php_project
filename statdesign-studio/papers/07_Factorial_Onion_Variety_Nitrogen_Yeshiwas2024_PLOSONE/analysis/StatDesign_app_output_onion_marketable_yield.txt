@@ -1,0 +1,72 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+LSD ANOVA (F test) ★ suggested
+ Run test
+Test
+LSD ANOVA (F test)
+Effects tested
+3
+A, B, AB
+Significant effects
+A, B
+at α = 0.05
+Error df
+124
+MS_E = 23.205
+How the statistics are computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Location (rows)	2	2,280.75	1,140.38	49.145	< 0.0001
+Replication (block) (columns)	2	45.4524	22.7262	0.97939	0.3784
+Variety (A)	3	928.399	309.466	13.336	< 0.0001
+Nitrogen rate (kg/ha) (B)	3	1,151.22	383.74	16.537	< 0.0001
+Variety × Nitrogen rate (kg/ha) (AB)	9	38.0656	4.22951	0.18227	0.9956
+Error	124	2,877.36	23.2045		
+Total	143	7,321.25			
+Every factor and every interaction is tested against the error mean square.
+Each effect: F test
+EFFECT	F0	DF	F CRITICAL	P-VALUE	RESULT
+Variety (A)	13.336	3, 124	2.678	< 0.0001	Significant
+Nitrogen rate (kg/ha) (B)	16.537	3, 124	2.678	< 0.0001	Significant
+Variety × Nitrogen rate (kg/ha) (AB)	0.18227	9, 124	1.956	0.9956	Not significant
+Back: Information available
+Next: Decision
+
+======================================================================
+STEP 8 - ASSUMPTION CHECKS
+======================================================================
+8
+Assumption checks
+Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.
+Normality
+Not satisfied
+SAMPLE	N	SHAPIRO-WILK W	SHAPIRO-WILK P	ANDERSON-DARLING P	RESULT
+Residuals of the factorial Latin square model	144	0.981	0.0436	0.0612	Not normal
+H0: the residuals come from a normal distribution. p ≥ 0.05 means no evidence against normality.
+Normal QQ plot of the residuals
+Histogram of the residuals
+Constant variance of the residuals
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Pagan (on the fitted values)	BP = 2.67	1	0.1023	Constant
+H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the fitted values; with a term for every combination and two replicates, the usual version would reject whatever the data). p ≥ 0.05 means the spread can be treated as constant.
+Residuals versus fitted values
+Spread of each treatment
+Independence
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Godfrey (lag 1)	LM = 0.06614	1	0.7970	Independent
+H0: the residuals are independent (no correlation between consecutive observations). The observations are listed replicate by replicate: every combination once, then the next replicate.
+Residuals in the order listed
+Normality failed: start again with the non-parametric test
+The LSD ANOVA (F test) assumes normality, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the Quade's test, which removes the blocking factors, ranks the residuals and tests each factor and each interaction on the ranks (Quade's test): new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.
+Back: Post-hoc
+Next: Non-parametric hypotheses

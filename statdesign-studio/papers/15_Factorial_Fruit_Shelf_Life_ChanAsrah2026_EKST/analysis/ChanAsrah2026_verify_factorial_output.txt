@@ -1,0 +1,27 @@
+
+       Chemical         Natural No preservative 
+             27              27              27 
+Analysis of Variance Table
+
+Response: Shelf life (days)
+                                                    Df  Sum Sq Mean Sq  F value
+Preservative                                         2 1060.91  530.46 282.6776
+`Moisture control`                                   2   64.02   32.01  17.0592
+`Storage condition`                                  2 1185.95  592.98 315.9934
+Preservative:`Moisture control`                      4    4.94    1.23   0.6579
+Preservative:`Storage condition`                     4   66.79   16.70   8.8980
+`Moisture control`:`Storage condition`               4   23.01    5.75   3.0658
+Preservative:`Moisture control`:`Storage condition`  8   15.14    1.89   1.0082
+Residuals                                           54  101.33    1.88         
+                                                       Pr(>F)    
+Preservative                                        < 2.2e-16 ***
+`Moisture control`                                  1.811e-06 ***
+`Storage condition`                                 < 2.2e-16 ***
+Preservative:`Moisture control`                       0.62392    
+Preservative:`Storage condition`                    1.357e-05 ***
+`Moisture control`:`Storage condition`                0.02389 *  
+Preservative:`Moisture control`:`Storage condition`   0.44092    
+Residuals                                                        
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+Total SS = 2522.099 (paper: 2522.10)

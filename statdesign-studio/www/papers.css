@@ -1,0 +1,103 @@
+/* Paper Replications page. It reuses the Problem Sets classes (cards, filters, groups, stepper, step cards);
+   the few rules below are its own and all start with pp-, so nothing else in the app is affected. */
+
+/* Summary tiles above the list */
+.pp-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pp-stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); min-width: 0; }
+.pp-sv { font-size: 24px; font-weight: 600; line-height: 30px; color: var(--green); font-variant-numeric: tabular-nums; }
+[data-bs-theme="dark"] .pp-sv { color: var(--pass); }
+.pp-sl { font-size: 13px; font-weight: 600; color: var(--ink); }
+.pp-ss { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Cards */
+.pp-card { min-height: 190px; }
+.pp-card .hrow .ml .pill { font-size: 11px; padding: 2px 9px; }
+.pp-find { font-size: 12px; line-height: 17px; color: var(--text); border-left: 3px solid var(--gold); padding: 2px 0 2px 9px; }
+.pp-toolbar .seg .shiny-options-group { flex-wrap: wrap; }
+.pp-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* One paper */
+.pp-tags { gap: 8px; }
+.pp-cite { display: flex; gap: 10px; align-items: flex-start; background: var(--surface2); border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 20px; color: var(--text); overflow-wrap: anywhere; }
+.pp-cite .ic { margin-top: 2px; color: var(--green); }
+.pp-cite a, .pp-p a { color: var(--green); font-weight: 500; }
+[data-bs-theme="dark"] .pp-cite a, [data-bs-theme="dark"] .pp-p a { color: var(--pass); }
+.pp-p { margin: 4px 0 0; font-size: 13.5px; line-height: 21px; color: var(--text); }
+.pp-p code, .pp-ins code { font-size: 12px; background: var(--surface2); border-radius: 4px; padding: 1px 4px; color: var(--ink); }
+.pp-stepbar { top: 72px; }
+.pp-stepbar .stepper { overflow-x: auto; }
+
+/* Data */
+.pp-data { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.pp-preview { max-height: 420px; overflow: auto; border: 1px solid var(--line2); border-radius: 10px; }
+.pp-preview table.kt { font-size: 12.5px; }
+.pp-preview table.kt th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.pp-more > summary, .pp-anova > summary, .pp-verify > summary { cursor: pointer; font-size: 12.5px; color: var(--green); font-weight: 600; list-style: none; display: flex; align-items: center; gap: 6px; }
+.pp-more > summary::-webkit-details-marker, .pp-anova > summary::-webkit-details-marker, .pp-verify > summary::-webkit-details-marker { display: none; }
+.pp-more[open] > summary, .pp-anova[open] > summary { margin-bottom: 8px; }
+[data-bs-theme="dark"] .pp-more > summary, [data-bs-theme="dark"] .pp-anova > summary, [data-bs-theme="dark"] .pp-verify > summary { color: var(--pass); }
+.pp-anova > summary .small, .pp-verify > summary .small { font-weight: 400; }
+
+/* Analyses */
+.pp-an { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; }
+.pp-an-n { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.pp-an-note { margin: 0; }
+.pp-an-body { grid-template-columns: minmax(0, 1fr) 340px; }
+.pp-tiles { gap: 10px; }
+.pp-tiles .ps-tv { font-size: 15px; line-height: 21px; }
+.pp-an-act { gap: 10px; padding-top: 12px; border-top: 1px solid var(--line2); }
+
+/* Tally and verification */
+.pp-tally table.kt td { vertical-align: top; }
+.pp-tally table.kt td:first-child { font-weight: 500; color: var(--ink); min-width: 200px; }
+.pp-tally .pill { white-space: normal; text-align: left; }
+.pp-verify { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.pp-verify[open] { gap: 10px; }
+.pp-pre { max-height: 380px; overflow: auto; background: var(--surface); border: 1px solid var(--line2); border-radius: 10px; padding: 12px 14px; font-size: 11.5px; line-height: 17px; margin: 0; white-space: pre; color: var(--text); }
+
+/* Insights */
+.pp-ins { display: flex; gap: 12px; align-items: flex-start; background: var(--surface2); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 21px; color: var(--text); }
+.pp-ins-n { width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: var(--gold); color: var(--forest); display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; }
+
+/* Files */
+.pp-files { align-items: start; }
+.pp-files .list-row { font-size: 12.5px; }
+
+/* "Back to the paper" bar on an analysis page opened from a paper */
+.pp-back { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--note-g); color: var(--pass); border: 1px solid transparent; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; }
+.pp-back .ml { margin-left: auto; }
+.pp-back-l { margin-left: 8px; color: var(--text); }
+
+/* Home banner */
+.pp-banner { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 16px; row-gap: 8px; align-items: center; text-decoration: none; color: inherit; cursor: pointer;
+  border-left: 4px solid var(--gold); transition: border-color .12s, transform .12s; }
+.pp-banner:hover { border-color: var(--green); border-left-color: var(--gold); transform: translateY(-1px); }
+.pp-banner .ico { width: 46px; height: 46px; border-radius: 14px; grid-row: 1 / span 2; }
+.pp-banner-txt { min-width: 0; }
+.pp-banner-chips { display: flex; gap: 6px; flex-wrap: wrap; grid-column: 2; }
+.pp-banner .pc-go { grid-column: 3; grid-row: 1 / span 2; margin-top: 0; white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .pp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pp-an-body { grid-template-columns: minmax(0, 1fr); }
+  .pp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .pp-filters { grid-template-columns: minmax(0, 1fr); }
+  .pp-banner { grid-template-columns: auto minmax(0, 1fr); }
+  .pp-banner .pc-go { grid-column: 1 / span 2; grid-row: auto; }
+  .pp-banner-chips { grid-column: 1 / span 2; }
+}
+@media (max-width: 600px) {
+  .pp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .pp-sv { font-size: 20px; }
+  .pp-tiles { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Arabic (right-to-left) */
+html[dir="rtl"] .pp-find { border-left: 0; border-right: 3px solid var(--gold); padding: 2px 9px 2px 0; }
+html[dir="rtl"] .pp-back .ml { margin-left: 0; margin-right: auto; }
+html[dir="rtl"] .pp-back-l { margin-left: 0; margin-right: 8px; }
+html[dir="rtl"] .pp-banner { border-left: 1px solid var(--line); border-right: 4px solid var(--gold); }
+html[dir="rtl"] .pp-tally .pill { text-align: right; }
+html[dir="rtl"] .pp-pre { direction: ltr; text-align: left; }

@@ -33,13 +33,14 @@ options(shiny.maxRequestSize = 50 * 1024^2)
 # categories and filters open instantly.
 invisible(lapply(PROBLEMS, ps_classify))
 
-PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "crd", "rcbd", "lsd", "glsd", "fact", "twok", "split", "planner", "report", "learn", "team")
+PAGES <- c("home", "advisor", "data", "desc", "one", "two", "k", "problems", "papers", "crd", "rcbd", "lsd", "glsd", "fact", "twok", "split", "planner", "report", "learn", "team")
 
 JUMP_CHOICES <- c(
   "Home" = "home", "Test Advisor" = "advisor", "Data Studio: upload a file" = "data",
   "Descriptive statistics" = "desc", "One sample tests" = "one", "Two sample tests (t-test, Mann-Whitney)" = "two",
   "k samples (one-way ANOVA, Kruskal-Wallis)" = "k",
   "Problem Sets: Chapter 2 to 7 exercises, custom problems" = "problems",
+  "Paper Replications: published papers re-created with the app" = "papers",
   "CRD: Completely Randomized Design" = "crd", "RCBD: Randomized Complete Block Design" = "rcbd",
   "Latin Square Design" = "lsd", "Graeco-Latin Square Design" = "glsd", "Factorial designs: two- and three-factor, interactions" = "fact",
   "2^k Factorial: two-level designs with two to five factors" = "twok",
@@ -59,6 +60,7 @@ ui <- page(
     tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&family=Cairo:wght@400;500;600;700&display=swap"),
     tags$link(rel = "stylesheet", href = "app.css"),
     tags$link(rel = "stylesheet", href = "design.css"),
+    tags$link(rel = "stylesheet", href = "papers.css"),
     tags$link(rel = "icon", href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23DAC961'/%3E%3Cpath d='M12 18V10M17 18V6M7 18v-4' stroke='%2300573F' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"),
     tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"),
     tags$script(src = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js", defer = NA),
@@ -74,6 +76,7 @@ ui <- page(
       div(class = "main", role = "main",
           topbar_ui(),
           div(class = "content", id = "main-content", tabindex = "-1",
+              uiOutput("paper_back"),
               tabsetPanel(
                 id = "pages", type = "hidden",
                 tabPanelBody("home", home_ui()),
@@ -84,6 +87,7 @@ ui <- page(
                 tabPanelBody("two", problems_ui("two", "two")),
                 tabPanelBody("k", problems_ui("k", "k")),
                 tabPanelBody("problems", problems_ui("problems")),
+                tabPanelBody("papers", papers_ui("papers")),
                 tabPanelBody("crd", problems_ui("crd", "crd")),
                 tabPanelBody("rcbd", problems_ui("rcbd", "rcbd")),
                 tabPanelBody("lsd", problems_ui("lsd", "lsd")),
@@ -171,9 +175,36 @@ server <- function(input, output, session) {
     })
   observe(session$sendCustomMessage("badge", list(id = "report-count", n = length(store$pins))))
 
+  # Paper Replications: a saved analysis of a paper opens in its analysis page, through the same route as a shared
+  # analysis; a "Back to the paper" bar then leads back to the paper while that page is on screen.
+  paper_back <- reactiveVal(NULL)
+  papers <- papers_server("papers", store, show_crumb = crumb,
+    # called from inside the papers module: the analysis page is started (and restored) in the app's own session,
+    # or its module would be namespaced under the papers module and never reach its page
+    open_analysis = function(x, p) withReactiveDomain(session, {
+      target <- if (x$page %in% LAZY_PAGES) srv_get(x$page)
+      if (is.null(target)) { showNotification("This analysis belongs to a page this version does not have.", type = "error"); return() }
+      x$intro_title <- sprintf("Paper %s: analysis opened", p$num)
+      x$intro <- sprintf("The data, columns and settings of %s are loaded exactly as the group saved them. Follow the steps with Back and Next; the bar at the top leads back to the paper.", p$cite_short)
+      paper_back(list(page = x$page, num = p$num, label = sprintf("Paper %s · %s", p$num, p$cite_short)))
+      show_page(x$page); target$restore(x)
+    }),
+    open_project = function(f) withReactiveDomain(session, { open_project(f); show_page("data") }),
+    open_data = function(name, df) withReactiveDomain(session, {
+      ds <- new_dataset(name, df, source = "Paper Replications")
+      store$datasets[[ds$id]] <- ds; store$active <- ds$id; store$grid_rev <- store$grid_rev + 1
+      show_page("data"); showNotification(sprintf("%s is now in Data Studio.", name), type = "message")
+    }))
+  output$paper_back <- renderUI({
+    b <- paper_back(); if (is.null(b) || !identical(input$pages, b$page)) return(NULL)
+    div(class = "pp-back", icon("book", 15), span(tags$b("Paper Replications"), span(class = "pp-back-l", b$label)),
+        div(class = "ml"), tags$button(class = "btn-k bs bsm", onclick = "Shiny.setInputValue('paper_back_go', Math.random(), {priority: 'event'})", icon("arrowl", 14), "Back to the paper"))
+  })
+  observeEvent(input$paper_back_go, { b <- paper_back(); paper_back(NULL); show_page("papers"); if (!is.null(b)) papers$open(b$num, 3) })
+
   # Ask Professor Riaz: each page tells the assistant what it is showing.
   ai_fns <- c(lapply(stats::setNames(LAZY_PAGES, LAZY_PAGES), function(m) function(...) srv_get(m)$ai(...)),
-              list(desc = desc$ai, planner = planner$ai, learn = learn$ai,
+              list(desc = desc$ai, planner = planner$ai, learn = learn$ai, papers = papers$ai,
                    report = function(full) {
                      pins <- store$pins
                      list(label = sprintf("your report (%d item%s)", length(pins), if (length(pins) == 1) "" else "s"), kind = "general",

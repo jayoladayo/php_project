@@ -1,0 +1,38 @@
+
+=== RCBD at Holetta: marketable tuber yield (t/ha)
+             Source  df         SS       MS       F      p
+Replication (block)   2    56.9958  28.4979  5.2242 0.0096
+            Variety  20 3,611.8818 180.5941 33.1063 0.0000
+              Error  40   218.1993   5.4550     NaN    NaN
+              Total  62 3,887.0770      NaN     NaN    NaN
+
+Genetic parameters at Holetta (paper Table 5, MTY row):
+  sigma2 g = (MSG - MSE)/r                   ours=       58.3797   paper=         58.38   MATCH
+  sigma2 p = sigma2 g + MSE/r                ours=       60.1980   paper=          60.2   MATCH
+  GCV (%)                                    ours=       30.1976   paper=          30.2   MATCH
+  PCV (%)                                    ours=       30.6642   paper=         30.66   MATCH
+  Broad-sense heritability H2 (%)            ours=       96.9794   paper=         96.98   MATCH
+  Genetic advance GA (5%) = 2.06*sqrt(s2p)*H2 ours=       15.5002   paper=          15.5   MATCH
+
+Combined ANOVA over locations (paper Table 3 mean squares):
+ Marketable tuber yield (t/ha)
+  MS Rep(Location)                           ours=       15.0207   paper=         15.02   MATCH
+  MS Variety                                 ours=      205.9936   paper=        205.99   MATCH
+  MS Location                                ours=    1,927.8608   paper=       1927.87   MATCH
+  MS Location x Variety                      ours=       44.3875   paper=         44.39   MATCH
+  MS Error                                   ours=        3.8145   paper=          3.82   MATCH
+  CV (%)                                     ours=        9.1305   paper=          9.13   MATCH
+ Total tuber yield (t/ha)
+  MS Rep(Location)                           ours=       16.0583   paper=         16.99   DIFFERS (5.5%)
+  MS Variety                                 ours=      218.5409   paper=        218.57   MATCH
+  MS Location                                ours=    2,556.7408   paper=       2556.72   MATCH
+  MS Location x Variety                      ours=       49.3767   paper=         49.37   MATCH
+  MS Error                                   ours=        4.8055   paper=          4.39   DIFFERS (9.5%)
+  CV (%)                                     ours=        8.6773   paper=          8.29   DIFFERS (4.7%)
+ Average tuber weight (g)
+  MS Rep(Location)                           ours=       21.2376   paper=         21.24   MATCH
+  MS Variety                                 ours=      600.8635   paper=        600.91   MATCH
+  MS Location                                ours=    4,537.5964   paper=       4538.05   MATCH
+  MS Location x Variety                      ours=      378.7743   paper=        378.75   MATCH
+  MS Error                                   ours=       21.2691   paper=         21.27   MATCH
+  CV (%)                                     ours=        8.9467   paper=          8.95   MATCH

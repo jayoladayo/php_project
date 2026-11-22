@@ -1,0 +1,19 @@
+StatDesign Studio output - Adawi et al. (2024) – shear bond strength after thermocycling aging, 5 groups (data rebuilt from Table 2)
+Layout: k independent samples. Test: CRD ANOVA (F test). alpha = 0.05
+
+ANOVA table
+      Source df Sum of squares Mean square     F0  P-value
+ Aging group  4        78.5027     19.6257 9.5711 < 0.0001
+       Error 75        153.788     2.05051                
+       Total 79        232.291                            
+
+Assumption checks on the residuals
+                               Sample  n Shapiro-Wilk W Shapiro-Wilk p
+ Residuals of the one-way (CRD) model 80         0.9864         0.5584
+ Anderson-Darling p Result
+             0.2911 Normal
+          Test  Statistic df p-value   Result
+ Breusch-Pagan BP = 2.393  4  0.6638 Constant
+                    Test   Statistic df p-value      Result
+ Breusch-Godfrey (lag 1) LM = 0.5932  1  0.4412 Independent
+All assumptions hold: TRUE

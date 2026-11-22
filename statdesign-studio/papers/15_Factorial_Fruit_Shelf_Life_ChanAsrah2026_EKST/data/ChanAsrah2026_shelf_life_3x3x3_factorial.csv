@@ -1,0 +1,82 @@
+"Preservative","Replicate","Moisture control","Storage condition","Shelf life (days)"
+"Natural",1,"NoSprinkle","Open",24
+"Natural",1,"NoSprinkle","Partial",13
+"Natural",1,"NoSprinkle","Full",9
+"Natural",1,"Every3days","Open",22
+"Natural",1,"Every3days","Partial",14
+"Natural",1,"Every3days","Full",12
+"Natural",1,"Every5days","Open",19
+"Natural",1,"Every5days","Partial",11
+"Natural",1,"Every5days","Full",9
+"Natural",2,"NoSprinkle","Open",21
+"Natural",2,"NoSprinkle","Partial",17
+"Natural",2,"NoSprinkle","Full",11
+"Natural",2,"Every3days","Open",20
+"Natural",2,"Every3days","Partial",17
+"Natural",2,"Every3days","Full",10
+"Natural",2,"Every5days","Open",15
+"Natural",2,"Every5days","Partial",13
+"Natural",2,"Every5days","Full",10
+"Natural",3,"NoSprinkle","Open",22
+"Natural",3,"NoSprinkle","Partial",16
+"Natural",3,"NoSprinkle","Full",9
+"Natural",3,"Every3days","Open",21
+"Natural",3,"Every3days","Partial",17
+"Natural",3,"Every3days","Full",9
+"Natural",3,"Every5days","Open",19
+"Natural",3,"Every5days","Partial",15
+"Natural",3,"Every5days","Full",10
+"Chemical",1,"NoSprinkle","Open",27
+"Chemical",1,"NoSprinkle","Partial",20
+"Chemical",1,"NoSprinkle","Full",17
+"Chemical",1,"Every3days","Open",27
+"Chemical",1,"Every3days","Partial",20
+"Chemical",1,"Every3days","Full",14
+"Chemical",1,"Every5days","Open",24
+"Chemical",1,"Every5days","Partial",18
+"Chemical",1,"Every5days","Full",16
+"Chemical",2,"NoSprinkle","Open",26
+"Chemical",2,"NoSprinkle","Partial",22
+"Chemical",2,"NoSprinkle","Full",16
+"Chemical",2,"Every3days","Open",26
+"Chemical",2,"Every3days","Partial",21
+"Chemical",2,"Every3days","Full",14
+"Chemical",2,"Every5days","Open",24
+"Chemical",2,"Every5days","Partial",17
+"Chemical",2,"Every5days","Full",13
+"Chemical",3,"NoSprinkle","Open",27
+"Chemical",3,"NoSprinkle","Partial",19
+"Chemical",3,"NoSprinkle","Full",17
+"Chemical",3,"Every3days","Open",26
+"Chemical",3,"Every3days","Partial",20
+"Chemical",3,"Every3days","Full",15
+"Chemical",3,"Every5days","Open",26
+"Chemical",3,"Every5days","Partial",20
+"Chemical",3,"Every5days","Full",14
+"No preservative",1,"NoSprinkle","Open",17
+"No preservative",1,"NoSprinkle","Partial",12
+"No preservative",1,"NoSprinkle","Full",9
+"No preservative",1,"Every3days","Open",14
+"No preservative",1,"Every3days","Partial",11
+"No preservative",1,"Every3days","Full",9
+"No preservative",1,"Every5days","Open",14
+"No preservative",1,"Every5days","Partial",9
+"No preservative",1,"Every5days","Full",9
+"No preservative",2,"NoSprinkle","Open",15
+"No preservative",2,"NoSprinkle","Partial",9
+"No preservative",2,"NoSprinkle","Full",9
+"No preservative",2,"Every3days","Open",17
+"No preservative",2,"Every3days","Partial",9
+"No preservative",2,"Every3days","Full",9
+"No preservative",2,"Every5days","Open",12
+"No preservative",2,"Every5days","Partial",9
+"No preservative",2,"Every5days","Full",9
+"No preservative",3,"NoSprinkle","Open",21
+"No preservative",3,"NoSprinkle","Partial",10
+"No preservative",3,"NoSprinkle","Full",9
+"No preservative",3,"Every3days","Open",16
+"No preservative",3,"Every3days","Partial",9
+"No preservative",3,"Every3days","Full",9
+"No preservative",3,"Every5days","Open",14
+"No preservative",3,"Every5days","Partial",9
+"No preservative",3,"Every5days","Full",9

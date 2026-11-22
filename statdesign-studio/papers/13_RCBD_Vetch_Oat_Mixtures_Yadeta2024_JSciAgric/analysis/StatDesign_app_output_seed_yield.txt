@@ -1,0 +1,20 @@
+StatDesign Studio output - Yadeta (2024) – seed yield of vetch and oat mixtures, RCBD with 5 treatments in 5 blocks (data rebuilt from Table 5)
+Layout: Randomized complete block design. Test: RCBD ANOVA (F test). alpha = 0.05
+
+ANOVA table
+                 Source df Sum of squares  Mean square             F0  P-value
+ Treatment (treatments)  4        15.7002      3.92505         34.718 < 0.0001
+         Block (blocks)  4   0.0000000056 0.0000000014 0.000000012383   1.0000
+                  Error 16         1.8089     0.113056                        
+                  Total 24        17.5091                                     
+
+Assumption checks on the residuals
+                      Sample  n Shapiro-Wilk W Shapiro-Wilk p
+ Residuals of the RCBD model 25         0.9602         0.4186
+ Anderson-Darling p Result
+             0.6579 Normal
+          Test  Statistic df p-value   Result
+ Breusch-Pagan BP = 8.206  8  0.4137 Constant
+                    Test   Statistic df p-value      Result
+ Breusch-Godfrey (lag 1) LM = 0.6185  1  0.4316 Independent
+All assumptions hold: TRUE

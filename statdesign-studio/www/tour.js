@@ -10,7 +10,7 @@
   var PSP = ['problems', 'one', 'two', 'k', 'crd', 'rcbd', 'lsd', 'glsd', 'fact', 'twok', 'split'];
   function isPS(pg) { return PSP.indexOf(pg) >= 0; }
   var PAGE_NAME = { home: 'Home', advisor: 'Test Advisor', data: 'Data Studio', desc: 'Descriptive statistics', one: 'One sample', two: 'Two samples', k: 'k samples',
-                    problems: 'Problem Sets', crd: 'CRD', rcbd: 'RCBD', lsd: 'Latin Square', glsd: 'Graeco-Latin Square', fact: 'Factorial', twok: '2^k Factorial', split: 'Split-Plot', planner: 'Design Planner',
+                    problems: 'Problem Sets', papers: 'Paper Replications', crd: 'CRD', rcbd: 'RCBD', lsd: 'Latin Square', glsd: 'Graeco-Latin Square', fact: 'Factorial', twok: '2^k Factorial', split: 'Split-Plot', planner: 'Design Planner',
                     report: 'Report', learn: 'Learn', team: 'About the team' };
 
   // ---------- helpers ----------
@@ -120,6 +120,22 @@
       { t: '#learn-body', place: 'left', title: 'What each guide gives you', text: 'When to use the method, the model, the assumptions and what to do when they fail, and a worked class example.' },
       { t: '#learn-open', place: 'bottom', title: 'Open the class example', text: 'Loads that example into the matching analysis page so you can run it yourself.' }
     ]; },
+    papers: function () {
+      var pane = document.querySelector('.tab-pane[data-value="papers"] .tab-pane.active');
+      if (pane && pane.getAttribute('data-value') === 'detail') return [
+        { t: '.pp-head .page-head', place: 'bottom', title: 'One paper', text: 'The paper you are reading. <b>All papers</b> goes back to the list; the arrows open the previous or next paper.' },
+        { t: '.pp-tags', place: 'bottom', title: 'Design and verdict', text: 'The design, whether the paper\u2019s printed results tally with the app, and the field. The buttons on the right open the paper itself (DOI, PDF or the open-access page).' },
+        { t: '.pp-stepbar', place: 'bottom', title: 'The steps of a replication', text: 'Like a problem, a paper is read step by step: <b>the paper</b>, its <b>data</b>, the <b>analysis in the app</b>, <b>do the values tally?</b>, the <b>insights</b> and the <b>files</b>. Click a dot to jump, or use Back and Next.' },
+        { t: '.tab-pane[data-value="papers"] .ps-step', place: 'top', title: 'The step on screen', text: 'In <b>Analysis in the app</b> every saved analysis is run again on this version of the app and checked against the saved numbers. <b>Open in the 5 steps</b> opens it on its analysis page with the paper\u2019s data and settings.' }
+      ];
+      return [
+        { t: '.tab-pane[data-value="papers"] .page-head', place: 'bottom', title: 'Paper Replications', text: 'Published experiments that the group re-created with the app. <b>Load all datasets</b> puts every paper\u2019s data into Data Studio; <b>Project file</b> downloads the same data as a project.' },
+        { t: '.pp-stats', place: 'bottom', title: 'At a glance', text: 'How many papers and saved analyses there are, the designs they cover, and how many reproduce exactly.' },
+        { t: '#papers-design', place: 'bottom', title: 'Choose a design', text: 'Show every paper, or only those of one design: one sample, CRD, RCBD, Latin square, Graeco-Latin square, factorial or 2<sup>k</sup> factorial.' },
+        { t: '.pp-filters', place: 'bottom', title: 'Filters and grouping', text: 'Filter by <b>whether the values tally</b> and by <b>field</b>, change the order, and group the papers. Click a group heading to collapse it.' },
+        { t: '.tab-pane[data-value="papers"] .pp-card', place: 'right', title: 'A paper', text: 'Each card shows the design, the verdict, the main finding and the number of saved analyses. Click it to go through the paper step by step.' }
+      ];
+    },
     team: function () { return [
       { t: '.tm-intro', place: 'bottom', title: 'About the team', text: 'StatDesign Studio was built by Group 4 for the KFUPM Experimental Design course.' },
       { t: '.tm-grid', place: 'top', title: 'The team', text: 'Each card shows a member’s photo, department and role. The team leader is marked with a gold badge.' },

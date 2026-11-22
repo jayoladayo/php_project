@@ -1,0 +1,145 @@
+{
+  "app": "StatDesign Studio",
+  "kind": "analysis",
+  "version": 1,
+  "saved": "2026-11-22 12:00",
+  "from": "ChanAsrah2026_shelf_life_factorial",
+  "note": "The paper's own raw data. Total SS = 2522.1 and the whole ANOVA table agree with the paper's. The three main effects, Preservative × Storage and Moisture × Storage are significant; Preservative × Moisture and the three-factor interaction are not.",
+  "page": "fact",
+  "problem_id": "custom",
+  "title": "Chan & Asrah (2026) – fruit shelf life, 3 × 3 × 3 factorial in a CRD with 3 replicates",
+  "edited": false,
+  "meta": {
+    "title": "Chan & Asrah (2026) – fruit shelf life, 3 × 3 × 3 factorial in a CRD with 3 replicates",
+    "statement": "The shelf life (days) of fruit was recorded for 3 preservatives (natural, chemical, none) × 3 moisture-control schedules (no sprinkling, every 3 days, every 5 days) × 3 storage conditions (open, partial, full), with 3 replicates in each of the 27 combinations (81 observations). Test the three main effects and all the interactions at α = 0.05. Source: EKST (2026), the paper's data table.",
+    "parts": [],
+    "roles": {
+      "response": "Shelf life (days)",
+      "treatment": "Preservative",
+      "factorB": "Moisture control",
+      "factorC": "Storage condition",
+      "factorD": "",
+      "factorE": "",
+      "block": "",
+      "row": "",
+      "column": "",
+      "greek": ""
+    },
+    "labels": {
+      "response": "shelf life",
+      "unit": "days",
+      "treatment": "preservative",
+      "factorB": "moisture control",
+      "factorC": "storage condition"
+    },
+    "settings": {
+      "alpha": 0.05,
+      "alt": "two.sided"
+    },
+    "target": "mean",
+    "control": null,
+    "9": null,
+    "10": null,
+    "11": null,
+    "random_wp": false
+  },
+  "data": {
+    "Preservative": ["Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "Chemical", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative", "No preservative"],
+    "Replicate": [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    "Moisture control": ["NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days", "NoSprinkle", "NoSprinkle", "NoSprinkle", "Every3days", "Every3days", "Every3days", "Every5days", "Every5days", "Every5days"],
+    "Storage condition": ["Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full", "Open", "Partial", "Full"],
+    "Shelf life (days)": [24, 13, 9, 22, 14, 12, 19, 11, 9, 21, 17, 11, 20, 17, 10, 15, 13, 10, 22, 16, 9, 21, 17, 9, 19, 15, 10, 27, 20, 17, 27, 20, 14, 24, 18, 16, 26, 22, 16, 26, 21, 14, 24, 17, 13, 27, 19, 17, 26, 20, 15, 26, 20, 14, 17, 12, 9, 14, 11, 9, 14, 9, 9, 15, 9, 9, 17, 9, 9, 12, 9, 9, 21, 10, 9, 16, 9, 9, 14, 9, 9]
+  },
+  "state": {
+    "s": {
+      "alpha": 0.05,
+      "alt": "two.sided",
+      "value": 0,
+      "var_mode": "auto",
+      "var_test": "levene",
+      "family": "auto",
+      "posthoc": "tukey"
+    },
+    "h0": null,
+    "h1": null,
+    "hs0": null,
+    "hs1": null,
+    "h0n": null,
+    "h1n": null,
+    "hs0n": null,
+    "hs1n": null,
+    "fh": {
+      "A": {
+        "h0": "Preservative has no effect: the mean shelf life is the same at every level of preservative (Natural, Chemical, No preservative).",
+        "h1": "Preservative affects the mean shelf life: at least one level of preservative gives a different mean."
+      },
+      "B": {
+        "h0": "Moisture control has no effect: the mean shelf life is the same at every level of moisture control (NoSprinkle, Every3days, Every5days).",
+        "h1": "Moisture control affects the mean shelf life: at least one level of moisture control gives a different mean."
+      },
+      "C": {
+        "h0": "Storage condition has no effect: the mean shelf life is the same at every level of storage condition (Open, Partial, Full).",
+        "h1": "Storage condition affects the mean shelf life: at least one level of storage condition gives a different mean."
+      },
+      "AB": {
+        "h0": "There is no interaction between preservative and moisture control: the effect of preservative on the mean shelf life is the same at every level of moisture control.",
+        "h1": "Preservative and moisture control interact: the effect of preservative on the mean shelf life depends on the level of moisture control."
+      },
+      "AC": {
+        "h0": "There is no interaction between preservative and storage condition: the effect of preservative on the mean shelf life is the same at every level of storage condition.",
+        "h1": "Preservative and storage condition interact: the effect of preservative on the mean shelf life depends on the level of storage condition."
+      },
+      "BC": {
+        "h0": "There is no interaction between moisture control and storage condition: the effect of moisture control on the mean shelf life is the same at every level of storage condition.",
+        "h1": "Moisture control and storage condition interact: the effect of moisture control on the mean shelf life depends on the level of storage condition."
+      },
+      "ABC": {
+        "h0": "There is no preservative × moisture control × storage condition interaction: the preservative × moisture control interaction on the mean shelf life is the same at every level of storage condition.",
+        "h1": "The preservative × moisture control × storage condition interaction is present: the preservative × moisture control interaction on the mean shelf life depends on the level of storage condition."
+      }
+    },
+    "fhn": {
+      "A": {
+        "h0": "Preservative has no effect: the median shelf life is the same at every level of preservative (Natural, Chemical, No preservative).",
+        "h1": "Preservative affects the median shelf life: at least one level of preservative gives a different median."
+      },
+      "B": {
+        "h0": "Moisture control has no effect: the median shelf life is the same at every level of moisture control (NoSprinkle, Every3days, Every5days).",
+        "h1": "Moisture control affects the median shelf life: at least one level of moisture control gives a different median."
+      },
+      "C": {
+        "h0": "Storage condition has no effect: the median shelf life is the same at every level of storage condition (Open, Partial, Full).",
+        "h1": "Storage condition affects the median shelf life: at least one level of storage condition gives a different median."
+      },
+      "AB": {
+        "h0": "There is no interaction between preservative and moisture control: the effect of preservative on the median shelf life is the same at every level of moisture control.",
+        "h1": "Preservative and moisture control interact: the effect of preservative on the median shelf life depends on the level of moisture control."
+      },
+      "AC": {
+        "h0": "There is no interaction between preservative and storage condition: the effect of preservative on the median shelf life is the same at every level of storage condition.",
+        "h1": "Preservative and storage condition interact: the effect of preservative on the median shelf life depends on the level of storage condition."
+      },
+      "BC": {
+        "h0": "There is no interaction between moisture control and storage condition: the effect of moisture control on the median shelf life is the same at every level of storage condition.",
+        "h1": "Moisture control and storage condition interact: the effect of moisture control on the median shelf life depends on the level of storage condition."
+      },
+      "ABC": {
+        "h0": "There is no preservative × moisture control × storage condition interaction: the preservative × moisture control interaction on the median shelf life is the same at every level of storage condition.",
+        "h1": "The preservative × moisture control × storage condition interaction is present: the preservative × moisture control interaction on the median shelf life depends on the level of storage condition."
+      }
+    },
+    "test": "anova",
+    "test_user": false,
+    "ph": "tukey",
+    "step": 5,
+    "seen": 5
+  },
+  "summary": {
+    "layout": "Factorial design (CRD)",
+    "test": "CRD ANOVA (F test)",
+    "p": [2.46749361689284e-29, 1.81063301713531e-06, 1.56352670767272e-30, 0.62391573738361, 1.35677376013354e-05, 0.0238894004013752, 0.44092251781222],
+    "reject": true,
+    "assumptions_ok": true,
+    "failed": []
+  }
+}

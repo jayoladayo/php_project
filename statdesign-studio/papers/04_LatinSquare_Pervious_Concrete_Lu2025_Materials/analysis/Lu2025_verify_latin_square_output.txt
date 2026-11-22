@@ -1,0 +1,62 @@
+
+=== Permeability coefficient (mm/s)
+                  Source  df      SS      MS       F      p
+           Sand rate (%)   2  1.9822  0.9911  4.2275 0.1913
+VMA dosage (% of cement)   2  0.5756  0.2878  1.2275 0.4489
+     Target porosity (%)   2 40.6422 20.3211 86.6777 0.0114
+                   Error   2  0.4689  0.2344     NaN    NaN
+                   Total   8 43.6689     NaN     NaN    NaN
+  SS Sand rate (%)                           ours=        1.9822   paper=          1.98   MATCH
+  F  Sand rate (%)                           ours=        4.2275   paper=          4.23   MATCH
+  SS VMA dosage (% of cement)                ours=        0.5756   paper=          0.58   MATCH
+  F  VMA dosage (% of cement)                ours=        1.2275   paper=          1.23   MATCH
+  SS Target porosity (%)                     ours=       40.6422   paper=         40.64   MATCH
+  F  Target porosity (%)                     ours=       86.6777   paper=         86.66   MATCH
+  SS Error                                   ours=        0.4689   paper=          0.47   MATCH
+
+=== Compressive strength 7 d (MPa)
+                  Source  df       SS       MS       F      p
+           Sand rate (%)   2 106.6400  53.3200  7.2315 0.1215
+VMA dosage (% of cement)   2  24.4067  12.2033  1.6551 0.3766
+     Target porosity (%)   2 259.8067 129.9033 17.6180 0.0537
+                   Error   2  14.7467   7.3733     NaN    NaN
+                   Total   8 405.6000      NaN     NaN    NaN
+  SS Sand rate (%)                           ours=      106.6400   paper=        106.78   MATCH
+  F  Sand rate (%)                           ours=        7.2315   paper=          7.43   DIFFERS (2.7%)
+  SS VMA dosage (% of cement)                ours=       24.4067   paper=         25.04   DIFFERS (2.5%)
+  F  VMA dosage (% of cement)                ours=        1.6551   paper=          1.74   DIFFERS (4.9%)
+  SS Target porosity (%)                     ours=      259.8067   paper=        257.83   MATCH
+  F  Target porosity (%)                     ours=       17.6180   paper=         17.93   MATCH
+  SS Error                                   ours=       14.7467   paper=         14.38   DIFFERS (2.5%)
+
+=== Compressive strength 28 d (MPa)
+                  Source  df       SS       MS      F      p
+           Sand rate (%)   2 194.3889  97.1944 4.1940 0.1925
+VMA dosage (% of cement)   2  14.4822   7.2411 0.3125 0.7619
+     Target porosity (%)   2 259.4489 129.7244 5.5977 0.1516
+                   Error   2  46.3489  23.1744    NaN    NaN
+                   Total   8 514.6689      NaN    NaN    NaN
+  SS Sand rate (%)                           ours=      194.3889   paper=         194.3   MATCH
+  F  Sand rate (%)                           ours=        4.1940   paper=         13.42   DIFFERS (68.7%)
+  SS VMA dosage (% of cement)                ours=       14.4822   paper=          15.4   DIFFERS (6.0%)
+  F  VMA dosage (% of cement)                ours=        0.3125   paper=           1.0   DIFFERS (68.8%)
+  SS Target porosity (%)                     ours=      259.4489   paper=        257.39   MATCH
+  F  Target porosity (%)                     ours=        5.5977   paper=         17.91   DIFFERS (68.7%)
+  SS Error                                   ours=       46.3489   paper=          15.4   DIFFERS (201.0%)
+
+=== Splitting tensile strength 28 d (MPa)
+                  Source  df     SS     MS      F      p
+           Sand rate (%)   2 0.2118 0.1059 0.5905 0.6287
+VMA dosage (% of cement)   2 0.1178 0.0589 0.3283 0.7528
+     Target porosity (%)   2 0.3180 0.1590 0.8864 0.5301
+                   Error   2 0.3587 0.1793    NaN    NaN
+                   Total   8 1.0062    NaN    NaN    NaN
+  SS Sand rate (%)                           ours=        0.2118   paper=          0.36   DIFFERS (41.2%)
+  F  Sand rate (%)                           ours=        0.5905   paper=         89.75   DIFFERS (99.3%)
+  SS VMA dosage (% of cement)                ours=        0.1178   paper=          0.11   DIFFERS (7.1%)
+  F  VMA dosage (% of cement)                ours=        0.3283   paper=          28.5   DIFFERS (98.8%)
+  SS Target porosity (%)                     ours=        0.3180   paper=          1.21   DIFFERS (73.7%)
+  F  Target porosity (%)                     ours=        0.8864   paper=        303.25   DIFFERS (99.7%)
+  SS Error                                   ours=        0.3587   paper=           0.0   DIFFERS (35868888888888.8%)
+
+The permeability and 7-day tables tally. For 28-day strength the paper's error SS (15.40) is a copy of the VMA SS, and for splitting tensile strength it reports an error of 0 although the null column has the largest range (K-range 0.43); with the correct error no factor is significant for STS.

@@ -1,0 +1,69 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+GLSD ANOVA (F test) ★ suggested
+ Run test
+Test
+GLSD ANOVA (F test)
+Test statistic (F)
+4.1905
+df = 4, 8
+P-value
+0.0404
+right tail
+Partial η²
+0.67692
+share of the variation explained by the treatments
+How the statistic is computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Water-to-binder ratio w/b (treatments)	4	0.243064	0.060766	4.1905	0.0404
+AEA dosage (% of cement mass) (rows)	4	0.041624	0.010406	0.71761	0.6032
+Binder type (columns)	4	0.048344	0.012086	0.83346	0.5403
+Paste-to-aggregate void ratio phi (Greek letters)	4	0.054064	0.013516	0.93207	0.4917
+Error	8	0.116008	0.014501		
+Total	24	0.503104			
+Rows and columns are blocking factors. The Latin letters are the treatments being tested; the Greek letters (Paste-to-aggregate void ratio phi (Greek letters)) have their own F test in the table.
+Result
+TEST	STATISTIC	DF	P-VALUE	ESTIMATE	95% CONFIDENCE INTERVAL
+GLSD ANOVA (F test)	F = 4.1905	4, 8	0.0404	Partial η² = 0.67692	—
+Back: Information available
+Next: Decision
+
+======================================================================
+STEP 8 - ASSUMPTION CHECKS
+======================================================================
+8
+Assumption checks
+Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.
+Normality
+Not satisfied
+SAMPLE	N	SHAPIRO-WILK W	SHAPIRO-WILK P	ANDERSON-DARLING P	RESULT
+Residuals of the Graeco-Latin square model	25	0.7821	0.0001	< 0.0001	Not normal
+H0: the residuals come from a normal distribution. p ≥ 0.05 means no evidence against normality.
+Normal QQ plot of the residuals
+Histogram of the residuals
+Constant variance of the residuals
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Pagan	BP = 11.4	16	0.7844	Constant
+H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the model terms). p ≥ 0.05 means the spread can be treated as constant.
+Residuals versus fitted values
+Spread of each treatment
+Independence
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Godfrey (lag 1)	LM = 1.75	1	0.1859	Independent
+H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed).
+Residuals in the order listed
+Normality failed: start again with the non-parametric test
+The GLSD ANOVA (F test) assumes normality, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the Quade's test, which removes the blocking factors (rows and columns, and Greek letters) and compares the treatments through the ranks of the residuals (Quade's test): new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.
+Back: Post-hoc
+Next: Non-parametric hypotheses

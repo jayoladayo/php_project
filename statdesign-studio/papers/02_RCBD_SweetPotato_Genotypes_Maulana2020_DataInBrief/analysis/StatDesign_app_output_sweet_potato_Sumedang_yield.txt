@@ -1,0 +1,67 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+RCBD ANOVA (F test) ★ suggested
+ Run test
+Test
+RCBD ANOVA (F test)
+Test statistic (F)
+23.641
+df = 22, 44
+P-value
+< 0.0001
+right tail
+Partial η²
+0.922
+share of the variation explained by the treatments
+How the statistic is computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Genotype (treatments)	22	7,172.61	326.028	23.641	< 0.0001
+Replication (block) (blocks)	2	6.4636	3.2318	0.23435	0.7921
+Error	44	606.783	13.7905		
+Total	68	7,785.85			
+The blocks are a nuisance factor: their F ratio is shown for information. The test of interest is the treatments.
+Result
+TEST	STATISTIC	DF	P-VALUE	ESTIMATE	95% CONFIDENCE INTERVAL
+RCBD ANOVA (F test)	F = 23.641	22, 44	< 0.0001	Partial η² = 0.922	—
+Back: Information available
+Next: Decision
+
+======================================================================
+STEP 8 - ASSUMPTION CHECKS
+======================================================================
+8
+Assumption checks
+Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.
+Normality
+Not satisfied
+SAMPLE	N	SHAPIRO-WILK W	SHAPIRO-WILK P	ANDERSON-DARLING P	RESULT
+Residuals of the RCBD model	69	0.9609	0.0300	0.3297	Not normal
+H0: the residuals come from a normal distribution. p ≥ 0.05 means no evidence against normality.
+Normal QQ plot of the residuals
+Histogram of the residuals
+Constant variance of the residuals
+Not satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Pagan	BP = 44.15	24	0.0073	Not constant
+H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the model terms). p ≥ 0.05 means the spread can be treated as constant.
+Residuals versus fitted values
+Spread of each treatment
+Independence
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Godfrey (lag 1)	LM = 0.8374	1	0.3601	Independent
+H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed).
+Residuals in the order listed
+Normality and Constant variance failed: start again with the non-parametric test
+The RCBD ANOVA (F test) assumes normality and constant variance, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the Friedman test, which ranks the responses within each block, so differences between blocks cannot affect it: new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.
+Back: Post-hoc
+Next: Non-parametric hypotheses

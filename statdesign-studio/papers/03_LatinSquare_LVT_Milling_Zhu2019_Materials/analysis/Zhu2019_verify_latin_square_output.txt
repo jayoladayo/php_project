@@ -1,0 +1,32 @@
+
+=== Resultant cutting force FR (N)
+               Source  df         SS         MS       F      p
+    Helix angle (deg)   2   284.3331   142.1666  1.8316 0.3532
+Cutting speed (m/min)   2     3.4464     1.7232  0.0222 0.9783
+   Cutting depth (mm)   2 5,560.1640 2,780.0820 35.8176 0.0272
+                Error   2   155.2356    77.6178     NaN    NaN
+                Total   8 6,003.1791        NaN     NaN    NaN
+  SS Helix angle (deg)                       ours=      284.3331   paper=       284.333   MATCH
+  F  Helix angle (deg)                       ours=        1.8316   paper=         1.832   MATCH
+  SS Cutting speed (m/min)                   ours=        3.4464   paper=         3.446   MATCH
+  F  Cutting speed (m/min)                   ours=        0.0222   paper=         0.022   MATCH
+  SS Cutting depth (mm)                      ours=    5,560.1640   paper=      5560.164   MATCH
+  F  Cutting depth (mm)                      ours=       35.8176   paper=        35.817   MATCH
+  SS Error                                   ours=      155.2356   paper=        155.24   MATCH
+
+=== Surface roughness Ra (um)
+               Source  df     SS     MS      F      p
+    Helix angle (deg)   2 0.0192 0.0096 2.3145 0.3017
+Cutting speed (m/min)   2 0.0053 0.0026 0.6376 0.6107
+   Cutting depth (mm)   2 0.0126 0.0063 1.5199 0.3968
+                Error   2 0.0083 0.0041    NaN    NaN
+                Total   8 0.0454    NaN    NaN    NaN
+  SS Helix angle (deg)                       ours=        0.0192   paper=         0.019   MATCH
+  F  Helix angle (deg)                       ours=        2.3145   paper=         2.375   DIFFERS (2.5%)
+  SS Cutting speed (m/min)                   ours=        0.0053   paper=         0.005   DIFFERS (5.7%)
+  F  Cutting speed (m/min)                   ours=        0.6376   paper=         0.625   DIFFERS (2.0%)
+  SS Cutting depth (mm)                      ours=        0.0126   paper=         0.013   DIFFERS (3.1%)
+  F  Cutting depth (mm)                      ours=        1.5199   paper=         1.625   DIFFERS (6.5%)
+  SS Error                                   ours=        0.0083   paper=          0.01   DIFFERS (17.1%)
+
+Note (Ra): the paper's F-values equal SS_factor / 0.008, i.e. an error SS of 0.008, although its table prints 0.010. Our error SS is 0.0083, so the F-values tally only with 0.008.

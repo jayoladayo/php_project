@@ -1,0 +1,14 @@
+n = 18  mean = 7.6661  sd = 0.3718 
+
+	One Sample t-test
+
+data:  x
+t = -9.5167, df = 17, p-value = 3.184e-08
+alternative hypothesis: true mean is not equal to 8.5
+95 percent confidence interval:
+ 7.481242 7.850980
+sample estimates:
+mean of x 
+ 7.666111 
+
+t = -9.5167, df = 17, p = 3.18e-08 (paper: t = -9.52, df = 17, p < 0.05)

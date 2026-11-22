@@ -1,0 +1,86 @@
+{
+  "app": "StatDesign Studio",
+  "kind": "analysis",
+  "version": 1,
+  "saved": "2026-11-22 12:00",
+  "from": "Bacharach1940_blister_area_latin_square",
+  "note": "The paper's own raw data. All three F ratios of the paper are reproduced: order F = 0.172 (p = 0.970), positions F = 1.168 (p = 0.359), rabbits F = 3.910 (p = 0.012).",
+  "page": "lsd",
+  "problem_id": "custom",
+  "title": "Bacharach, Chance & Middleton (1940) – blister area in a 6 × 6 Latin square (6 rabbits, 6 positions, 6 injection orders)",
+  "edited": false,
+  "meta": {
+    "title": "Bacharach, Chance & Middleton (1940) – blister area in a 6 × 6 Latin square (6 rabbits, 6 positions, 6 injection orders)",
+    "statement": "In the bioassay of the testicular diffusing factor, six injections were made into each of six rabbits, one injection at each of six skin positions (rows a to f), and the blister area (cm²) was measured. The order of injection (i to vi) is the treatment, rabbits are the columns and positions the rows of a 6 × 6 Latin square. Test the order of injection, the positions and the rabbits at α = 0.05. Source: Biochemical Journal 34:1464-1471.",
+    "parts": [],
+    "roles": {
+      "response": "Blister area (cm2)",
+      "treatment": "Order of injection",
+      "factorB": "",
+      "factorC": "",
+      "factorD": "",
+      "factorE": "",
+      "block": "",
+      "row": "Position",
+      "column": "Rabbit",
+      "greek": ""
+    },
+    "labels": {
+      "response": "blister area",
+      "unit": "cm²",
+      "treatment": "order of injection",
+      "row": "position",
+      "column": "rabbit"
+    },
+    "settings": {
+      "alpha": 0.05,
+      "alt": "two.sided"
+    },
+    "target": "mean",
+    "control": null,
+    "9": null,
+    "10": null,
+    "11": null,
+    "random_wp": false
+  },
+  "data": {
+    "Position": ["a", "a", "a", "a", "a", "a", "b", "b", "b", "b", "b", "b", "c", "c", "c", "c", "c", "c", "d", "d", "d", "d", "d", "d", "e", "e", "e", "e", "e", "e", "f", "f", "f", "f", "f", "f"],
+    "Rabbit": [1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6],
+    "Order of injection": ["iii", "v", "iv", "i", "vi", "ii", "iv", "ii", "vi", "v", "iii", "i", "i", "iii", "v", "vi", "ii", "iv", "vi", "i", "iii", "ii", "iv", "v", "ii", "iv", "i", "iii", "v", "vi", "v", "vi", "ii", "iv", "i", "iii"],
+    "Blister area (cm2)": [7.9, 8.7, 7.4, 7.4, 7.1, 8.2, 6.1, 8.2, 7.7, 7.1, 8.1, 5.9, 7.5, 8.1, 6, 6.4, 6.2, 7.5, 6.9, 8.5, 6.8, 7.7, 8.5, 8.5, 6.7, 9.9, 7.3, 6.4, 6.4, 7.3, 7.3, 8.3, 7.3, 5.8, 6.4, 7.7]
+  },
+  "state": {
+    "s": {
+      "alpha": 0.05,
+      "alt": "two.sided",
+      "value": 0,
+      "var_mode": "auto",
+      "var_test": "levene",
+      "family": "auto",
+      "posthoc": "tukey"
+    },
+    "h0": "The mean blister area is the same for all 6 order of injections.",
+    "h1": "At least one order of injection has a different mean blister area.",
+    "hs0": "The mean blister area is the same for all 6 order of injections.",
+    "hs1": "At least one order of injection has a different mean blister area.",
+    "h0n": "The median blister area is the same for all 6 order of injections.",
+    "h1n": "At least one order of injection has a different median blister area.",
+    "hs0n": "The median blister area is the same for all 6 order of injections.",
+    "hs1n": "At least one order of injection has a different median blister area.",
+    "fh": null,
+    "fhn": null,
+    "test": "anova",
+    "test_user": false,
+    "ph": "tukey",
+    "step": 5,
+    "seen": 5
+  },
+  "summary": {
+    "layout": "Latin square",
+    "test": "LSD ANOVA (F test)",
+    "p": 0.970129672303524,
+    "reject": false,
+    "assumptions_ok": true,
+    "failed": []
+  }
+}

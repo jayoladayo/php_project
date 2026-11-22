@@ -1,0 +1,82 @@
+{
+  "app": "StatDesign Studio",
+  "kind": "analysis",
+  "version": 1,
+  "saved": "2026-11-22 12:00",
+  "from": "Adawi2024_bond_strength_k_samples",
+  "note": "The data are rebuilt from the published means and SDs. From Table 2 the app (and an independent calculation) gives F = 9.571 on 4 and 75 df; the F = 13.55 printed in the paper's text does not follow from its own Table 2. Both are highly significant.",
+  "page": "k",
+  "problem_id": "custom",
+  "title": "Adawi et al. (2024) – shear bond strength after thermocycling aging, 5 groups (data rebuilt from Table 2)",
+  "edited": false,
+  "meta": {
+    "title": "Adawi et al. (2024) – shear bond strength after thermocycling aging, 5 groups (data rebuilt from Table 2)",
+    "statement": "Shear bond strength (MPa) of a veneer ceramic bonded to direct resin nano-hybrid composite was measured in 5 groups of 16 specimens: a control (TC) and four groups aged by thermocycling for 1, 3, 6 and 12 months. The paper prints only each group's mean and SD, so the 16 values of each group were rebuilt to have exactly that mean and SD. Does the mean bond strength differ between the groups? Test at α = 0.05. Source: Medical Science Monitor 30:e945243, Table 2.",
+    "parts": [],
+    "roles": {
+      "response": "Shear bond strength (MPa)",
+      "treatment": "Aging group",
+      "factorB": "",
+      "factorC": "",
+      "factorD": "",
+      "factorE": "",
+      "block": "",
+      "row": "",
+      "column": "",
+      "greek": ""
+    },
+    "labels": {
+      "response": "shear bond strength",
+      "unit": "MPa",
+      "treatment": "aging group"
+    },
+    "settings": {
+      "alpha": 0.05,
+      "alt": "two.sided"
+    },
+    "target": "mean",
+    "control": null,
+    "9": null,
+    "10": null,
+    "11": null,
+    "random_wp": false
+  },
+  "data": {
+    "Aging group": ["TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "TC (control)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T1 (1 month)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T3 (3 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T6 (6 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)", "T12 (12 months)"],
+    "Shear bond strength (MPa)": [20.7924, 20.7308, 20.8625, 22.6026, 20.8277, 17.8971, 21.8117, 20.5287, 20.6365, 21.3486, 21.5977, 23.5901, 22.5056, 21.3371, 19.521, 18.9298, 20.66, 22.3043, 20.3439, 20.1154, 21.1008, 18.0348, 19.7973, 21.0369, 21.6284, 19.908, 20.8612, 20.6629, 21.4878, 18.5604, 21.1572, 17.9407, 15.7871, 18.4224, 18.018, 20.3637, 20.0865, 17.621, 20.3262, 17.9049, 19.104, 18.8322, 19.3667, 20.2886, 20.0527, 19.675, 20.0678, 19.8433, 17.6841, 17.535, 17.9431, 19.542, 18.3058, 22.5713, 17.3669, 16.9057, 19.986, 21.0638, 19.5526, 20.0971, 21.0712, 18.5633, 16.3711, 17.8407, 19.4993, 15.7156, 18.0478, 18.3947, 17.4967, 19.1374, 18.9118, 21.6599, 18.9737, 17.0328, 17.1079, 16.682, 19.4984, 17.1, 17.884, 19.1779]
+  },
+  "state": {
+    "s": {
+      "alpha": 0.05,
+      "alt": "two.sided",
+      "value": 0,
+      "var_mode": "auto",
+      "var_test": "levene",
+      "family": "auto",
+      "posthoc": "tukey"
+    },
+    "h0": "The mean shear bond strength is the same for all 5 aging groups.",
+    "h1": "At least one aging group has a different mean shear bond strength.",
+    "hs0": "The mean shear bond strength is the same for all 5 aging groups.",
+    "hs1": "At least one aging group has a different mean shear bond strength.",
+    "h0n": "The median shear bond strength is the same for all 5 aging groups.",
+    "h1n": "At least one aging group has a different median shear bond strength.",
+    "hs0n": "The median shear bond strength is the same for all 5 aging groups.",
+    "hs1n": "At least one aging group has a different median shear bond strength.",
+    "fh": null,
+    "fhn": null,
+    "test": "anova",
+    "test_user": false,
+    "ph": "tukey",
+    "step": 5,
+    "seen": 5
+  },
+  "summary": {
+    "layout": "k independent samples",
+    "test": "CRD ANOVA (F test)",
+    "p": 2.62588195878608e-06,
+    "reject": true,
+    "assumptions_ok": true,
+    "failed": []
+  }
+}

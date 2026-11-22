@@ -1,0 +1,8 @@
+StatDesign Studio output - Uddin et al. (2023) – groundwater pH against the 8.5 guideline limit, one-sample t-test
+Layout: One sample. Test: One-sample t-test. alpha = 0.05
+
+              Test   Statistic df  P-value      Estimate
+ One-sample t-test t = −9.5167 17 < 0.0001 Mean = 7.6661
+ 95% confidence interval
+         [7.4812, 7.851]
+

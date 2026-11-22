@@ -1,0 +1,10 @@
+Mix code,Sand rate (%),VMA dosage (% of cement),Target porosity (%),Compressive strength 7 d (MPa),Compressive strength 28 d (MPa),Splitting tensile strength 28 d (MPa),Permeability coefficient (mm/s)
+OED1,4,0.015,14,22.9,31.3,2.35,4.6
+OED2,4,0.01,20,19.3,30.3,2.67,5.5
+OED3,4,0.005,26,16.5,23.1,2.46,9.1
+OED4,6,0.01,26,9.5,16.8,2.12,8.7
+OED5,6,0.005,14,27.4,36.1,2.78,4.1
+OED6,6,0.015,20,14.6,20.8,2.32,5.2
+OED7,8,0.005,20,24.3,33.3,2.35,4.9
+OED8,8,0.015,26,18.6,31.3,2.62,8.5
+OED9,8,0.01,14,33.2,42.6,3.33,2.4

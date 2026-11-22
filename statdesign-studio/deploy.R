@@ -50,6 +50,7 @@ RIAZ_KEY_FILES_DEPLOY <- c("ai_key.txt", "ai-key.txt", "ai_key", ".Renviron", ".
 if (!length(intersect(RIAZ_KEY_FILES_DEPLOY, list.files(".", all.files = TRUE))))
   message("Note: no ai_key.txt found, so the published app will ask students for their own AI key.")
 files <- c("app.R", list.files("R", full.names = TRUE), list.files("www", full.names = TRUE, recursive = TRUE),
+           list.files("papers", full.names = TRUE, recursive = TRUE),   # Paper Replications: the papers, their data and saved analyses
            intersect(RIAZ_KEY_FILES_DEPLOY, list.files(".", all.files = TRUE)))  # the built-in AI key, if you set one
 deploy <- function() rsconnect::deployApp(appDir = ".", appName = APP, account = ACCOUNT, launch.browser = TRUE,
                                           forceUpdate = TRUE, appFiles = files)

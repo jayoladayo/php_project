@@ -1,0 +1,84 @@
+{
+  "app": "StatDesign Studio",
+  "kind": "analysis",
+  "version": 1,
+  "saved": "2026-11-22 12:00",
+  "from": "Yadeta2024_seed_yield_RCBD",
+  "note": "The 25 values are a reconstruction: treatment means and CV (18.68 %) are exact, the block structure is an assumption (no block effect). The app gives F = 34.718 on 4 and 16 df, p < 0.0001, equal to the independent calculation (34.7176); the paper prints p = 0.001 and no F.",
+  "page": "rcbd",
+  "problem_id": "custom",
+  "title": "Yadeta (2024) – seed yield of vetch and oat mixtures, RCBD with 5 treatments in 5 blocks (data rebuilt from Table 5)",
+  "edited": false,
+  "meta": {
+    "title": "Yadeta (2024) – seed yield of vetch and oat mixtures, RCBD with 5 treatments in 5 blocks (data rebuilt from Table 5)",
+    "statement": "Five treatments (sole Oat Bona-bas, sole Oat Bonsa, sole Vetch Gebisa, and two vetch-oat mixtures) were grown in a randomized complete block design with 5 replications, and the seed yield (t/ha) was measured. The paper prints only the treatment means, the grand mean (1.8) and CV = 18.68 %, so the 25 yields were rebuilt to reproduce those exactly, with no block effect (no block values were published). Does the mean seed yield differ between the treatments? Test at α = 0.05. Source: Journal of Scientific Agriculture 8:51-58, Table 5.",
+    "parts": [],
+    "roles": {
+      "response": "Seed yield (t/ha)",
+      "treatment": "Treatment",
+      "factorB": "",
+      "factorC": "",
+      "factorD": "",
+      "factorE": "",
+      "block": "Block",
+      "row": "",
+      "column": "",
+      "greek": ""
+    },
+    "labels": {
+      "response": "seed yield",
+      "unit": "t/ha",
+      "treatment": "treatment",
+      "block": "block"
+    },
+    "settings": {
+      "alpha": 0.05,
+      "alt": "two.sided"
+    },
+    "target": "mean",
+    "control": null,
+    "9": null,
+    "10": null,
+    "11": null,
+    "random_wp": false
+  },
+  "data": {
+    "Treatment": ["T1 Oat Bona-bas (sole)", "T1 Oat Bona-bas (sole)", "T1 Oat Bona-bas (sole)", "T1 Oat Bona-bas (sole)", "T1 Oat Bona-bas (sole)", "T2 Oat Bonsa (sole)", "T2 Oat Bonsa (sole)", "T2 Oat Bonsa (sole)", "T2 Oat Bonsa (sole)", "T2 Oat Bonsa (sole)", "T3 Vetch Gebisa (sole)", "T3 Vetch Gebisa (sole)", "T3 Vetch Gebisa (sole)", "T3 Vetch Gebisa (sole)", "T3 Vetch Gebisa (sole)", "T4 Vetch Gebisa + Oat Bonsa", "T4 Vetch Gebisa + Oat Bonsa", "T4 Vetch Gebisa + Oat Bonsa", "T4 Vetch Gebisa + Oat Bonsa", "T4 Vetch Gebisa + Oat Bonsa", "T5 Vetch Gebisa + Oat Bona-bas", "T5 Vetch Gebisa + Oat Bona-bas", "T5 Vetch Gebisa + Oat Bona-bas", "T5 Vetch Gebisa + Oat Bona-bas", "T5 Vetch Gebisa + Oat Bona-bas"],
+    "Block": [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5],
+    "Seed yield (t/ha)": [0.9157, 1.1798, 1.5213, 1.2776, 1.1056, 2.8363, 2.6638, 3.0065, 2.4303, 2.5631, 0.9756, 0.4832, 1.0073, 1.1583, 0.8756, 2.7609, 3.5378, 2.445, 2.6188, 2.6376, 1.5115, 1.1354, 1.02, 1.5151, 1.818]
+  },
+  "state": {
+    "s": {
+      "alpha": 0.05,
+      "alt": "two.sided",
+      "value": 0,
+      "var_mode": "auto",
+      "var_test": "levene",
+      "family": "auto",
+      "posthoc": "tukey"
+    },
+    "h0": "The mean seed yield is the same for all 5 treatments.",
+    "h1": "At least one treatment has a different mean seed yield.",
+    "hs0": "The mean seed yield is the same for all 5 treatments.",
+    "hs1": "At least one treatment has a different mean seed yield.",
+    "h0n": "The median seed yield is the same for all 5 treatments.",
+    "h1n": "At least one treatment has a different median seed yield.",
+    "hs0n": "The median seed yield is the same for all 5 treatments.",
+    "hs1n": "At least one treatment has a different median seed yield.",
+    "fh": null,
+    "fhn": null,
+    "test": "anova",
+    "test_user": false,
+    "ph": "tukey",
+    "step": 5,
+    "seen": 5
+  },
+  "summary": {
+    "layout": "Randomized complete block design",
+    "test": "RCBD ANOVA (F test)",
+    "p": 1.06076862945088e-07,
+    "reject": true,
+    "assumptions_ok": true,
+    "failed": []
+  }
+}

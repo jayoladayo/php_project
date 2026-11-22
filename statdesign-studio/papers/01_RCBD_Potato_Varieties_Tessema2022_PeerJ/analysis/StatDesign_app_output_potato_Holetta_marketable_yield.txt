@@ -1,0 +1,68 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+RCBD ANOVA (F test) ★ suggested
+ Run test
+Test
+RCBD ANOVA (F test)
+Test statistic (F)
+33.106
+df = 20, 40
+P-value
+< 0.0001
+right tail
+Partial η²
+0.94303
+share of the variation explained by the treatments
+How the statistic is computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Variety (treatments)	20	3,611.88	180.594	33.106	< 0.0001
+Replication (block) (blocks)	2	56.995	28.4975	5.2241	0.0096
+Error	40	218.201	5.45503		
+Total	62	3,887.08			
+The blocks are a nuisance factor: their F ratio is shown for information. The test of interest is the treatments.
+Result
+TEST	STATISTIC	DF	P-VALUE	ESTIMATE	95% CONFIDENCE INTERVAL
+RCBD ANOVA (F test)	F = 33.106	20, 40	< 0.0001	Partial η² = 0.94303	—
+Back: Information available
+Next: Decision
+
+======================================================================
+STEP 8 - ASSUMPTION CHECKS
+======================================================================
+8
+Assumption checks
+Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.
+Normality
+Satisfied
+SAMPLE	N	SHAPIRO-WILK W	SHAPIRO-WILK P	ANDERSON-DARLING P	RESULT
+Residuals of the RCBD model	63	0.9792	0.3618	0.3050	Normal
+H0: the residuals come from a normal distribution. p ≥ 0.05 means no evidence against normality.
+Normal QQ plot of the residuals
+Histogram of the residuals
+Constant variance of the residuals
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Pagan	BP = 27.66	22	0.1873	Constant
+H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the model terms). p ≥ 0.05 means the spread can be treated as constant.
+Residuals versus fitted values
+Spread of each treatment
+Independence
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Godfrey (lag 1)	LM = 0.005048	1	0.9434	Independent
+H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed).
+Residuals in the order listed
+All assumptions hold: the analysis stops here
+The RCBD ANOVA (F test) result stands. Reject H0. At α = 0.05 there is sufficient evidence to conclude that at least one Variety has a different mean Marketable tuber yield (t/ha) (RCBD ANOVA (F test), p < 0.0001).
+End of the analysis
+The worked solution (PDF) and the R script appear here once you have been through every step, from the hypotheses to the decision.
+Back: Post-hoc

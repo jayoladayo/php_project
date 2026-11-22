@@ -1,0 +1,20 @@
+From Table 2: SS between = 78.5024, SS error = 153.7875, F(4, 75) = 9.5711, p = 2.63e-06, eta^2 = 0.3380
+The paper prints F = 13.55 (df 4), p = 0.00001 in its text; it does not follow from Table 2.
+
+      Aging group Shear bond strength (MPa).n Shear bond strength (MPa).mean
+1    TC (control)                   16.000000                      20.969994
+2    T1 (1 month)                   16.000000                      20.350000
+3   T3 (3 months)                   16.000000                      19.110006
+4   T6 (6 months)                   16.000000                      18.899981
+5 T12 (12 months)                   16.000000                      18.269994
+  Shear bond strength (MPa).sd
+1                     1.400005
+2                     1.260002
+3                     1.280000
+4                     1.730008
+5                     1.440000
+              Df Sum Sq Mean Sq F value   Pr(>F)    
+`Aging group`  4   78.5  19.626   9.571 2.63e-06 ***
+Residuals     75  153.8   2.051                     
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1

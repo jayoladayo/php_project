@@ -1,0 +1,16 @@
+     
+      a b c d e f
+  i   1 1 1 1 1 1
+  ii  1 1 1 1 1 1
+  iii 1 1 1 1 1 1
+  iv  1 1 1 1 1 1
+  v   1 1 1 1 1 1
+  vi  1 1 1 1 1 1
+                     Df Sum Sq Mean Sq F value Pr(>F)  
+`Order of injection`  5  0.563  0.1127   0.172 0.9701  
+Position              5  3.833  0.7667   1.168 0.3592  
+Rabbit                5 12.833  2.5667   3.910 0.0124 *
+Residuals            20 13.130  0.6565                 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+Paper: F(order) = 0.172, F(positions) = 1.168, F(rabbits) = 3.910

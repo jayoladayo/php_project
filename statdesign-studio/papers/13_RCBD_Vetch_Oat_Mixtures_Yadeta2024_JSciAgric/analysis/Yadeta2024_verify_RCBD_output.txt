@@ -1,0 +1,14 @@
+                       Treatment       y
+1         T1 Oat Bona-bas (sole) 1.20000
+2            T2 Oat Bonsa (sole) 2.70000
+3         T3 Vetch Gebisa (sole) 0.90000
+4    T4 Vetch Gebisa + Oat Bonsa 2.80002
+5 T5 Vetch Gebisa + Oat Bona-bas 1.40000
+grand mean = 1.8 
+            Df Sum Sq Mean Sq F value   Pr(>F)    
+Treatment    4 15.700   3.925   34.72 1.06e-07 ***
+Block        4  0.000   0.000    0.00        1    
+Residuals   16  1.809   0.113                     
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+CV = 18.6799 % (paper: 18.68 %)

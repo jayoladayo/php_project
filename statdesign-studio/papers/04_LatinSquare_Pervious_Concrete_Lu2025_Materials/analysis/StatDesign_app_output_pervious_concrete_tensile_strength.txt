@@ -1,0 +1,68 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+LSD ANOVA (F test) ★ suggested
+ Run test
+Test
+LSD ANOVA (F test)
+Test statistic (F)
+0.88644
+df = 2, 2
+P-value
+0.5301
+right tail
+Partial η²
+0.4699
+share of the variation explained by the treatments
+How the statistic is computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Target porosity (%) (treatments)	2	0.317956	0.158978	0.88644	0.5301
+Sand rate (%) (rows)	2	0.211822	0.105911	0.59055	0.6287
+VMA dosage (% of cement) (columns)	2	0.117756	0.0588778	0.32829	0.7528
+Error	2	0.358689	0.179344		
+Total	8	1.00622			
+Rows and columns are blocking factors: their F ratios are shown for information. The test of interest is the treatments (Latin letters).
+Result
+TEST	STATISTIC	DF	P-VALUE	ESTIMATE	95% CONFIDENCE INTERVAL
+LSD ANOVA (F test)	F = 0.88644	2, 2	0.5301	Partial η² = 0.4699	—
+Back: Information available
+Next: Decision
+
+======================================================================
+STEP 8 - ASSUMPTION CHECKS
+======================================================================
+8
+Assumption checks
+Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.
+Normality
+Not satisfied
+SAMPLE	N	SHAPIRO-WILK W	SHAPIRO-WILK P	ANDERSON-DARLING P	RESULT
+Residuals of the Latin square model	9	0.6364	0.0003	0.0001	Not normal
+H0: the residuals come from a normal distribution. p ≥ 0.05 means no evidence against normality.
+Normal QQ plot of the residuals
+Histogram of the residuals
+Constant variance of the residuals
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Pagan	BP = 0.000000000000000000000000000008306	6	1.0000	Constant
+H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the model terms). p ≥ 0.05 means the spread can be treated as constant.
+Residuals versus fitted values
+Spread of each treatment
+Independence
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Godfrey (lag 1)	LM = 1.486	1	0.2228	Independent
+H0: the residuals are independent (no correlation between consecutive observations, in the order the data are listed).
+Residuals in the order listed
+Normality failed: start again with the non-parametric test
+The LSD ANOVA (F test) assumes normality, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the Quade's test, which removes the blocking factors (rows and columns, and Greek letters) and compares the treatments through the ranks of the residuals (Quade's test): new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.
+Back: Decision
+Next: Non-parametric hypotheses

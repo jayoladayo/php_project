@@ -1,0 +1,82 @@
+{
+  "app": "StatDesign Studio",
+  "kind": "analysis",
+  "version": 1,
+  "saved": "2026-11-22 12:00",
+  "from": "Chacrabati2013_broiler_live_weight_CRD",
+  "note": "The data are rebuilt from the published means and SEs. The app gives F = 30.351 on 3 and 12 df, p < 0.0001 (η² = 0.884), equal to the independent calculation (30.3512) and consistent with the paper's '**' (p < 0.01). The paper prints no F value to compare with.",
+  "page": "crd",
+  "problem_id": "custom",
+  "title": "Chacrabati et al. (2013) – broiler live weight, completely randomized design with 4 diets (data rebuilt from means and SE)",
+  "edited": false,
+  "meta": {
+    "title": "Chacrabati et al. (2013) – broiler live weight, completely randomized design with 4 diets (data rebuilt from means and SE)",
+    "statement": "Four diets (control, banana peel meal at 0.5 %, Bio-Sel E and a commercial additive) were each given to 4 replicate groups of broilers in a completely randomized design, and the live weight (g) was recorded. The paper prints only each diet's mean and standard error (with significance letters), so the four values of each diet were rebuilt to have exactly that mean and SD = SE × √4. Does the mean live weight differ between the diets? Test at α = 0.05. Source: Bangladesh Journal of Animal Science (2013).",
+    "parts": [],
+    "roles": {
+      "response": "Live weight (g)",
+      "treatment": "Treatment",
+      "factorB": "",
+      "factorC": "",
+      "factorD": "",
+      "factorE": "",
+      "block": "",
+      "row": "",
+      "column": "",
+      "greek": ""
+    },
+    "labels": {
+      "response": "live weight",
+      "unit": "g",
+      "treatment": "diet"
+    },
+    "settings": {
+      "alpha": 0.05,
+      "alt": "two.sided"
+    },
+    "target": "mean",
+    "control": null,
+    "9": null,
+    "10": null,
+    "11": null,
+    "random_wp": false
+  },
+  "data": {
+    "Treatment": ["Control", "Control", "Control", "Control", "Plantain 0.5 %", "Plantain 0.5 %", "Plantain 0.5 %", "Plantain 0.5 %", "Bio-Sel E", "Bio-Sel E", "Bio-Sel E", "Bio-Sel E", "Commercial", "Commercial", "Commercial", "Commercial"],
+    "Live weight (g)": [1118.493, 1191.31, 1121.32, 1112.877, 922.8, 934.092, 954.972, 944.136, 1194.011, 1116.636, 1130.96, 1110.394, 1043.517, 1133.924, 1121.415, 1121.144]
+  },
+  "state": {
+    "s": {
+      "alpha": 0.05,
+      "alt": "two.sided",
+      "value": 0,
+      "var_mode": "auto",
+      "var_test": "levene",
+      "family": "auto",
+      "posthoc": "tukey"
+    },
+    "h0": "The mean live weight is the same for all 4 diets.",
+    "h1": "At least one diet has a different mean live weight.",
+    "hs0": "The mean live weight is the same for all 4 diets.",
+    "hs1": "At least one diet has a different mean live weight.",
+    "h0n": "The median live weight is the same for all 4 diets.",
+    "h1n": "At least one diet has a different median live weight.",
+    "hs0n": "The median live weight is the same for all 4 diets.",
+    "hs1n": "At least one diet has a different median live weight.",
+    "fh": null,
+    "fhn": null,
+    "test": "anova",
+    "test_user": false,
+    "ph": "tukey",
+    "step": 5,
+    "seen": 5
+  },
+  "summary": {
+    "layout": "k independent samples",
+    "test": "CRD ANOVA (F test)",
+    "p": 6.93612148367624e-06,
+    "reject": true,
+    "assumptions_ok": true,
+    "failed": []
+  }
+}

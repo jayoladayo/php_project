@@ -1416,10 +1416,10 @@ problems_server <- function(id, store, show_crumb, open_design = NULL, mode = NU
       mm <- cur$meta
       now <- tryCatch(ps_share_summary(mm, cur$s, cur$test), error = function(e) NULL)
       same <- share_same(now, x$summary)
-      showModal(modalDialog(title = "Shared analysis opened", easyClose = TRUE, footer = modalButton("Close"),
+      showModal(modalDialog(title = x$intro_title %||% "Shared analysis opened", easyClose = TRUE, footer = modalButton("Close"),
         p(tags$b(x$title %||% "Analysis"), if (nzchar(x$from %||% "")) sprintf(" · from %s", x$from), if (nzchar(x$saved %||% "")) sprintf(" · saved %s", x$saved)),
         if (nzchar(x$note %||% "")) div(class = "note g", icon("chat", 14), span(x$note)),
-        p(sprintf("It is open at step %d, with the student's data, settings and wording.", step)),
+        p(x$intro %||% sprintf("It is open at step %d, with the student's data, settings and wording.", step)),
         if (isTRUE(same)) note(kind = "g", ic = "check", "The numbers computed here are identical to those in the shared file.")
         else if (isFALSE(same)) note(kind = "w", ic = "alert", "The numbers computed here differ from those in the shared file. The file may come from another version of the app.")))
     }

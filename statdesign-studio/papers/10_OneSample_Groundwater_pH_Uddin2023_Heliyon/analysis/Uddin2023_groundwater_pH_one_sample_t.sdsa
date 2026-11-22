@@ -1,0 +1,81 @@
+{
+  "app": "StatDesign Studio",
+  "kind": "analysis",
+  "version": 1,
+  "saved": "2026-11-22 12:00",
+  "from": "Uddin2023_groundwater_pH_one_sample_t",
+  "note": "Replication of the paper's one-sample t-test: t = −9.52, df = 17. The app gives t = −9.5167, p < 0.0001, mean 7.666, 95 % CI [7.481, 7.851]. H0 is rejected: the mean pH is below 8.5.",
+  "page": "one",
+  "problem_id": "custom",
+  "title": "Uddin et al. (2023) – groundwater pH against the 8.5 guideline limit, one-sample t-test",
+  "edited": false,
+  "meta": {
+    "title": "Uddin et al. (2023) – groundwater pH against the 8.5 guideline limit, one-sample t-test",
+    "statement": "Groundwater pH was measured at 9 sites (GW1 to GW9) in the dry and in the wet season, 18 values in all. The upper guideline limit for pH (WHO and Bangladesh standards) is 8.5. Is the mean pH of the groundwater different from 8.5? Test at α = 0.05. Source: Heliyon 9:e19668.",
+    "parts": [],
+    "roles": {
+      "response": "Groundwater pH",
+      "treatment": "",
+      "factorB": "",
+      "factorC": "",
+      "factorD": "",
+      "factorE": "",
+      "block": "",
+      "row": "",
+      "column": "",
+      "greek": ""
+    },
+    "labels": {
+      "response": "groundwater pH",
+      "unit": ""
+    },
+    "settings": {
+      "alpha": 0.05,
+      "alt": "two.sided",
+      "mu0": 8.5
+    },
+    "target": "mean",
+    "control": null,
+    "9": null,
+    "10": null,
+    "11": null,
+    "random_wp": false
+  },
+  "data": {
+    "Site": ["GW1", "GW1", "GW2", "GW2", "GW3", "GW3", "GW4", "GW4", "GW5", "GW5", "GW6", "GW6", "GW7", "GW7", "GW8", "GW8", "GW9", "GW9"],
+    "Season": ["dry", "wet", "dry", "wet", "dry", "wet", "dry", "wet", "dry", "wet", "dry", "wet", "dry", "wet", "dry", "wet", "dry", "wet"],
+    "Groundwater pH": [8.27, 7.66, 7.35, 7.86, 7.05, 7.94, 7.6, 7.98, 7.65, 7.85, 7.28, 7.86, 8.11, 7.87, 7.2, 7.79, 6.9, 7.77]
+  },
+  "state": {
+    "s": {
+      "alpha": 0.05,
+      "alt": "two.sided",
+      "value": 8.5,
+      "var_mode": "auto",
+      "var_test": "levene",
+      "family": "auto",
+      "posthoc": "tukey"
+    },
+    "h0": "The mean groundwater pH is 8.5.",
+    "h1": "The mean groundwater pH is different from 8.5.",
+    "hs0": "The mean groundwater pH is 8.5.",
+    "hs1": "The mean groundwater pH is different from 8.5.",
+    "h0n": "The median groundwater pH is 8.5.",
+    "h1n": "The median groundwater pH is different from 8.5.",
+    "hs0n": "The median groundwater pH is 8.5.",
+    "hs1n": "The median groundwater pH is different from 8.5.",
+    "fh": null,
+    "fhn": null,
+    "test": "t",
+    "test_user": false,
+    "ph": "tukey",
+    "step": 5,
+    "seen": 5
+  },
+  "summary": {
+    "layout": "One sample",
+    "test": "One-sample t-test",
+    "p": 3.18412032105058e-08,
+    "reject": true
+  }
+}

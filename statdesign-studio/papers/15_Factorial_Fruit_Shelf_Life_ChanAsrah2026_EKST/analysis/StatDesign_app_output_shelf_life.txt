@@ -1,0 +1,35 @@
+StatDesign Studio output - Chan & Asrah (2026) – fruit shelf life, 3 × 3 × 3 factorial in a CRD with 3 replicates
+Layout: Factorial design (CRD). Test: CRD ANOVA (F test). alpha = 0.05
+
+ANOVA table
+                                                    Source df Sum of squares
+                                          Preservative (A)  2       1,060.91
+                                      Moisture control (B)  2        64.0247
+                                     Storage condition (C)  2       1,185.95
+                      Preservative × Moisture control (AB)  4        4.93827
+                     Preservative × Storage condition (AC)  4        66.7901
+                 Moisture control × Storage condition (BC)  4        23.0123
+ Preservative × Moisture control × Storage condition (ABC)  8        15.1358
+                                                     Error 54        101.333
+                                                     Total 80        2,522.1
+ Mean square      F0  P-value
+     530.457  282.68 < 0.0001
+     32.0123  17.059 < 0.0001
+     592.975  315.99 < 0.0001
+     1.23457 0.65789   0.6239
+     16.6975   8.898 < 0.0001
+     5.75309  3.0658   0.0239
+     1.89198  1.0082   0.4409
+     1.87654                 
+                             
+
+Assumption checks on the residuals
+                               Sample  n Shapiro-Wilk W Shapiro-Wilk p
+ Residuals of the factorial CRD model 81         0.9754         0.1207
+ Anderson-Darling p Result
+             0.0349 Normal
+                                 Test   Statistic df p-value   Result
+ Breusch-Pagan (on the fitted values) BP = 0.5427  1  0.4613 Constant
+                    Test   Statistic df p-value      Result
+ Breusch-Godfrey (lag 1) LM = 0.8624  1  0.3531 Independent
+All assumptions hold: TRUE

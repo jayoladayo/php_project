@@ -1,0 +1,41 @@
+
+=== RCBD at Sumedang, raw tuber yield (t/ha)
+             Source  df         SS       MS       F      p
+Replication (block)   2     6.4636   3.2318  0.2343 0.7921
+           Genotype  22 7,172.6082 326.0276 23.6414 0.0000
+              Error  44   606.7827  13.7905     NaN    NaN
+              Total  68 7,785.8545      NaN     NaN    NaN
+
+Location means (paper Table 2):
+  Mean yield Sumedang (t/ha)                 ours=       17.2844   paper=         17.28   MATCH
+  Mean yield Bandung (t/ha)                  ours=       10.2210   paper=         10.22   MATCH
+  Mean yield Karawang (t/ha)                 ours=        8.2178   paper=          8.22   MATCH
+  Sumedang mean MZ202                        ours=       33.5000   paper=          33.5   MATCH
+  Sumedang mean MZ237                        ours=       37.2333   paper=         37.23   MATCH
+  Sumedang mean MZ236                        ours=        2.7000   paper=           2.7   MATCH
+
+=== Combined ANOVA on raw yield
+             Source  df          SS         MS        F      p
+           Location   2  3,130.4942 1,565.2471 163.7814 0.0000
+            Loc-Rep   6     12.0221     2.0037   0.2097 0.9732
+           Genotype  22  4,422.1996   201.0091  21.0328 0.0000
+Location x Genotype  44  8,309.2901   188.8475  19.7603 0.0000
+              Error 132  1,261.5142     9.5569      NaN    NaN
+              Total 206 17,135.5203        NaN      NaN    NaN
+
+=== Combined ANOVA on square-root yield
+             Source  df       SS      MS        F      p
+           Location   2  72.5201 36.2601 191.1094 0.0000
+            Loc-Rep   6   0.3391  0.0565   0.2979 0.9370
+           Genotype  22 134.7161  6.1235  32.2738 0.0000
+Location x Genotype  44 176.7517  4.0171  21.1721 0.0000
+              Error 132  25.0450  0.1897      NaN    NaN
+              Total 206 409.3720     NaN      NaN    NaN
+
+Paper Table 1 vs square-root analysis:
+  SS Block(Environment)                      ours=        0.3391   paper=          0.36   DIFFERS (5.8%)
+  SS Genotypes                               ours=      134.7161   paper=        134.65   MATCH
+  SS Locations                               ours=       72.5201   paper=         72.52   MATCH
+  SS G x E                                   ours=      176.7517   paper=        176.88   MATCH
+  CV (%)                                     ours=       13.8228   paper=         13.82   MATCH
+  F Locations tested against Block(Env)      ours=      641.6140   paper=        641.61   MATCH

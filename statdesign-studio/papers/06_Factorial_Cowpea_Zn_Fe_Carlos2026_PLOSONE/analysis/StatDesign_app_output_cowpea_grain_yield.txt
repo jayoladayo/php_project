@@ -1,0 +1,79 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+RCBD ANOVA (F test) ★ suggested
+ Run test
+Test
+RCBD ANOVA (F test)
+Effects tested
+7
+A, B, C, AB, AC, BC, ABC
+Significant effects
+A, B, C, AB, AC, BC, ABC
+at α = 0.05
+Error df
+141
+MS_E = 15.183
+How the statistics are computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Block (blocks)	3	16,632.5	5,544.16	365.14	< 0.0001
+Fertilization mode (A)	2	576,143	288,071	18,973	< 0.0001
+Zinc rate (kg/ha) (B)	3	2,456,500	818,834	53,929	< 0.0001
+Iron rate (kg/ha) (C)	3	499,419	166,473	10,964	< 0.0001
+Fertilization mode × Zinc rate (kg/ha) (AB)	6	95,889.8	15,981.6	1,052.6	< 0.0001
+Fertilization mode × Iron rate (kg/ha) (AC)	6	21,576.9	3,596.15	236.85	< 0.0001
+Zinc rate (kg/ha) × Iron rate (kg/ha) (BC)	9	152,749	16,972.2	1,117.8	< 0.0001
+Fertilization mode × Zinc rate (kg/ha) × Iron rate (kg/ha) (ABC)	18	15,286.8	849.269	55.934	< 0.0001
+Error	141	2,140.87	15.1835		
+Total	191	3,836,340			
+Each replicate is a block: the block effect is removed from the error. The test of interest is each factor and each interaction.
+Each effect: F test
+EFFECT	F0	DF	F CRITICAL	P-VALUE	RESULT
+Fertilization mode (A)	18,973	2, 141	3.06	< 0.0001	Significant
+Zinc rate (kg/ha) (B)	53,929	3, 141	2.669	< 0.0001	Significant
+Iron rate (kg/ha) (C)	10,964	3, 141	2.669	< 0.0001	Significant
+Fertilization mode × Zinc rate (kg/ha) (AB)	1,052.6	6, 141	2.163	< 0.0001	Significant
+Fertilization mode × Iron rate (kg/ha) (AC)	236.85	6, 141	2.163	< 0.0001	Significant
+Zinc rate (kg/ha) × Iron rate (kg/ha) (BC)	1,117.8	9, 141	1.947	< 0.0001	Significant
+Fertilization mode × Zinc rate (kg/ha) × Iron rate (kg/ha) (ABC)	55.934	18, 141	1.677	< 0.0001	Significant
+Back: Information available
+Next: Decision
+
+======================================================================
+STEP 8 - ASSUMPTION CHECKS
+======================================================================
+8
+Assumption checks
+Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.
+Normality
+Satisfied
+SAMPLE	N	SHAPIRO-WILK W	SHAPIRO-WILK P	ANDERSON-DARLING P	RESULT
+Residuals of the factorial RCBD model	192	0.9909	0.2652	0.1563	Normal
+H0: the residuals come from a normal distribution. p ≥ 0.05 means no evidence against normality.
+Normal QQ plot of the residuals
+Histogram of the residuals
+Constant variance of the residuals
+Not satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Pagan (on the fitted values)	BP = 11.29	1	0.0008	Not constant
+H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the fitted values; with a term for every combination and two replicates, the usual version would reject whatever the data). p ≥ 0.05 means the spread can be treated as constant.
+Residuals versus fitted values
+Spread of each treatment
+Independence
+Not satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Godfrey (lag 1)	LM = 27.97	1	< 0.0001	Dependent
+H0: the residuals are independent (no correlation between consecutive observations). The observations are listed replicate by replicate: every combination once, then the next replicate.
+Residuals in the order listed
+Constant variance and Independence failed: start again with the non-parametric test
+The RCBD ANOVA (F test) assumes constant variance and independence, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the Friedman test (factorial RCBD), which ranks the treatment combinations within each block and tests each factor and each interaction on the rank sums: new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.
+Back: Post-hoc
+Next: Non-parametric hypotheses

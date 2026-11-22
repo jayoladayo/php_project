@@ -1,0 +1,54 @@
+
+=== RO3003: log10 kerf depth, interactions pooled
+               Source  df       SS       MS            F        p
+      Aperture A (um)   1 0.027070 0.027070  3913.007752 0.000000
+Pulse duration B (us)   1 0.299850 0.299850 43344.511975 0.000000
+    Number of loops C   1 0.172555 0.172555 24943.458277 0.000000
+                Error   4 0.000028 0.000007          NaN      NaN
+                Total   7 0.499502      NaN          NaN      NaN
+  SS Aperture A (um)                         ours=        0.0271   paper=        0.0271   MATCH
+  % contribution Aperture A (um)             ours=        5.4193   paper=          5.42   MATCH
+  SS Pulse duration B (us)                   ours=        0.2999   paper=        0.2999   MATCH
+  % contribution Pulse duration B (us)       ours=       60.0298   paper=         60.02   MATCH
+  SS Number of loops C                       ours=        0.1726   paper=        0.1726   MATCH
+  % contribution Number of loops C           ours=       34.5453   paper=         34.55   MATCH
+  Residual mean square                       ours=        0.0000   paper=     7.075e-06   MATCH
+
+=== RO3003: interactions shown separately
+                                   Source  df       SS       MS            F        p
+                          Aperture A (um)   1 0.027070 0.027070  3620.447883 0.010579
+                    Pulse duration B (us)   1 0.299850 0.299850 40103.816952 0.003179
+                        Number of loops C   1 0.172555 0.172555 23078.536112 0.004191
+  Aperture A (um) x Pulse duration B (us)   1 0.000005 0.000005     0.719887 0.552074
+      Aperture A (um) x Number of loops C   1 0.000007 0.000007     0.942411 0.509439
+Pulse duration B (us) x Number of loops C   1 0.000008 0.000008     1.038639 0.493967
+                                    Error   1 0.000007 0.000007          NaN      NaN
+                                    Total   7 0.499502      NaN          NaN      NaN
+
+=== RT_Duroid_5880: log10 kerf depth, interactions pooled
+               Source  df       SS       MS            F        p
+      Aperture A (um)   1 0.026165 0.026165  5010.761176 0.000000
+Pulse duration B (us)   1 0.303186 0.303186 58061.781341 0.000000
+    Number of loops C   1 0.057273 0.057273 10968.126726 0.000000
+                Error   4 0.000021 0.000005          NaN      NaN
+                Total   7 0.386645      NaN          NaN      NaN
+  SS Aperture A (um)                         ours=        0.0262   paper=        0.0262   MATCH
+  % contribution Aperture A (um)             ours=        6.7672   paper=          6.77   MATCH
+  SS Pulse duration B (us)                   ours=        0.3032   paper=        0.3032   MATCH
+  % contribution Pulse duration B (us)       ours=       78.4145   paper=         78.41   MATCH
+  SS Number of loops C                       ours=        0.0573   paper=        0.0573   MATCH
+  % contribution Number of loops C           ours=       14.8129   paper=         14.81   MATCH
+  Residual mean square                       ours=        0.0000   paper=     5.275e-06   MATCH
+
+=== RT_Duroid_5880: interactions shown separately
+                                   Source  df       SS       MS              F        p
+                          Aperture A (um)   1 0.026165 0.026165  123099.812197 0.001814
+                    Pulse duration B (us)   1 0.303186 0.303186 1426408.908410 0.000533
+                        Number of loops C   1 0.057273 0.057273  269454.937636 0.001226
+  Aperture A (um) x Pulse duration B (us)   1 0.000004 0.000004      20.624414 0.137979
+      Aperture A (um) x Number of loops C   1 0.000014 0.000014      64.861777 0.078645
+Pulse duration B (us) x Number of loops C   1 0.000003 0.000003      11.782162 0.180472
+                                    Error   1 0.000000 0.000000            NaN      NaN
+                                    Total   7 0.386645      NaN            NaN      NaN
+
+F-values differ by about 2% only because the paper's ANOVA used unrounded depths; both papers' tables also repeat the same 'Total MS 0.3855', a copy error.

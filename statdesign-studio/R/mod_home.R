@@ -32,6 +32,19 @@ path_card <- function(page, ic, title, desc, cta) {
          span(class = "pc-go", cta, icon("arrowr", 15)))
 }
 
+# Paper Replications on the home page: one banner under the designs (the papers were analysed with those pages).
+paper_banner <- function() {
+  P <- tryCatch(papers_all(), error = function(e) list())
+  if (!length(P)) return(NULL)
+  n_an <- sum(vapply(P, function(p) length(p$analyses), 0))
+  tags$a(class = "kcard pp-banner", href = "#", onclick = nav_js("papers"),
+         ico_box("journal", "ig", 22),
+         div(class = "pp-banner-txt", div(class = "pc-t", "Paper Replications"),
+             div(class = "pc-d", sprintf("%d published experiments re-created with the app: %d saved analyses, each with the paper's data, the five steps and whether the printed results tally.", length(P), n_an))),
+         div(class = "pp-banner-chips", lapply(unique(vapply(P, `[[`, "", "design")), function(d) span(class = "chip", PAPER_DESIGNS[[d]]$label))),
+         span(class = "pc-go", "Open Paper Replications", icon("arrowr", 15)))
+}
+
 home_ui <- function() {
   tagList(
     div(class = "hero",
@@ -62,6 +75,7 @@ home_ui <- function() {
             analysis_card("fact", "cross", "Factorial", "Two or three crossed factors: main effects and interactions.", c("CRD, RCBD, LSD or GLSD layout", "Rank test per effect")),
             analysis_card("twok", "cross", "2^k Factorial", "Two-level designs with two to five factors, replicated or with one observation per combination.", c("2² to 2⁵", "Pooled error if unreplicated")),
             analysis_card("split", "layers", "Split-Plot", "Hard-to-change whole-plot factors and easy-to-change subplot factors, tested against two errors.", c("Whole-plot and subplot error", "Rank-transform fallback")))),
+    paper_banner(),
     div(class = "col",
         div(class = "home-sec", h2(class = "ct home-h", "Explore and compare"), span(class = "small", "Classic tests for one, two or many groups")),
         div(class = "grid g4",

@@ -1,0 +1,94 @@
+StatDesign Studio output (https://boxwish.shinyapps.io/statdesign-studio/), run 15 Nov 2026
+
+======================================================================
+STEP 5 - TEST (ANOVA table as shown by StatDesign Studio)
+======================================================================
+5
+Test
+The test that fits the design is selected for you (★ suggested): the parametric test first, whose assumptions are checked on the residuals in step 8. You can choose another test, including the rank test; a warning appears when it does not suit the data.
+Test
+CRD ANOVA (F test) ★ suggested
+ Run test
+Test
+CRD ANOVA (F test)
+Effects tested
+15
+A, B, C, D, AB, AC, AD, BC, BD, CD, ABC, ABD, ACD, BCD, ABCD
+Significant effects
+A, B, C, D, AB, AC, AD, BC, BD, CD, ABC, ABD, ACD, BCD, ABCD
+at α = 0.05
+Error df
+16
+MS_E = 0.00028125
+How the statistics are computed
+show the calculation
+ANOVA table
+SOURCE	DF	SUM OF SQUARES	MEAN SQUARE	F0	P-VALUE
+Deposition temperature (C) (A)	1	0.2738	0.2738	973.51	< 0.0001
+Argon flow rate (sccm) (B)	1	0.0242	0.0242	86.044	< 0.0001
+Precursor pulse time (ms) (C)	1	0.0190125	0.0190125	67.6	< 0.0001
+Purge time (s) (D)	1	0.0045125	0.0045125	16.044	0.0010
+Deposition temperature (C) × Argon flow rate (sccm) (AB)	1	0.0153125	0.0153125	54.444	< 0.0001
+Deposition temperature (C) × Precursor pulse time (ms) (AC)	1	0.02	0.02	71.111	< 0.0001
+Deposition temperature (C) × Purge time (s) (AD)	1	0.0512	0.0512	182.04	< 0.0001
+Argon flow rate (sccm) × Precursor pulse time (ms) (BC)	1	0.0032	0.0032	11.378	0.0039
+Argon flow rate (sccm) × Purge time (s) (BD)	1	0.0128	0.0128	45.511	< 0.0001
+Precursor pulse time (ms) × Purge time (s) (CD)	1	0.0351125	0.0351125	124.84	< 0.0001
+Deposition temperature (C) × Argon flow rate (sccm) × Precursor pulse time (ms) (ABC)	1	0.0276125	0.0276125	98.178	< 0.0001
+Deposition temperature (C) × Argon flow rate (sccm) × Purge time (s) (ABD)	1	0.0231125	0.0231125	82.178	< 0.0001
+Deposition temperature (C) × Precursor pulse time (ms) × Purge time (s) (ACD)	1	0.0098	0.0098	34.844	< 0.0001
+Argon flow rate (sccm) × Precursor pulse time (ms) × Purge time (s) (BCD)	1	0.045	0.045	160	< 0.0001
+Deposition temperature (C) × Argon flow rate (sccm) × Precursor pulse time (ms) × Purge time (s) (ABCD)	1	0.0153125	0.0153125	54.444	< 0.0001
+Error	16	0.0045	0.00028125		
+Total	31	0.584488			
+Every factor and every interaction is tested against the error mean square.
+Each effect: F test
+EFFECT	F0	DF	F CRITICAL	P-VALUE	RESULT
+Deposition temperature (C) (A)	973.51	1, 16	4.494	< 0.0001	Significant
+Argon flow rate (sccm) (B)	86.044	1, 16	4.494	< 0.0001	Significant
+Precursor pulse time (ms) (C)	67.6	1, 16	4.494	< 0.0001	Significant
+Purge time (s) (D)	16.044	1, 16	4.494	0.0010	Significant
+Deposition temperature (C) × Argon flow rate (sccm) (AB)	54.444	1, 16	4.494	< 0.0001	Significant
+Deposition temperature (C) × Precursor pulse time (ms) (AC)	71.111	1, 16	4.494	< 0.0001	Significant
+Deposition temperature (C) × Purge time (s) (AD)	182.04	1, 16	4.494	< 0.0001	Significant
+Argon flow rate (sccm) × Precursor pulse time (ms) (BC)	11.378	1, 16	4.494	0.0039	Significant
+Argon flow rate (sccm) × Purge time (s) (BD)	45.511	1, 16	4.494	< 0.0001	Significant
+Precursor pulse time (ms) × Purge time (s) (CD)	124.84	1, 16	4.494	< 0.0001	Significant
+Deposition temperature (C) × Argon flow rate (sccm) × Precursor pulse time (ms) (ABC)	98.178	1, 16	4.494	< 0.0001	Significant
+Deposition temperature (C) × Argon flow rate (sccm) × Purge time (s) (ABD)	82.178	1, 16	4.494	< 0.0001	Significant
+Deposition temperature (C) × Precursor pulse time (ms) × Purge time (s) (ACD)	34.844	1, 16	4.494	< 0.0001	Significant
+Argon flow rate (sccm) × Precursor pulse time (ms) × Purge time (s) (BCD)	160	1, 16	4.494	< 0.0001	Significant
+Deposition temperature (C) × Argon flow rate (sccm) × Precursor pulse time (ms) × Purge time (s) (ABCD)	54.444	1, 16	4.494	< 0.0001	Significant
+Back: Information available
+Next: Decision
+
+======================================================================
+STEP 8 - ASSUMPTION CHECKS
+======================================================================
+8
+Assumption checks
+Check the three ANOVA assumptions on the residuals: normality, constant variance (Breusch-Pagan) and independence.
+Normality
+Not satisfied
+SAMPLE	N	SHAPIRO-WILK W	SHAPIRO-WILK P	ANDERSON-DARLING P	RESULT
+Residuals of the factorial CRD model	32	0.8291	0.0002	< 0.0001	Not normal
+H0: the residuals come from a normal distribution. p ≥ 0.05 means no evidence against normality.
+Normal QQ plot of the residuals
+Histogram of the residuals
+Constant variance of the residuals
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Pagan (on the fitted values)	BP = 1.489	1	0.2224	Constant
+H0: the residuals have constant variance (Breusch-Pagan test: the squared residuals regressed on the fitted values; with a term for every combination and two replicates, the usual version would reject whatever the data). p ≥ 0.05 means the spread can be treated as constant.
+Residuals versus fitted values
+Spread of each treatment
+Independence
+Satisfied
+TEST	STATISTIC	DF	P-VALUE	RESULT
+Breusch-Godfrey (lag 1)	LM = 0.06349	1	0.8011	Independent
+H0: the residuals are independent (no correlation between consecutive observations). The observations are listed replicate by replicate: every combination once, then the next replicate.
+Residuals in the order listed
+Normality failed: start again with the non-parametric test
+The CRD ANOVA (F test) assumes normality, and the check above says this is not reasonable here, so its result cannot be trusted. The process starts again for the Kruskal-Wallis test (factorial), which ranks all the observations together and tests each factor and each interaction on the ranks: new hypotheses about the medians, the significance level, the information, the test, the decision and the post-hoc.
+Back: Post-hoc
+Next: Non-parametric hypotheses

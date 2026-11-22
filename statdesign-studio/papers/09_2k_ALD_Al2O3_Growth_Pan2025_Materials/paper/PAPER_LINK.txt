@@ -1,0 +1,4 @@
+Pan, D., & Lei, Y. (2025). Investigation and Optimization of Process Parameters on Growth Rate in Al2O3 Atomic Layer Deposition (ALD) Using Statistical Approach. Materials, 18(9), 1918.
+DOI: https://doi.org/10.3390/ma18091918
+Full text and PDF (open access, CC BY 4.0): https://pmc.ncbi.nlm.nih.gov/articles/PMC12072700/
+Suggested file name when you save it here: Pan2025_Materials_ALD_Al2O3_growth_rate.pdf
